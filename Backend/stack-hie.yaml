@@ -76,16 +76,16 @@ packages:
 # extra-deps: []
 
 extra-deps:
-  # - ../beckn-gateway/app/gateway
-  # - ../beckn-gateway/app/mock-registry
+  # - ../../beckn-gateway/app/gateway
+  # - ../../beckn-gateway/app/mock-registry
   - git: https://github.com/nammayatri/beckn-gateway.git
-    commit: 7094d2af08055f37ca01f2891d19f3153e619be1
+    commit: 879884854bf6b50bcd6b7d81563cd0e9051270af
     subdirs:
       - app/gateway
       - app/mock-registry
-  # -  ../beckn-shared-kernel/lib/mobility-core
+  # -  ../../shared-kernel/lib/mobility-core
   - git: https://github.com/nammayatri/shared-kernel.git
-    commit: eb9ea61fdd6f4b08f7d1e3c47a102204a06a7e6e
+    commit: f15ddf41baa5f23a35f3566f2edd16887d3a6467
     subdirs:
       - lib/mobility-core
   - git: https://github.com/juspay/passetto
