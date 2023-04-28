@@ -65,7 +65,7 @@ data Waypoint = Waypoint
 data UpdateLocationHandle m = UpdateLocationHandle
   { driver :: Person.Person,
     findDriverLocation :: m (Maybe DriverLocation),
-    upsertDriverLocation :: LatLong -> UTCTime -> m (),
+    upsertDriverLocation :: LatLong -> UTCTime -> Maybe Double -> m (),
     getAssignedRide :: m (Maybe (Id DRide.Ride, DRide.RideStatus)),
     addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
   }
@@ -145,7 +145,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
         (a : ax) -> do
           let newWaypoints = a :| ax
               currPoint = NE.last newWaypoints
-          upsertDriverLocation currPoint.pt currPoint.ts
+          upsertDriverLocation currPoint.pt currPoint.ts currPoint.acc
           mbRideIdAndStatus <- getAssignedRide
           fork "updating in kafka" $
             mapM_
