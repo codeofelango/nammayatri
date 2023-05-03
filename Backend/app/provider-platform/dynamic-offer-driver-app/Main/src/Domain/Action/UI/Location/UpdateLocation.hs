@@ -49,6 +49,7 @@ import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.DriverInformation as DInfo
+import Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics (CoreMetrics)
 
@@ -135,12 +136,15 @@ updateLocationHandler ::
 updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
   withLogTag ("driverId-" <> driver.id.getId) $ do
     driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
+    transporterConfig <- CTC.findByMerchantId driverInfo.merchantId >>= fromMaybeM (TransporterConfigDoesNotExist driverInfo.merchantId.getId)
+    let futureDriverLocationBuffer = secondsToNominalDiffTime transporterConfig.futureDriverLocationBufferInSec
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driver.id $ do
       mbOldLoc <- findDriverLocation
-      case filterNewWaypoints mbOldLoc of
+      filterNewWayPoints <- filterNewWaypointsList mbOldLoc futureDriverLocationBuffer
+      case filterNewWayPoints of
         [] -> logWarning "Incoming points are older than current one, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
@@ -160,9 +164,11 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
             mbRideIdAndStatus
     pure Success
   where
-    filterNewWaypoints mbOldLoc = do
-      let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-      maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+    filterNewWaypointsList mbOldLoc futureDriverLocationBuffer = do
+      currTime <- getCurrentTime
+      let allowedFutureDriverLocation = addUTCTime futureDriverLocationBuffer currTime
+          sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
+      pure $ maybe sortedWaypoint (\oldLoc -> filter (\newPoint -> oldLoc.coordinatesCalculatedAt < newPoint.ts && newPoint.ts <= allowedFutureDriverLocation) sortedWaypoint) mbOldLoc
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,
