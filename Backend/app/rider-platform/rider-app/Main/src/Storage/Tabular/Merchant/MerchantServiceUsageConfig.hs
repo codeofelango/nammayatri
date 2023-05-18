@@ -39,15 +39,17 @@ mkPersist
       merchantId MerchantTId
       initiateCall CallService
       getDistances MapsService
+      getSimulatedRoutes MapsService
       getRoutes MapsService
       snapToRoad MapsService
       getPlaceName MapsService
       getPickupRoutes MapsService
       getTripRoutes MapsService
+      getSimulatedDistance MapsService
       getPlaceDetails MapsService
       autoComplete MapsService
       notifyPerson NotificationService
-      useFraudDetection Bool
+      useSimulationDetection Bool
       smsProvidersPriorityList (PostgresList SmsService)
       whatsappProvidersPriorityList (PostgresList WhatsappService)
       updatedAt UTCTime
