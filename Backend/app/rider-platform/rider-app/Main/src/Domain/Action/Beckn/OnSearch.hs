@@ -16,7 +16,8 @@ module Domain.Action.Beckn.OnSearch
   ( DOnSearchReq (..),
     ProviderInfo (..),
     EstimateInfo (..),
-    DEstimate.FareRange (..),
+    CustomerExtraFeeBounds (..),
+    FareRange (..),
     QuoteInfo (..),
     QuoteDetails (..),
     OneWayQuoteDetails (..),
@@ -36,7 +37,6 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
-import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
@@ -87,12 +87,23 @@ data EstimateInfo = EstimateInfo
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
-    totalFareRange :: DEstimate.FareRange,
+    customerExtraFeeBounds :: Maybe CustomerExtraFeeBounds,
+    totalFareRange :: FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
     nightShiftInfo :: Maybe NightShiftInfo,
     waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong]
+  }
+
+data CustomerExtraFeeBounds = CustomerExtraFeeBounds
+  { minFee :: Money,
+    maxFee :: Money
+  }
+
+data FareRange = FareRange
+  { minFare :: Money,
+    maxFare :: Money
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -156,7 +167,7 @@ onSearch ::
 onSearch transactionId ValidatedOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
-  estimates <- traverse (buildEstimate requestId providerInfo now _searchRequest) estimatesInfo
+  estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
   DB.runTransaction do
     QEstimate.createMany estimates
@@ -166,19 +177,19 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
 buildEstimate ::
   MonadFlow m =>
-  Id DSearchReq.SearchRequest ->
   ProviderInfo ->
   UTCTime ->
-  SearchRequest ->
+  DSearchReq.SearchRequest ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate requestId providerInfo now _searchRequest EstimateInfo {..} = do
+buildEstimate providerInfo now _searchRequest EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
   pure
     DEstimate.Estimate
       { id = uid,
+        requestId = _searchRequest.id,
         autoAssignEnabled = False,
         autoAssignQuoteId = Nothing,
         autoAssignEnabledV2 = False,
@@ -206,6 +217,17 @@ buildEstimate requestId providerInfo now _searchRequest EstimateInfo {..} = do
         waitingCharges =
           DEstimate.WaitingCharges
             { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin)
+            },
+        customerExtraFeeBounds =
+          customerExtraFeeBounds <&> \customerExtraFeeBounds' ->
+            DEstimate.CustomerExtraFeeBounds
+              { minFee = customerExtraFeeBounds'.minFee,
+                maxFee = customerExtraFeeBounds'.maxFee
+              },
+        totalFareRange =
+          DEstimate.FareRange
+            { minFare = totalFareRange.minFare,
+              maxFare = totalFareRange.maxFare
             },
         ..
       }
