@@ -124,7 +124,7 @@ handler org sReq = do
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   Redis.setExp (CD.deviceKey sReq.transactionId) sReq.device 120
   logDebug $ "distance: " <> show result.distance
-  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
+  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong (getId merchantId)
 
   (quotes, mbEstimateInfos) <-
     if isJust mbSpecialLocation
