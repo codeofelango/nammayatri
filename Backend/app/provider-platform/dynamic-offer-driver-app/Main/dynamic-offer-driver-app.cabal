@@ -25,6 +25,8 @@ library
       API.Beckn
       API.Beckn.Cancel
       API.Beckn.Confirm
+      API.Beckn.GetFeedbackForm
+      API.Beckn.GetRatingCategories
       API.Beckn.Init
       API.Beckn.Rating
       API.Beckn.Search
@@ -71,6 +73,8 @@ library
       Beckn.ACL.Cancel
       Beckn.ACL.Common
       Beckn.ACL.Confirm
+      Beckn.ACL.GetFeedbackForm
+      Beckn.ACL.GetRatingCategories
       Beckn.ACL.Init
       Beckn.ACL.OnConfirm
       Beckn.ACL.OnInit
@@ -172,6 +176,7 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.FareProduct
+      Domain.Types.FeedbackForm
       Domain.Types.Geometry
       Domain.Types.Issue.Comment
       Domain.Types.Issue.IssueCategory
@@ -196,6 +201,7 @@ library
       Domain.Types.Person
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
+      Domain.Types.RatingCategories
       Domain.Types.RegistrationToken
       Domain.Types.Ride
       Domain.Types.RideDetails
@@ -289,6 +295,7 @@ library
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProduct
+      Storage.Queries.FeedbackForm
       Storage.Queries.FullEntityBuilders
       Storage.Queries.Geometry
       Storage.Queries.Issue.Comment
@@ -313,6 +320,7 @@ library
       Storage.Queries.Person
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
+      Storage.Queries.RatingCategories
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride
       Storage.Queries.RideDetails
@@ -359,6 +367,7 @@ library
       Storage.Tabular.FarePolicy.Instances
       Storage.Tabular.FarePolicy.Table
       Storage.Tabular.FareProduct
+      Storage.Tabular.FeedbackForm
       Storage.Tabular.Geometry
       Storage.Tabular.Issue.Comment
       Storage.Tabular.Issue.IssueCategory
@@ -384,6 +393,7 @@ library
       Storage.Tabular.Person
       Storage.Tabular.QuoteSpecialZone
       Storage.Tabular.Rating
+      Storage.Tabular.RatingCategories
       Storage.Tabular.RegistrationToken
       Storage.Tabular.Ride
       Storage.Tabular.Ride.Instances

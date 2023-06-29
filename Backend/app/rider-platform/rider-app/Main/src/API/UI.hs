@@ -26,12 +26,14 @@ import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Feedback as Feedback
+import qualified API.UI.FeedbackForm as FeedbackForm
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.Payment as Payment
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
+import qualified API.UI.RatingCategories as RatingCategories
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
@@ -77,6 +79,8 @@ type API =
            :<|> Whatsapp.API
            :<|> Sos.API
            :<|> AppInstalls.API
+           :<|> RatingCategories.API
+           :<|> FeedbackForm.API
        )
 
 handler :: FlowServer API
@@ -108,3 +112,5 @@ handler =
     :<|> Whatsapp.handler
     :<|> Sos.handler
     :<|> AppInstalls.handler
+    :<|> RatingCategories.handler
+    :<|> FeedbackForm.handler
