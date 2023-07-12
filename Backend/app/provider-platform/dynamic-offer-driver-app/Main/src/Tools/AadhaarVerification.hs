@@ -19,7 +19,7 @@ module Tools.AadhaarVerification
   )
 where
 
-import qualified Domain.Types.Merchant as DM
+import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Kernel.External.AadhaarVerification as Reexport hiding
   ( generateAadhaarOtp,
@@ -41,7 +41,7 @@ generateAadhaarOtp ::
     EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id DM.Merchant ->
+  Id MerchantOperatingCity ->
   AadhaarOtpReq ->
   m AadhaarVerificationResp
 generateAadhaarOtp = runWithServiceConfig Verification.generateAadhaarOtp
@@ -52,7 +52,7 @@ verifyAadhaarOtp ::
     EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id DM.Merchant ->
+  Id MerchantOperatingCity ->
   AadhaarOtpVerifyReq ->
   m AadhaarOtpVerifyRes
 verifyAadhaarOtp = runWithServiceConfig Verification.verifyAadhaarOtp
@@ -60,16 +60,16 @@ verifyAadhaarOtp = runWithServiceConfig Verification.verifyAadhaarOtp
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
   (AadhaarVerificationServiceConfig -> req -> m resp) ->
-  Id DM.Merchant ->
+  Id MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func merchantId req = do
+runWithServiceConfig func merchatOperatingCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantId merchantId
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+    CQMSUC.findByMerchantId merchatOperatingCityId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchatOperatingCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService)
-      >>= fromMaybeM (InternalError $ "No Aadhaar Verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
+    CQMSC.findByMerchantIdAndService merchatOperatingCityId (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService)
+      >>= fromMaybeM (InternalError $ "No Aadhaar Verification service provider configured for the merchant, merchantId:" <> merchatOperatingCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.AadhaarVerificationServiceConfig vsc -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"

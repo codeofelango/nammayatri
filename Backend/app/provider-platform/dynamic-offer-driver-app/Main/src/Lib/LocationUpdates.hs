@@ -30,6 +30,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
 import qualified Storage.Queries.Ride as QRide
@@ -37,9 +38,10 @@ import Tools.Error
 
 buildRideInterpolationHandler :: Id Merchant -> Bool -> Flow (RideInterpolationHandler Person.Person Flow)
 buildRideInterpolationHandler orgId isEndRide = do
-  orgMapsConfig <- QOMC.findByMerchantId orgId >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
+  merchantOperatingCity <- SMOC.findByMerchantId orgId >>= fromMaybeM (MerchantOperatingCityNotFound orgId.getId)
+  orgMapsConfig <- QOMC.findByMerchantId merchantOperatingCity.id >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService orgMapsConfig.snapToRoad)
+    QOMSC.findByMerchantIdAndService merchantOperatingCity.id (DOSC.MapsService orgMapsConfig.snapToRoad)
       >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show orgMapsConfig.snapToRoad))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig cfg ->

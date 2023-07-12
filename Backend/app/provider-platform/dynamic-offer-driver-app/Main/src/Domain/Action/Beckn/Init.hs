@@ -22,6 +22,7 @@ import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.SearchRequest as DSR
@@ -171,6 +172,7 @@ handler merchantId req eitherReq = do
       ( CacheFlow m r,
         EsqDBFlow m r,
         HasField "transactionId" sr Text,
+        HasField "merchantOperatingCityId" sr (Maybe (Id MerchantOperatingCity)),
         HasField "fromLocation" sr DLoc.SearchReqLocation,
         HasField "toLocation" sr DLoc.SearchReqLocation,
         HasField "estimatedDuration" sr Seconds,
@@ -199,6 +201,7 @@ handler merchantId req eitherReq = do
             quoteId = req.driverQuoteId,
             status = DRB.NEW,
             providerId = merchantId,
+            merchantOperatingCityId = searchRequest.merchantOperatingCityId,
             primaryExophone = exophone.primaryPhone,
             bapId = req.bapId,
             bapUri = req.bapUri,

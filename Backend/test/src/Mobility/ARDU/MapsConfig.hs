@@ -16,7 +16,7 @@
 
 module Mobility.ARDU.MapsConfig where
 
-import "dynamic-offer-driver-app" Domain.Types.Merchant
+import "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantOperatingCity
 import "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
@@ -37,21 +37,21 @@ spec = describe "Merchant maps configs" $ do
     fetchOSRMConfig
 
 -- We use direct calls to DB in this test because cache already changed for using mock-google
-fetchConfig :: forall b. (Show b, Eq b) => Id Merchant -> Maps.MapsService -> (ServiceConfig -> b) -> b -> IO ()
-fetchConfig merchantId serviceProvider getterFunc resultExpected = do
+fetchConfig :: forall b. (Show b, Eq b) => Id MerchantOperatingCity -> Maps.MapsService -> (ServiceConfig -> b) -> b -> IO ()
+fetchConfig merchantOperatingCityId serviceProvider getterFunc resultExpected = do
   Just cfg <-
     runARDUFlow "" $
-      QMSC.findByMerchantIdAndService merchantId (MapsService serviceProvider)
+      QMSC.findByMerchantIdAndService merchantOperatingCityId (MapsService serviceProvider)
   getterFunc cfg.serviceConfig `shouldBe` resultExpected
 
 fetchGoogleConfig :: IO ()
 fetchGoogleConfig = do
-  fetchConfig Fixtures.nammaYatriPartnerMerchantId Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
+  fetchConfig Fixtures.nammaYatriPartnerMerchantOperatingCityId Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
   where
     func (MapsServiceConfig (GoogleConfig cfg)) = cfg.googleMapsUrl
 
 fetchOSRMConfig :: IO ()
 fetchOSRMConfig = do
-  fetchConfig Fixtures.nammaYatriPartnerMerchantId OSRM func (fromJust $ parseBaseUrl "localhost:5000")
+  fetchConfig Fixtures.nammaYatriPartnerMerchantOperatingCityId OSRM func (fromJust $ parseBaseUrl "localhost:5000")
   where
     func (MapsServiceConfig (OSRMConfig cfg)) = cfg.osrmUrl

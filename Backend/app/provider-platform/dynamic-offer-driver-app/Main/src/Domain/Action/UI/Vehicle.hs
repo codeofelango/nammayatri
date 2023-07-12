@@ -27,6 +27,7 @@ where
 
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -131,8 +132,8 @@ updateVehicle admin driverId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity updatedVehicle
 
-getVehicle :: EsqDBReplicaFlow m r => (Id SP.Person, Id DM.Merchant) -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
-getVehicle (personId, _) registrationNoM vehicleIdM = do
+getVehicle :: EsqDBReplicaFlow m r => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
+getVehicle (personId, _, _) registrationNoM vehicleIdM = do
   user <-
     Esq.runInReplica $
       QP.findById personId

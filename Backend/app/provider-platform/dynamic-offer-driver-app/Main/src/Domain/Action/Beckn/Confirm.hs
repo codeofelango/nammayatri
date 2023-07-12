@@ -211,6 +211,7 @@ handler transporter req quote = do
             bookingId = booking.id,
             shortId = shortId,
             merchantId = Just booking.providerId,
+            merchantOperatingCityId = booking.merchantOperatingCityId,
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,

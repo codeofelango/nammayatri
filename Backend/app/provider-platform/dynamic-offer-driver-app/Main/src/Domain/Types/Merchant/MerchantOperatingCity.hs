@@ -12,33 +12,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.UI.Frontend
-  ( DFrontend.GetDriverFlowStatusRes,
-    API,
-    handler,
-  )
-where
+module Domain.Types.Merchant.MerchantOperatingCity where
 
-import qualified Domain.Action.UI.Frontend as DFrontend
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as Person
-import Environment
-import EulerHS.Prelude
+import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common
-import Servant
-import Tools.Auth
 
-type API =
-  "frontend"
-    :> "flowStatus"
-    :> TokenAuth
-    :> Get '[JSON] DFrontend.GetDriverFlowStatusRes
+data MerchantOperatingCity = MerchantOperatingCity
+  { id :: Id MerchantOperatingCity,
+    merchantId :: Id DM.Merchant,
+    city :: City
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
 
-handler :: FlowServer API
-handler =
-  getDriverFlowStatus
-
-getDriverFlowStatus :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DFrontend.GetDriverFlowStatusRes
-getDriverFlowStatus = withFlowHandlerAPI . DFrontend.getDriverFlowStatus
+data City = BANGALORE | KOLKATA | KOCHI | CHENNAI | DELHI | MUMBAI | DEFAULT
+  deriving (Generic, FromJSON, ToJSON, Show, Read, Eq, ToSchema)

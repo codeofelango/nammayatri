@@ -22,6 +22,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.LeaderBoardConfig as LConfig
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -51,10 +52,10 @@ data LeaderBoardRes = LeaderBoardRes
 
 getDailyDriverLeaderBoard ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) =>
-  (Id Person, Id DM.Merchant) ->
+  (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
   m LeaderBoardRes
-getDailyDriverLeaderBoard (personId, merchantId) day = do
+getDailyDriverLeaderBoard (personId, merchantId, _) day = do
   now <- getCurrentTime
   let currentDate = RideEndInt.getCurrentDate now
   let dateDiff = diffDays currentDate day
@@ -103,11 +104,11 @@ getDailyDriverLeaderBoard (personId, merchantId) day = do
 
 getWeeklyDriverLeaderBoard ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) =>
-  (Id Person, Id DM.Merchant) ->
+  (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
   Day ->
   m LeaderBoardRes
-getWeeklyDriverLeaderBoard (personId, merchantId) fromDate toDate = do
+getWeeklyDriverLeaderBoard (personId, merchantId, _) fromDate toDate = do
   now <- getCurrentTime
   let currentDate = RideEndInt.getCurrentDate now
   let (currWeekNumber, _) = sundayStartWeek currentDate

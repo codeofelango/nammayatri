@@ -28,6 +28,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Storage.Tabular.Estimate (EstimateTId)
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
@@ -43,6 +44,7 @@ mkPersist
       requestId SearchRequestTId
       estimateId EstimateTId
       merchantId MerchantTId Maybe
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       startTime UTCTime
       validTill UTCTime
       baseFare Money
@@ -70,6 +72,7 @@ instance FromTType SearchTryT Domain.SearchTry where
           requestId = fromKey requestId,
           estimateId = fromKey estimateId,
           merchantId = fromKey <$> merchantId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           ..
         }
 
@@ -80,5 +83,6 @@ instance ToTType SearchTryT Domain.SearchTry where
         requestId = toKey requestId,
         estimateId = toKey estimateId,
         merchantId = toKey <$> merchantId,
+        merchantOperatingCityId = toKey <$> merchantOperatingCityId,
         ..
       }

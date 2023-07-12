@@ -20,7 +20,7 @@
 
 module Storage.Tabular.Merchant.MerchantServiceConfig where
 
-import qualified Domain.Types.Merchant as Domain
+import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
@@ -35,7 +35,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common (decodeFromText, encodeToText)
 import Kernel.Utils.Error
-import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import Tools.Error
 
 derivePersistField "Domain.ServiceName"
@@ -44,18 +44,18 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     MerchantServiceConfigT sql=merchant_service_config
-      merchantId MerchantTId
+      merchantOperatingCityId MerchantOperatingCityTId
       serviceName Domain.ServiceName
       configJSON Text sql=config_json
       updatedAt UTCTime
       createdAt UTCTime
-      UniqueMerchantServiceConfigTId merchantId serviceName
-      Primary merchantId serviceName
+      UniqueMerchantServiceConfigTId merchantOperatingCityId serviceName
+      Primary merchantOperatingCityId serviceName
       deriving Generic
     |]
 
 instance TEntityKey MerchantServiceConfigT where
-  type DomainKey MerchantServiceConfigT = (Id Domain.Merchant, Domain.ServiceName)
+  type DomainKey MerchantServiceConfigT = (Id Domain.MerchantOperatingCity, Domain.ServiceName)
   fromKey (MerchantServiceConfigTKey _id serviceName) = (fromKey _id, serviceName)
   toKey (id, serviceName) = MerchantServiceConfigTKey (toKey id) serviceName
 
@@ -74,7 +74,7 @@ instance FromTType MerchantServiceConfigT Domain.MerchantServiceConfig where
       Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> decodeFromText configJSON
     return $
       Domain.MerchantServiceConfig
-        { merchantId = fromKey merchantId,
+        { merchantOperatingCityId = fromKey merchantOperatingCityId,
           ..
         }
 
@@ -82,7 +82,7 @@ instance ToTType MerchantServiceConfigT Domain.MerchantServiceConfig where
   toTType Domain.MerchantServiceConfig {..} = do
     let (serviceName, configJSON) = getServiceNameConfigJSON serviceConfig
     MerchantServiceConfigT
-      { merchantId = toKey merchantId,
+      { merchantOperatingCityId = toKey merchantOperatingCityId,
         ..
       }
 

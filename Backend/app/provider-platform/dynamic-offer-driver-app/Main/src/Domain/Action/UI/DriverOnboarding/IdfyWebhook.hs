@@ -35,6 +35,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -65,11 +66,12 @@ idfyWebhookHandler ::
 idfyWebhookHandler merchantShortId secret val = do
   merchant <- findMerchantByShortId merchantShortId
   let merchantId = merchant.id
+  merchantOperatingCity <- SMOC.findByMerchantId merchantId >>= fromMaybeM (MerchantOperatingCityNotFound merchantId.getId)
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantId merchantId
+    CQMSUC.findByMerchantId merchantOperatingCity.id
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (DMSC.VerificationService merchantServiceUsageConfig.verificationService)
+    CQMSC.findByMerchantIdAndService merchantOperatingCity.id (DMSC.VerificationService merchantServiceUsageConfig.verificationService)
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> do
@@ -85,8 +87,9 @@ onVerify resp respDump = do
 
   ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+  merchantOperatingCity <- SMOC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantId.getId)
   -- running statusHandler to enable Driver
-  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId)
+  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId, merchantOperatingCity.id)
 
   return ack_
   where

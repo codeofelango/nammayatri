@@ -270,6 +270,7 @@ otpRideCreate driver otpCode booking = do
             bookingId = booking.id,
             shortId = shortId,
             merchantId = merchantId,
+            merchantOperatingCityId = booking.merchantOperatingCityId,
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,

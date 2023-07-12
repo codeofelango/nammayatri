@@ -20,7 +20,7 @@
 
 module Storage.Tabular.Merchant.MerchantServiceUsageConfig where
 
-import qualified Domain.Types.Merchant as Domain
+import qualified Domain.Types.Merchant.MerchantOperatingCity as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
 import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Call (CallService)
@@ -31,13 +31,13 @@ import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     MerchantServiceUsageConfigT sql=merchant_service_usage_config
-      merchantId MerchantTId
+      merchantOperatingCityId MerchantOperatingCityTId
       initiateCall CallService
       getDistances MapsService
       getEstimatedPickupDistances MapsService
@@ -55,12 +55,12 @@ mkPersist
       aadhaarVerificationService AadhaarVerificationService
       updatedAt UTCTime
       createdAt UTCTime
-      Primary merchantId
+      Primary merchantOperatingCityId
       deriving Generic
     |]
 
 instance TEntityKey MerchantServiceUsageConfigT where
-  type DomainKey MerchantServiceUsageConfigT = Id Domain.Merchant
+  type DomainKey MerchantServiceUsageConfigT = Id Domain.MerchantOperatingCity
   fromKey (MerchantServiceUsageConfigTKey _id) = fromKey _id
   toKey id = MerchantServiceUsageConfigTKey $ toKey id
 
@@ -68,7 +68,7 @@ instance FromTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig
   fromTType MerchantServiceUsageConfigT {..} =
     return $
       Domain.MerchantServiceUsageConfig
-        { merchantId = fromKey merchantId,
+        { merchantOperatingCityId = fromKey merchantOperatingCityId,
           smsProvidersPriorityList = unPostgresList smsProvidersPriorityList,
           whatsappProvidersPriorityList = unPostgresList whatsappProvidersPriorityList,
           ..
@@ -77,7 +77,7 @@ instance FromTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig
 instance ToTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig where
   toTType Domain.MerchantServiceUsageConfig {..} =
     MerchantServiceUsageConfigT
-      { merchantId = toKey merchantId,
+      { merchantOperatingCityId = toKey merchantOperatingCityId,
         smsProvidersPriorityList = PostgresList smsProvidersPriorityList,
         whatsappProvidersPriorityList = PostgresList whatsappProvidersPriorityList,
         ..

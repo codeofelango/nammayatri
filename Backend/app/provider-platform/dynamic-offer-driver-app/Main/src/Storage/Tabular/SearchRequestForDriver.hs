@@ -30,6 +30,7 @@ import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.SearchTry (SearchTryTId)
@@ -46,6 +47,7 @@ mkPersist
       requestId SearchRequestTId sql=search_request_id
       searchTryId SearchTryTId
       merchantId MerchantTId Maybe
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       startTime UTCTime
       actualDistanceToPickup Meters
       straightLineDistanceToPickup Meters
@@ -88,6 +90,7 @@ instance FromTType SearchRequestForDriverT Domain.SearchRequestForDriver where
           requestId = fromKey requestId,
           searchTryId = fromKey searchTryId,
           merchantId = fromKey <$> merchantId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           ..
         }
 
@@ -100,5 +103,6 @@ instance ToTType SearchRequestForDriverT Domain.SearchRequestForDriver where
         requestId = toKey requestId,
         searchTryId = toKey searchTryId,
         merchantId = toKey <$> merchantId,
+        merchantOperatingCityId = toKey <$> merchantOperatingCityId,
         ..
       }

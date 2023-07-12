@@ -21,6 +21,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Status as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
@@ -78,26 +79,26 @@ handler =
   )
     :<|> addReferral
 
-verifyDL :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
-verifyDL (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing (personId, merchantId)
+verifyDL :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
+verifyDL (personId, merchantId, merchantOperatingCityId) = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing (personId, merchantId, merchantOperatingCityId)
 
-verifyRC :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
-verifyRC (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.verifyRC False Nothing (personId, merchantId)
+verifyRC :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
+verifyRC (personId, merchantId, merchantOperatingCityId) = withFlowHandlerAPI . DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOperatingCityId)
 
-statusHandler :: (Id DP.Person, Id DM.Merchant) -> FlowHandler DriverOnboarding.StatusRes
+statusHandler :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DriverOnboarding.StatusRes
 statusHandler = withFlowHandlerAPI . DriverOnboarding.statusHandler
 
-validateImage :: (Id DP.Person, Id DM.Merchant) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
-validateImage (personId, merchantId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId)
+validateImage :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
+validateImage (personId, merchantId, merchantOperatingCityId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId, merchantOperatingCityId)
 
-validateImageFile :: (Id DP.Person, Id DM.Merchant) -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
-validateImageFile (personId, merchantId) = withFlowHandlerAPI . Image.validateImageFile False (personId, merchantId)
+validateImageFile :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
+validateImageFile (personId, merchantId, merchantOperatingCityId) = withFlowHandlerAPI . Image.validateImageFile False (personId, merchantId, merchantOperatingCityId)
 
-generateAadhaarOtp :: (Id DP.Person, Id DM.Merchant) -> AadhaarVerification.AadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarVerificationResp
-generateAadhaarOtp (personId, _) = withFlowHandlerAPI . AV.generateAadhaarOtp False Nothing personId
+generateAadhaarOtp :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> AadhaarVerification.AadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarVerificationResp
+generateAadhaarOtp (personId, _, merchantOperatingCityId) = withFlowHandlerAPI . AV.generateAadhaarOtp False Nothing personId merchantOperatingCityId
 
-verifyAadhaarOtp :: (Id DP.Person, Id DM.Merchant) -> AV.VerifyAadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarOtpVerifyRes
-verifyAadhaarOtp (personId, _) = withFlowHandlerAPI . AV.verifyAadhaarOtp Nothing personId
+verifyAadhaarOtp :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> AV.VerifyAadhaarOtpReq -> FlowHandler AadhaarVerification.AadhaarOtpVerifyRes
+verifyAadhaarOtp (personId, _, merchantOperatingCityId) = withFlowHandlerAPI . AV.verifyAadhaarOtp Nothing personId merchantOperatingCityId
 
-addReferral :: (Id DP.Person, Id DM.Merchant) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
-addReferral (personId, merchantId) = withFlowHandlerAPI . DriverOnboarding.addReferral (personId, merchantId)
+addReferral :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
+addReferral (personId, merchantId, merchantOperatingCityId) = withFlowHandlerAPI . DriverOnboarding.addReferral (personId, merchantId, merchantOperatingCityId)

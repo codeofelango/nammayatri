@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Storage.Tabular.Booking (BookingTId)
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.RideStatus"
@@ -40,6 +41,7 @@ mkPersist
       bookingId BookingTId
       shortId Text
       merchantId MerchantTId Maybe
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       status Domain.RideStatus
       driverId PersonTId
       otp Text

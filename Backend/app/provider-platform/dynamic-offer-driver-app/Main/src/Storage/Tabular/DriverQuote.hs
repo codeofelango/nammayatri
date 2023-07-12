@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import qualified Storage.Tabular.SearchRequestForDriver as SRFD
@@ -58,6 +59,7 @@ mkPersist
       estimatedFare Common.Money
       fareParametersId Fare.FareParametersTId
       providerId MerchantTId
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       specialLocationTag Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
@@ -85,6 +87,7 @@ instance FromTType FullDriverQuoteT Domain.DriverQuote where
           driverId = fromKey driverId,
           durationToPickup = roundToIntegral durationToPickup,
           providerId = fromKey providerId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           ..
         }
 
@@ -99,6 +102,7 @@ instance ToTType FullDriverQuoteT Domain.DriverQuote where
           durationToPickup = realToFrac durationToPickup,
           fareParametersId = toKey fareParams.id,
           providerId = toKey providerId,
+          merchantOperatingCityId = toKey <$> merchantOperatingCityId,
           ..
         },
       toTType fareParams

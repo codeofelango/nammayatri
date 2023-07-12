@@ -32,6 +32,7 @@ import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
 import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import qualified Storage.Tabular.Merchant.MerchantPaymentMethod as SMPM
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
@@ -53,6 +54,7 @@ mkPersist
       specialZoneOtpCode Text Maybe
       area FareProductD.Area Maybe
       providerId MerchantTId
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       primaryExophone Text
       bapId Text
       bapUri Text
@@ -94,6 +96,7 @@ instance FromTType FullBookingT Domain.Booking where
       Domain.Booking
         { id = Id id,
           providerId = fromKey providerId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
@@ -108,6 +111,7 @@ instance ToTType FullBookingT Domain.Booking where
     ( BookingT
         { id = getId id,
           providerId = toKey providerId,
+          merchantOperatingCityId = toKey <$> merchantOperatingCityId,
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,

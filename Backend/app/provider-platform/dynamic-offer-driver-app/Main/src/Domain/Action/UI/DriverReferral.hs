@@ -6,6 +6,7 @@ where
 
 import qualified Domain.Types.DriverReferral as D
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -33,11 +34,11 @@ createDriverReferral ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r
   ) =>
-  (Id SP.Person, Id DM.Merchant) ->
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Bool ->
   ReferralLinkReq ->
   m APISuccess
-createDriverReferral (driverId, merchantId) isDashboard ReferralLinkReq {..} = do
+createDriverReferral (driverId, merchantId, _) isDashboard ReferralLinkReq {..} = do
   unless (TU.validateAllDigitWithMinLength 6 referralCode) $
     throwError $ InvalidRequest "Referral Code must have 6 digits."
   transporterConfig <- QTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)

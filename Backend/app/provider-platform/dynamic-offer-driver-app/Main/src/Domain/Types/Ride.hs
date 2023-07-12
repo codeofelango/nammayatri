@@ -23,6 +23,7 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types
@@ -53,6 +54,7 @@ data Ride = Ride
     bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     status :: RideStatus,
     driverId :: Id DPers.Person,
     otp :: Text,

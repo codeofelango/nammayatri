@@ -28,6 +28,7 @@ import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.DriverLocation as DDriverLocation
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
@@ -55,7 +56,7 @@ data ServiceHandle m = ServiceHandle
     findDriverLocationId :: Id Merchant -> Id DP.Person -> m (Maybe DDriverLocation.DriverLocation),
     cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    pickUpDistance :: Id DM.Merchant -> LatLong -> LatLong -> m Meters
+    pickUpDistance :: Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m Meters
   }
 
 cancelRideHandle :: ServiceHandle Flow
@@ -76,18 +77,18 @@ data CancelRideReq = CancelRideReq
 
 data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant)
 
-driverCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
-driverCancelRideHandler shandle personId rideId req =
+driverCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+driverCancelRideHandler shandle personId merchantOperatingCityId rideId req =
   withLogTag ("rideId-" <> rideId.getId) $
-    cancelRideHandler shandle (PersonRequestorId personId) rideId req
+    cancelRideHandler shandle (PersonRequestorId personId) merchantOperatingCityId rideId req
 
-dashboardCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
-dashboardCancelRideHandler shandle merchantId rideId req =
+dashboardCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+dashboardCancelRideHandler shandle merchantId merchantOperatingCityId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $
-    cancelRideHandler shandle (DashboardRequestorId merchantId) rideId req
+    cancelRideHandler shandle (DashboardRequestorId merchantId) merchantOperatingCityId rideId req
 
-cancelRideHandler :: MonadHandler m => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
-cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
+cancelRideHandler :: MonadHandler m => ServiceHandle m -> RequestorId -> Id DMOC.MerchantOperatingCity -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+cancelRideHandler ServiceHandle {..} requestorId merchantOperatingCityId rideId req = withLogTag ("rideId-" <> rideId.getId) do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
   let driverId = ride.driverId
@@ -109,7 +110,7 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideI
           mbLocation <- findDriverLocationId driver.merchantId driverId
           booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           disToPickup <- forM mbLocation $ \location -> do
-            pickUpDistance booking.providerId (getCoordinates location) (getCoordinates booking.fromLocation)
+            pickUpDistance merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
           let currentDriverLocation = getCoordinates <$> mbLocation
           buildRideCancelationReason currentDriverLocation disToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId)
     DashboardRequestorId reqMerchantId -> do
@@ -145,13 +146,13 @@ driverDistanceToPickup ::
     Maps.HasCoordinates tripStartPos,
     Maps.HasCoordinates tripEndPos
   ) =>
-  Id Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
   m Meters
-driverDistanceToPickup merchantId tripStartPos tripEndPos = do
+driverDistanceToPickup merchantOperatingCityId tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide merchantId $
+    Maps.getDistanceForCancelRide merchantOperatingCityId $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,

@@ -355,15 +355,15 @@ search'Confirm appToken driver searchReq' = do
 changeCachedMapsConfig :: Maps.MapsServiceConfig -> IO ()
 changeCachedMapsConfig googleCfg = runARDUFlow "change cached maps config" $ do
   let serviceConfig = TDMSC.MapsServiceConfig googleCfg
-  nammaYatriPartnerServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.nammaYatriPartnerMerchantId serviceConfig
-  otherMerchant2ServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.otherMerchant2Id serviceConfig
+  nammaYatriPartnerServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.nammaYatriPartnerMerchantOperatingCityId serviceConfig
+  otherMerchant2ServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.nammaYatriPartnerMerchantOperatingCityId1 serviceConfig
   TCQMSC.cacheMerchantServiceConfig nammaYatriPartnerServiceConfig
   TCQMSC.cacheMerchantServiceConfig otherMerchant2ServiceConfig
 
 clearCachedMapsConfig :: IO ()
 clearCachedMapsConfig = runARDUFlow "clear cached maps config" do
-  TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantId (TDMSC.MapsService Maps.Google)
-  TCQMSC.clearCache Fixtures.otherMerchant2Id (TDMSC.MapsService Maps.Google)
+  TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantOperatingCityId (TDMSC.MapsService Maps.Google)
+  TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantOperatingCityId1 (TDMSC.MapsService Maps.Google)
 
 rideSync :: ShortId TDM.Merchant -> Id TRide.Ride -> ClientsM ()
 rideSync merchantId rideId = do

@@ -16,12 +16,13 @@ module Tools.Auth where
 
 import Data.Text as T
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
-import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Esqueleto.Config (HasEsqEnv)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.App
 import Kernel.Types.Id
@@ -52,7 +53,7 @@ type TokenAuth = HeaderAuth "token" VerifyToken
 data VerifyToken = VerifyToken
 
 instance VerificationMethod VerifyToken where
-  type VerificationResult VerifyToken = (Id Person.Person, Id Merchant.Merchant)
+  type VerificationResult VerifyToken = (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity)
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
@@ -93,20 +94,21 @@ validateAdmin regToken = do
       >>= fromMaybeM (PersonNotFound entityId)
   verifyAdmin user
 
-verifyPerson :: (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person, Id Merchant.Merchant)
+verifyPerson :: (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   result <- Redis.safeGet key
   case result of
-    Just (personId, merchantId) -> return (personId, merchantId)
+    Just (personId, merchantId, merchantOperatingCityId) -> return (personId, merchantId, merchantOperatingCityId)
     Nothing -> do
       sr <- verifyToken token
       let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
       let personId = Id sr.entityId
       let merchantId = Id sr.merchantId
-      Redis.setExp key (personId, merchantId) expiryTime
-      return (personId, merchantId)
+      let merchantOperatingCityId = Id sr.merchantOperatingCityId
+      Redis.setExp key (personId, merchantId, merchantOperatingCityId) expiryTime
+      return (personId, merchantId, merchantOperatingCityId)
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =

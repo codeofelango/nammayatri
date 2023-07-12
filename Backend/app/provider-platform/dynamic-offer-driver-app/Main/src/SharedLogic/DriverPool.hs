@@ -70,6 +70,7 @@ import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as DIP
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CTC
 import qualified Storage.Queries.Person as QP
 import Tools.Maps as Maps
@@ -661,8 +662,9 @@ computeActualDistance ::
 computeActualDistance orgId pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
   transporter <- CTC.findByMerchantId orgId >>= fromMaybeM (TransporterConfigDoesNotExist orgId.getId)
+  merchantOperatingCity <- SMOC.findByMerchantId orgId >>= fromMaybeM (MerchantOperatingCityNotFound orgId.getId)
   getDistanceResults <-
-    Maps.getEstimatedPickupDistances orgId $
+    Maps.getEstimatedPickupDistances merchantOperatingCity.id $
       Maps.GetDistancesReq
         { origins = driverPoolResults,
           destinations = pickupLatLong :| [],

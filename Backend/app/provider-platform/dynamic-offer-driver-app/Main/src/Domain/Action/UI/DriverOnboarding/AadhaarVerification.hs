@@ -22,6 +22,7 @@ import qualified Domain.Types.DriverOnboarding.AadhaarOtp as Domain
 import qualified Domain.Types.DriverOnboarding.AadhaarVerification as VDomain
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Prelude
@@ -49,9 +50,10 @@ generateAadhaarOtp ::
   Bool ->
   Maybe DM.Merchant ->
   Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
   AadhaarVerification.AadhaarOtpReq ->
   Flow AadhaarVerification.AadhaarVerificationResp
-generateAadhaarOtp isDashboard mbMerchant personId req = do
+generateAadhaarOtp isDashboard mbMerchant personId merchantOperatingCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
@@ -64,7 +66,7 @@ generateAadhaarOtp isDashboard mbMerchant personId req = do
   let tried = fromMaybe 0 numberOfTries
   transporterConfig <- CTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   unless (isDashboard || tried < transporterConfig.onboardingTryLimit) $ throwError (GenerateAadhaarOtpExceedLimit personId.getId)
-  res <- AadhaarVerification.generateAadhaarOtp person.merchantId $ req
+  res <- AadhaarVerification.generateAadhaarOtp merchantOperatingCityId $ req
   aadhaarOtpEntity <- mkAadhaarOtp personId res
   Esq.runNoTransaction $ Query.createForGenerate aadhaarOtpEntity
   cacheAadhaarVerifyTries personId tried res.transactionId isDashboard
@@ -82,9 +84,10 @@ cacheAadhaarVerifyTries personId tried transactionId isDashboard = do
 verifyAadhaarOtp ::
   Maybe DM.Merchant ->
   Id Person.Person ->
+  Id DMOC.MerchantOperatingCity ->
   VerifyAadhaarOtpReq ->
   Flow AadhaarVerification.AadhaarOtpVerifyRes
-verifyAadhaarOtp mbMerchant personId req = do
+verifyAadhaarOtp mbMerchant personId merchantOperatingCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound (getId personId))
   when (driverInfo.blocked) $ throwError DriverAccountBlocked
@@ -102,7 +105,7 @@ verifyAadhaarOtp mbMerchant personId req = do
                 shareCode = req.shareCode,
                 transactionId = tId
               }
-      res <- AadhaarVerification.verifyAadhaarOtp person.merchantId aadhaarVerifyReq
+      res <- AadhaarVerification.verifyAadhaarOtp merchantOperatingCityId aadhaarVerifyReq
       aadhaarVerifyEntity <- mkAadhaarVerify personId tId res
       Esq.runTransaction $ Query.createForVerify aadhaarVerifyEntity
       if res.code == pack "1002"
@@ -110,7 +113,7 @@ verifyAadhaarOtp mbMerchant personId req = do
           Redis.del key
           aadhaarEntity <- mkAadhaar personId res
           Esq.runNoTransaction $ Q.create aadhaarEntity
-          _ <- Status.statusHandler (person.id, person.merchantId)
+          _ <- Status.statusHandler (person.id, person.merchantId, merchantOperatingCityId)
           void $ CQDriverInfo.updateAadhaarVerifiedState (cast personId) True
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res

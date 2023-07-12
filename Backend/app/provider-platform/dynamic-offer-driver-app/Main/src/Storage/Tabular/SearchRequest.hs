@@ -28,6 +28,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 import qualified Tools.Maps as Maps
@@ -41,6 +42,7 @@ mkPersist
       id Text
       transactionId Text
       providerId MerchantTId
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       fromLocationId SearchReqLocationTId
       toLocationId SearchReqLocationTId
       area FareProductD.Area Maybe
@@ -77,6 +79,7 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
       Domain.SearchRequest
         { id = Id id,
           providerId = fromKey providerId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
@@ -88,6 +91,7 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
     ( SearchRequestT
         { id = getId id,
           providerId = toKey providerId,
+          merchantOperatingCityId = toKey <$> merchantOperatingCityId,
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,

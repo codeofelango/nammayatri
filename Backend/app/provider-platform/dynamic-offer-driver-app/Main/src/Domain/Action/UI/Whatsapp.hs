@@ -15,6 +15,7 @@
 module Domain.Action.UI.Whatsapp (module Domain.Action.UI.Whatsapp, module Reexport) where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Whatsapp.Interface.Types as Reexport
@@ -34,12 +35,12 @@ newtype OptAPIRequest = OptAPIRequest
   }
   deriving (Show, Eq, Generic, ToSchema, FromJSON, ToJSON)
 
-whatsAppOptAPI :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DM.Merchant) -> OptAPIRequest -> m APISuccess
-whatsAppOptAPI (personId, _) OptAPIRequest {..} = do
+whatsAppOptAPI :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> OptAPIRequest -> m APISuccess
+whatsAppOptAPI (personId, _, merchantOperatingCityId) OptAPIRequest {..} = do
   DP.Person {..} <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mobileNo <- mapM decrypt mobileNumber >>= fromMaybeM (InvalidRequest "Person is not linked with any mobile number")
   unless (whatsappNotificationEnrollStatus == Just status) $
-    void $ Whatsapp.whatsAppOptAPI merchantId $ OptApiReq {phoneNumber = mobileNo, method = status}
+    void $ Whatsapp.whatsAppOptAPI merchantOperatingCityId $ OptApiReq {phoneNumber = mobileNo, method = status}
   DB.runTransaction $
     void $ QP.updateWhatsappNotificationEnrollStatus personId $ Just status
   return Success

@@ -15,6 +15,7 @@
 module Mobility.ARDU.Fixtures where
 
 import "dynamic-offer-driver-app" Domain.Types.Merchant as DM
+import "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
@@ -48,11 +49,17 @@ defaultAllowedDriverFee = 10
 nammaYatriPartnerMerchantId :: Id DM.Merchant
 nammaYatriPartnerMerchantId = "favorit0-0000-0000-0000-00000favorit"
 
+nammaYatriPartnerMerchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+nammaYatriPartnerMerchantOperatingCityId = "eb4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
+
 nammaYatriPartnerMerchantShortId :: ShortId DM.Merchant
 nammaYatriPartnerMerchantShortId = "NAMMA_YATRI_PARTNER"
 
 otherMerchant2Id :: Id DM.Merchant
 otherMerchant2Id = "nearest-drivers-testing-organization"
+
+nammaYatriPartnerMerchantOperatingCityId1 :: Id DMOC.MerchantOperatingCity
+nammaYatriPartnerMerchantOperatingCityId1 = "eb4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
 
 dashboardToken :: Text
 dashboardToken = "some-secret-dashboard-token-for-driver-offer-bpp"

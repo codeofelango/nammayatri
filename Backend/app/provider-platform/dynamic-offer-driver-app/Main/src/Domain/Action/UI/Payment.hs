@@ -24,6 +24,7 @@ where
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Environment
@@ -44,6 +45,7 @@ import Servant (BasicAuthData)
 import SharedLogic.Merchant
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -56,10 +58,10 @@ import qualified Tools.Payment as Payment
 -- create order -----------------------------------------------------
 
 createOrder ::
-  (Id DP.Person, Id DM.Merchant) ->
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DriverFee ->
   Flow Payment.CreateOrderResp
-createOrder (driverId, merchantId) driverFeeId = do
+createOrder (driverId, merchantId, merchantOperatingCityId) driverFeeId = do
   driverFee <- runInReplica $ QDF.findById driverFeeId >>= fromMaybeM (DriverFeeNotFound $ getId driverFeeId)
   when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled $ getId driverFeeId)
   when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse $ getId driverFeeId)
@@ -84,7 +86,7 @@ createOrder (driverId, merchantId) driverFeeId = do
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
       orderId = cast @DriverFee @DOrder.PaymentOrder driverFee.id
-      createOrderCall = Payment.createOrder merchantId -- api call
+      createOrderCall = Payment.createOrder merchantOperatingCityId -- api call
   DPayment.createOrderService commonMerchantId commonPersonId orderId createOrderReq createOrderCall
 
 getOrder ::
@@ -94,10 +96,10 @@ getOrder ::
     EncFlow m r,
     CoreMetrics m
   ) =>
-  (Id DP.Person, Id DM.Merchant) ->
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
   m DOrder.PaymentOrderAPIEntity
-getOrder (personId, _) orderId = do
+getOrder (personId, _, _) orderId = do
   order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
@@ -116,12 +118,12 @@ getStatus ::
     EncFlow m r,
     CoreMetrics m
   ) =>
-  (Id DP.Person, Id DM.Merchant) ->
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Id DOrder.PaymentOrder ->
   m DPayment.PaymentStatusResp
-getStatus (personId, merchantId) orderId = do
+getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
   let commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId -- api call
+      orderStatusCall = Payment.orderStatus merchantOperatingCityId -- api call
   paymentStatus <- DPayment.orderStatusService commonPersonId orderId orderStatusCall
   processPayment merchantId paymentStatus.status (cast orderId)
   pure paymentStatus
@@ -135,17 +137,17 @@ juspayWebhookHandler ::
   Flow AckResponse
 juspayWebhookHandler merchantShortId authData value = do
   merchant <- findMerchantByShortId merchantShortId
-  let merchantId = merchant.id
+  merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (DMSC.PaymentService Payment.Juspay)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show Payment.Juspay))
+    CQMSC.findByMerchantIdAndService merchantOperatingCity.id (DMSC.PaymentService Payment.Juspay)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PaymentServiceConfig psc -> do
       orderStatusContent <- Juspay.orderStatusWebhook psc DPayment.juspayWebhookService authData value
       case orderStatusContent of
         Nothing -> throwError $ InternalError "Order Contents not found."
         Just osc -> do
-          processPayment merchantId osc.order.status (Id osc.order.order_id)
+          processPayment merchant.id osc.order.status (Id osc.order.order_id)
           pure Ack
     _ -> throwError $ InternalError "Unknown Service Config"
 

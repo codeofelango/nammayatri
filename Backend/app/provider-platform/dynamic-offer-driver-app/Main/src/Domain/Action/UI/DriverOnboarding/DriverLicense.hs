@@ -34,6 +34,7 @@ import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.OnboardingDocumentConfig (OnboardingDocumentConfig)
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DTO
 import qualified Domain.Types.Person as Person
@@ -53,6 +54,7 @@ import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as QODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
@@ -90,10 +92,10 @@ validateDriverDLReq now DriverDLReq {..} =
 verifyDL ::
   Bool ->
   Maybe DM.Merchant ->
-  (Id Person.Person, Id DM.Merchant) ->
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverDLReq ->
   Flow DriverDLRes
-verifyDL isDashboard mbMerchant (personId, _) req@DriverDLReq {..} = do
+verifyDL isDashboard mbMerchant (personId, _, merchantOperatingCityId) req@DriverDLReq {..} = do
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -117,7 +119,7 @@ verifyDL isDashboard mbMerchant (personId, _) req@DriverDLReq {..} = do
       image1 <- getImage imageId1
       image2 <- getImage `mapM` imageId2
       resp <-
-        Verification.extractDLImage person.merchantId $
+        Verification.extractDLImage merchantOperatingCityId $
           Verification.ExtractImageReq {image1, image2, driverId = person.id.getId}
       case resp.extractedDL of
         Just extractedDL -> do
@@ -153,12 +155,13 @@ verifyDL isDashboard mbMerchant (personId, _) req@DriverDLReq {..} = do
 verifyDLFlow :: Person.Person -> OnboardingDocumentConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Flow ()
 verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue = do
   now <- getCurrentTime
+  merchantOperatingCity <- SMOC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantId.getId)
   let imageExtractionValidation =
         if isNothing dateOfIssue && onboardingDocumentConfig.checkExtraction
           then Domain.Success
           else Domain.Skipped
   verifyRes <-
-    Verification.verifyDLAsync person.merchantId $
+    Verification.verifyDLAsync merchantOperatingCity.id $
       Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId}
   encryptedDL <- encrypt dlNumber
   idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedDL
@@ -300,6 +303,7 @@ cacheExtractedDl personId extractedDL operatingCity = do
 
 dlNotFoundFallback :: UTCTime -> (Text, Text) -> UTCTime -> Domain.IdfyVerification -> Person.Person -> Flow AckResponse
 dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq person = do
+  merchantOperatingCity <- SMOC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantId.getId)
   let dlreq =
         DriverDLReq
           { driverLicenseNumber = extractedDL,
@@ -309,5 +313,5 @@ dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq pe
             imageId2 = verificationReq.documentImageId2,
             dateOfIssue = Just issueDate
           }
-  void $ verifyDL False Nothing (person.id, person.merchantId) dlreq
+  void $ verifyDL False Nothing (person.id, person.merchantId, merchantOperatingCity.id) dlreq
   return Ack

@@ -27,10 +27,12 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (Forkable (fork), Money, withFlowHandlerAPI)
+import Kernel.Utils.Common (Forkable (fork), Money, fromMaybeM, withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 
 type API =
   "ride"
@@ -111,25 +113,27 @@ multipleRideEnd merchantShortId Common.MultipleRideEndReq {rides} = do
 rideCancel :: ShortId DM.Merchant -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
 rideCancel merchantShortId reqRideId Common.CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let dashboardReq =
         CHandler.CancelRideReq
           { reasonCode = coerce @Common.CancellationReasonCode @DCReason.CancellationReasonCode reasonCode,
             additionalInfo
           }
-  CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id rideId dashboardReq
+  CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOperatingCity.id rideId dashboardReq
 
 cancelMultipleRide :: ShortId DM.Merchant -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
 cancelMultipleRide merchantShortId reqRideId Common.CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
   fork "multipleRideCancel - BPP Side" $ do
     merchant <- findMerchantByShortId merchantShortId
+    merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
     let rideId = cast @Common.Ride @DRide.Ride reqRideId
     let dashboardReq =
           CHandler.CancelRideReq
             { reasonCode = coerce @Common.CancellationReasonCode @DCReason.CancellationReasonCode reasonCode,
               additionalInfo
             }
-    void $ CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id rideId dashboardReq
+    void $ CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOperatingCity.id rideId dashboardReq
   return Success
 
 multipleRideCancel :: ShortId DM.Merchant -> Common.MultipleRideCancelReq -> FlowHandler APISuccess

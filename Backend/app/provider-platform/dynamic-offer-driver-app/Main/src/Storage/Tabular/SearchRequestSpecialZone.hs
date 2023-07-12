@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Merchant.MerchantOperatingCity (MerchantOperatingCityTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 
@@ -42,6 +43,7 @@ mkPersist
       startTime UTCTime
       validTill UTCTime
       providerId MerchantTId
+      merchantOperatingCityId MerchantOperatingCityTId Maybe
       fromLocationId SearchReqLocationTId
       toLocationId SearchReqLocationTId
       area FareProductD.Area Maybe
@@ -70,6 +72,7 @@ instance FromTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLoca
       Domain.SearchRequestSpecialZone
         { id = Id id,
           providerId = fromKey providerId,
+          merchantOperatingCityId = fromKey <$> merchantOperatingCityId,
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
@@ -81,6 +84,7 @@ instance ToTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocati
     ( SearchRequestSpecialZoneT
         { id = getId id,
           providerId = toKey providerId,
+          merchantOperatingCityId = toKey <$> merchantOperatingCityId,
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,

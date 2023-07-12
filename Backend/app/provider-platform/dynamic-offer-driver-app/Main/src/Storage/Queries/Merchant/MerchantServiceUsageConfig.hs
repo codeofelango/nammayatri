@@ -19,7 +19,7 @@ module Storage.Queries.Merchant.MerchantServiceUsageConfig
     #-}
 where
 
-import Domain.Types.Merchant as DOrg
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Merchant.MerchantServiceUsageConfig
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
@@ -28,12 +28,12 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Merchant.MerchantServiceUsageConfig
 
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
-findByMerchantId orgId =
+findByMerchantId :: Transactionable m => Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantId merchanOperatingCityId =
   Esq.findOne $ do
     orgMapsCfg <- from $ table @MerchantServiceUsageConfigT
     where_ $
-      orgMapsCfg ^. MerchantServiceUsageConfigTId ==. val (toKey orgId)
+      orgMapsCfg ^. MerchantServiceUsageConfigTId ==. val (toKey merchanOperatingCityId)
     return orgMapsCfg
 
 updateMerchantServiceUsageConfig ::
@@ -55,4 +55,4 @@ updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
         MerchantServiceUsageConfigUpdatedAt =. val now
       ]
     where_ $
-      tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantId)
+      tbl ^. MerchantServiceUsageConfigTId ==. val (toKey merchantOperatingCityId)

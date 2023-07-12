@@ -23,6 +23,7 @@ import qualified Data.Geohash as DG
 import Data.Text (pack)
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -33,12 +34,14 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.CacheConfig as SCC
 import qualified Storage.CachedQueries.Maps.PlaceNameCache as CM
 import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
 getPlaceName :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
 getPlaceName merchantId req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
   case req.getBy of
     MIT.ByLatLong (Maps.LatLong lat lon) -> do
       let myGeohash = DG.encode merchant.geoHashPrecisionValue (lat, lon)
@@ -46,18 +49,18 @@ getPlaceName merchantId req = do
         Just geoHash -> do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
           if null placeNameCache
-            then callMapsApi merchantId req merchant.geoHashPrecisionValue
+            then callMapsApi merchantOperatingCity.id req merchant.geoHashPrecisionValue
             else pure $ map convertToGetPlaceNameResp placeNameCache
-        Nothing -> callMapsApi merchantId req merchant.geoHashPrecisionValue
+        Nothing -> callMapsApi merchantOperatingCity.id req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
       if null placeNameCache
-        then callMapsApi merchantId req merchant.geoHashPrecisionValue
+        then callMapsApi merchantOperatingCity.id req merchant.geoHashPrecisionValue
         else pure $ map convertToGetPlaceNameResp placeNameCache
 
-callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
-callMapsApi merchantId req geoHashPrecisionValue = do
-  res <- Maps.getPlaceName merchantId req
+callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
+callMapsApi merchantOperatingCityId req geoHashPrecisionValue = do
+  res <- Maps.getPlaceName merchantOperatingCityId req
   let firstElement = listToMaybe res
   case firstElement of
     Just element -> do

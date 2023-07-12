@@ -93,7 +93,8 @@ initiateCallToCustomer rideId = do
             toPhoneNum = customerPhone,
             attachments = Attachments $ CallAttachments {callStatusId = callStatusId, rideId = rideId}
           }
-  exotelResponse <- initiateCall booking.providerId callReq
+  let merchantOperatingCityId = fromMaybe "" booking.merchantOperatingCityId
+  exotelResponse <- initiateCall merchantOperatingCityId callReq
   logTagInfo ("RideId: " <> getId rideId) "Call initiated from driver to customer."
   callStatus <- buildCallStatus callStatusId exotelResponse
   runTransaction $ QCallStatus.create callStatus

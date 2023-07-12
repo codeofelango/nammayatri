@@ -36,8 +36,11 @@ import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Tools.AadhaarVerification as AadhaarVerification
 
@@ -65,10 +68,11 @@ mapImageType Common.VehicleRegistrationCertificate = Domain.VehicleRegistrationC
 uploadDocument :: ShortId DM.Merchant -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 uploadDocument merchantShortId driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
   res <-
     validateImage
       True
-      (cast driverId_, cast merchant.id)
+      (cast driverId_, cast merchant.id, cast merchantOperatingCity.id)
       ImageValidateRequest
         { image = req.imageBase64,
           imageType = mapImageType req.imageType
@@ -78,10 +82,11 @@ uploadDocument merchantShortId driverId_ req = do
 registerDL :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 registerDL merchantShortId driverId_ Common.RegisterDLReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
   verifyDL
     True
     (Just merchant)
-    (cast driverId_, cast merchant.id)
+    (cast driverId_, cast merchant.id, cast merchantOperatingCity.id)
     DriverDLReq
       { imageId1 = cast imageId1,
         imageId2 = fmap cast imageId2,
@@ -91,10 +96,11 @@ registerDL merchantShortId driverId_ Common.RegisterDLReq {..} = do
 registerRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterRCReq -> Flow APISuccess
 registerRC merchantShortId driverId_ Common.RegisterRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
   verifyRC
     True
     (Just merchant)
-    (cast driverId_, cast merchant.id)
+    (cast driverId_, cast merchant.id, cast merchantOperatingCity.id)
     DriverRCReq
       { imageId = cast imageId,
         ..
@@ -103,11 +109,13 @@ registerRC merchantShortId driverId_ Common.RegisterRCReq {..} = do
 generateAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> Flow Common.GenerateAadhaarOtpRes
 generateAadhaarOtp merchantShortId driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
   res <-
     AV.generateAadhaarOtp
       True
       (Just merchant)
       (cast driverId_)
+      (cast merchantOperatingCity.id)
       AadhaarVerification.AadhaarOtpReq
         { aadhaarNumber = req.aadhaarNumber,
           consent = req.consent
@@ -117,10 +125,12 @@ generateAadhaarOtp merchantShortId driverId_ req = do
 verifyAadhaarOtp :: ShortId DM.Merchant -> Id Common.Driver -> Common.VerifyAadhaarOtpReq -> Flow Common.VerifyAadhaarOtpRes
 verifyAadhaarOtp merchantShortId driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
   res <-
     AV.verifyAadhaarOtp
       (Just merchant)
       (cast driverId_)
+      (cast merchantOperatingCity.id)
       AV.VerifyAadhaarOtpReq
         { otp = req.otp,
           shareCode = req.shareCode

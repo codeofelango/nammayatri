@@ -29,6 +29,7 @@ import Data.OpenApi hiding (info, url)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
@@ -56,6 +57,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -67,10 +69,13 @@ import Tools.Metrics
 import Tools.SMS as Sms hiding (Success)
 import Tools.Whatsapp as Whatsapp
 
+-- import Storage.Tabular.Merchant.MerchantOperatingCity (EntityField(MerchantOperatingCityId))
+
 data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
-    merchantId :: Text
+    merchantId :: Text,
+    city :: DMOC.City
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -136,6 +141,7 @@ auth req mbBundleVersion mbClientVersion = do
   merchant <-
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchantOperatingCity <- SMOC.findByMerchantIdAndCity merchant.id req.city >>= fromMaybeM (InvalidRequest "MerchantOperatingCity Not Found")
   person <-
     QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
       >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id) return
@@ -144,7 +150,8 @@ auth req mbBundleVersion mbClientVersion = do
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
-  token <- makeSession scfg entityId mkId SR.USER (show <$> useFakeOtpM)
+      id = getId merchantOperatingCity.id
+  token <- makeSession scfg entityId mkId id SR.USER (show <$> useFakeOtpM)
   Esq.runTransaction do
     QR.create token
     QP.updatePersonVersions person mbBundleVersion mbClientVersion
@@ -160,7 +167,7 @@ auth req mbBundleVersion mbClientVersion = do
             { otp = otpCode,
               hash = otpHash
             }
-      Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+      Sms.sendSMS merchantOperatingCity.id (Sms.SendSMSReq message phoneNumber sender)
         >>= Sms.checkSmsResult
   let attempts = SR.attempts token
       authId = SR.id token
@@ -238,10 +245,11 @@ makeSession ::
   SmsSessionConfig ->
   Text ->
   Text ->
+  Text ->
   SR.RTEntityType ->
   Maybe Text ->
   m SR.RegistrationToken
-makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
+makeSession SmsSessionConfig {..} entityId merchantId merchantOperatingCityId entityType fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- generateGUID
   token <- generateGUID
@@ -260,6 +268,7 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp = do
         tokenExpiry = tokenExpiry,
         entityId = entityId,
         merchantId = merchantId,
+        merchantOperatingCityId,
         entityType = entityType,
         createdAt = now,
         updatedAt = now,
@@ -323,7 +332,7 @@ verify tokenId req = do
     fork "whatsapp_opt_api_call" $ do
       case decPerson.mobileNumber of
         Nothing -> throwError $ AuthBlocked "Mobile Number is null"
-        Just mobileNo -> callWhatsappOptApi mobileNo person.merchantId person.id req.whatsappNotificationEnroll
+        Just mobileNo -> callWhatsappOptApi mobileNo (Id merchantOperatingCityId) person.id req.whatsappNotificationEnroll
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthVerifyRes token personAPIEntity
   where
@@ -338,13 +347,13 @@ callWhatsappOptApi ::
     CacheFlow m r
   ) =>
   Text ->
-  Id DO.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   Id SP.Person ->
   Maybe Whatsapp.OptApiMethods ->
   m ()
-callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
+callWhatsappOptApi mobileNo merchantOperatingCityId personId hasOptedIn = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
-  void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
+  void $ Whatsapp.whatsAppOptAPI merchantOperatingCityId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   DB.runTransaction $
     QP.updateWhatsappNotificationEnrollStatus personId $ Just status
 
@@ -383,7 +392,7 @@ resend tokenId = do
           { otp = otpCode,
             hash = otpHash
           }
-    Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
+    Sms.sendSMS (Id merchantOperatingCityId) (Sms.SendSMSReq message phoneNumber sender)
       >>= Sms.checkSmsResult
   Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
@@ -400,9 +409,9 @@ logout ::
     CacheFlow m r,
     Redis.HedisFlow m r
   ) =>
-  (Id SP.Person, Id DO.Merchant) ->
+  (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
-logout (personId, _) = do
+logout (personId, _, _) = do
   cleanCachedTokens personId
   uperson <-
     QP.findById personId

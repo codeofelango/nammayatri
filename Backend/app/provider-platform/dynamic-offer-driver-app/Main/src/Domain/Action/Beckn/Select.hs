@@ -25,6 +25,7 @@ import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Environment
@@ -102,7 +103,7 @@ handler merchant sReq estimate = do
           pureEstimatedFare = pureFareSum fareParams
       searchTry <- case mbLastSearchTry of
         Nothing -> do
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration 0 DST.INITIAL
+          searchTry <- buildSearchTry merchant.id searchReq.merchantOperatingCityId searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration 0 DST.INITIAL
           Esq.runTransaction $ do
             QST.create searchTry
           return searchTry
@@ -111,7 +112,7 @@ handler merchant sReq estimate = do
           -- hack check, i think we should store whole breakup instead of  single baseFare value
           unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
             throwError SearchTryEstimatedFareChanged
-          searchTry <- buildSearchTry merchant.id searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
+          searchTry <- buildSearchTry merchant.id searchReq.merchantOperatingCityId searchReq.id estimate sReq estimatedFare searchReq.estimatedDistance searchReq.estimatedDuration (oldSearchTry.searchRepeatCounter + 1) searchRepeatType
           Esq.runTransaction $ do
             when (oldSearchTry.status == DST.ACTIVE) $ do
               QST.updateStatus oldSearchTry.id DST.CANCELLED
@@ -137,6 +138,7 @@ buildSearchTry ::
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   Id DM.Merchant ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
   Id DSR.SearchRequest ->
   DEst.Estimate ->
   DSelectReq ->
@@ -146,7 +148,7 @@ buildSearchTry ::
   Int ->
   DST.SearchRepeatType ->
   m DST.SearchTry
-buildSearchTry merchantId searchReqId estimate sReq baseFare distance duration searchRepeatCounter searchRepeatType = do
+buildSearchTry merchantId merchantOperatingCityId searchReqId estimate sReq baseFare distance duration searchRepeatCounter searchRepeatType = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -158,6 +160,7 @@ buildSearchTry merchantId searchReqId estimate sReq baseFare distance duration s
         requestId = searchReqId,
         estimateId = estimate.id,
         merchantId = Just merchantId,
+        merchantOperatingCityId = merchantOperatingCityId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
         validTill = validTill_,

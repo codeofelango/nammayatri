@@ -23,7 +23,7 @@ module Tools.Verification
   )
 where
 
-import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Kernel.External.Verification as Reexport hiding
   ( extractDLImage,
@@ -49,7 +49,7 @@ verifyDLAsync ::
     EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   VerifyDLAsyncReq ->
   m VerifyDLAsyncResp
 verifyDLAsync = runWithServiceConfig Verification.verifyDLAsync
@@ -60,7 +60,7 @@ verifyRCAsync ::
     EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   VerifyRCAsyncReq ->
   m VerifyRCAsyncResp
 verifyRCAsync = runWithServiceConfig Verification.verifyRCAsync
@@ -71,7 +71,7 @@ validateImage ::
     EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   ValidateImageReq ->
   m ValidateImageResp
 validateImage = runWithServiceConfig Verification.validateImage
@@ -82,7 +82,7 @@ extractRCImage ::
     EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   ExtractRCImageReq ->
   m ExtractRCImageResp
 extractRCImage = runWithServiceConfig Verification.extractRCImage
@@ -93,7 +93,7 @@ extractDLImage ::
     EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   ExtractDLImageReq ->
   m ExtractDLImageResp
 extractDLImage = runWithServiceConfig Verification.extractDLImage
@@ -112,16 +112,16 @@ extractDLImage = runWithServiceConfig Verification.extractDLImage
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
   (VerificationServiceConfig -> req -> m resp) ->
-  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func merchantId req = do
+runWithServiceConfig func merchantOperatingCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantId merchantId
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+    CQMSUC.findByMerchantId merchantOperatingCityId
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (DMSC.VerificationService merchantServiceUsageConfig.verificationService)
-      >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantId.getId)
+    CQMSC.findByMerchantIdAndService merchantOperatingCityId (DMSC.VerificationService merchantServiceUsageConfig.verificationService)
+      >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantId:" <> merchantOperatingCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> func vsc req
     _ -> throwError $ InternalError "Unknown Service Config"

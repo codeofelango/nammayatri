@@ -35,6 +35,7 @@ import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as ODC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Vehicle as Vehicle
@@ -52,6 +53,7 @@ import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as SCO
 import Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
@@ -83,10 +85,10 @@ validateDriverRCReq rcNumberPrefix DriverRCReq {..} =
 verifyRC ::
   Bool ->
   Maybe DM.Merchant ->
-  (Id Person.Person, Id DM.Merchant) ->
+  (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverRCReq ->
   Flow DriverRCRes
-verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
+verifyRC isDashboard mbMerchant (personId, _, merchantOperatingCityId) req@DriverRCReq {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   onboardingDocumentConfig <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
   runRequestValidation (validateDriverRCReq onboardingDocumentConfig.rcNumberPrefix) req
@@ -108,7 +110,7 @@ verifyRC isDashboard mbMerchant (personId, _) req@DriverRCReq {..} = do
     $ do
       image <- getImage imageId
       resp <-
-        Verification.extractRCImage person.merchantId $
+        Verification.extractRCImage merchantOperatingCityId $
           Verification.ExtractImageReq {image1 = image, image2 = Nothing, driverId = person.id.getId}
       case resp.extractedRC of
         Just extractedRC -> do
@@ -158,8 +160,9 @@ verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration = do
         if isNothing dateOfRegistration && imageExtraction
           then Domain.Success
           else Domain.Skipped
+  merchantOperatingCity <- SMOC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantId.getId)
   verifyRes <-
-    Verification.verifyRCAsync person.merchantId $
+    Verification.verifyRCAsync merchantOperatingCity.id $
       Verification.VerifyRCAsyncReq {rcNumber = rcNumber, driverId = person.id.getId}
   idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedRC
   runTransaction $ IVQuery.create idfyVerificationEntity

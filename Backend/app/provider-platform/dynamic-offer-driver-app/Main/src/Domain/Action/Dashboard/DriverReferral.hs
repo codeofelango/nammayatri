@@ -38,6 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import Tools.Error
 
@@ -70,6 +71,7 @@ linkDriverReferralCode ::
   Flow Common.LinkReport
 linkDriverReferralCode merchantShortId Common.ReferralLinkReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOperatingCity <- SMOC.findByMerchantId merchant.id >>= fromMaybeM (MerchantOperatingCityNotFound merchant.id.getId)
   csvData <- L.runIO $ BS.readFile file
   dIdRefIdMap <-
     case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CSVRow)) of
@@ -78,7 +80,7 @@ linkDriverReferralCode merchantShortId Common.ReferralLinkReq {..} = do
   linkingResult <-
     mapM
       ( \(CSVRow dId refId) -> do
-          linkingRes <- try @_ @SomeException (createDriverReferral (dId, merchant.id) True (mkRefLinkReq refId))
+          linkingRes <- try @_ @SomeException (createDriverReferral (dId, merchant.id, merchantOperatingCity.id) True (mkRefLinkReq refId))
           pure (dId, linkingRes)
       )
       dIdRefIdMap
