@@ -24,6 +24,7 @@ library
       API
       API.Beckn
       API.Beckn.Cancel
+      API.Beckn.CancellationReasons
       API.Beckn.Confirm
       API.Beckn.Init
       API.Beckn.Rating
@@ -72,6 +73,7 @@ library
       App
       App.Server
       Beckn.ACL.Cancel
+      Beckn.ACL.CancellationReasons
       Beckn.ACL.Common
       Beckn.ACL.Confirm
       Beckn.ACL.Init
@@ -90,6 +92,7 @@ library
       Beckn.ACL.Update
       Beckn.Core
       Domain.Action.Beckn.Cancel
+      Domain.Action.Beckn.CancellationReason
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
       Domain.Action.Beckn.Rating
@@ -111,7 +114,6 @@ library
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
-      Domain.Action.UI.CancellationReason
       Domain.Action.UI.Driver
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense
@@ -152,7 +154,6 @@ library
       Domain.Types.BookingCancellationReason
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
-      Domain.Types.CancellationReason
       Domain.Types.Common
       Domain.Types.Driver.DriverFlowStatus
       Domain.Types.DriverFee

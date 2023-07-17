@@ -14,7 +14,7 @@
 
 module Storage.Queries.CancellationReason where
 
-import Domain.Types.CancellationReason hiding (priority)
+import Beckn.Types.Core.Taxi.CancellationReasons.Types hiding (priority)
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
 import Storage.Tabular.CancellationReason

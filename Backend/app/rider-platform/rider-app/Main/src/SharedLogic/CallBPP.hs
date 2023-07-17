@@ -18,6 +18,7 @@ module SharedLogic.CallBPP where
 import qualified Beckn.ACL.Track as TrackACL
 import qualified Beckn.Types.Core.Metro.API.Search as MigAPI
 import Beckn.Types.Core.Taxi.API.Cancel as API
+import qualified Beckn.Types.Core.Taxi.API.CancellationReasons as API
 import Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Init as API
 import Beckn.Types.Core.Taxi.API.Rating as API
@@ -26,6 +27,7 @@ import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Status as API
 import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
+import Beckn.Types.Core.Taxi.CancellationReasons.Types
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
 import qualified EulerHS.Types as Euler
@@ -109,6 +111,16 @@ update ::
   UpdateReq ->
   m UpdateRes
 update providerUrl req = callBecknAPIWithSignature req.context.bap_id "update" API.updateAPI providerUrl req
+
+cancellationReasons ::
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
+  Text ->
+  BaseUrl ->
+  CancellationReasonsReq ->
+  m CancellationReasons
+cancellationReasons bapId = callBecknAPIWithSignature bapId "get_cancellation_reasons" API.cancellationReasonsAPI
 
 callTrack ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

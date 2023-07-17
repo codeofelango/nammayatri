@@ -21,6 +21,7 @@ module API.UI.Booking
   )
 where
 
+import Beckn.Types.Core.Taxi.CancellationReasons.Types
 import qualified Domain.Action.UI.Booking as DBooking
 import Domain.Types.Booking (BookingAPIEntity)
 import qualified Domain.Types.Booking as SRB
@@ -38,6 +39,10 @@ type API =
     :> ( Capture "rideBookingId" (Id SRB.Booking)
            :> TokenAuth
            :> Post '[JSON] BookingAPIEntity
+           :<|> Capture "rideBookingId" (Id SRB.Booking)
+             :> "cancellationReasons"
+             :> TokenAuth
+             :> Get '[JSON] CancellationReasonsRes
            :<|> "list"
              :> TokenAuth
              :> QueryParam "limit" Integer
@@ -50,6 +55,7 @@ type API =
 handler :: FlowServer API
 handler =
   bookingStatus
+    :<|> bookingCancellationReasons
     :<|> bookingList
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler BookingAPIEntity
@@ -57,3 +63,6 @@ bookingStatus bookingId = withFlowHandlerAPI . DBooking.bookingStatus bookingId
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
 bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive
+
+bookingCancellationReasons :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler CancellationReasonsRes
+bookingCancellationReasons bookingId _ = withFlowHandlerAPI $ DBooking.getBookingCancellationReason bookingId

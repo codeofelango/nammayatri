@@ -12,16 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.CancellationReason
+module Domain.Action.Beckn.CancellationReason
   ( list,
+    getCancellationReasons,
   )
 where
 
-import qualified Domain.Types.CancellationReason as SCR
+import qualified Beckn.Types.Core.Taxi.CancellationReasons.Types as SCR
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Storage.Queries.CancellationReason as QCR
 
 list :: EsqDBReplicaFlow m r => m [SCR.CancellationReasonAPIEntity]
-list = fmap SCR.makeCancellationReasonAPIEntity <$> runInReplica QCR.findAll
+list = fmap SCR.makeCancellationReasonAPIEntity <$> getCancellationReasons
+
+getCancellationReasons :: EsqDBReplicaFlow m r => m [SCR.CancellationReason]
+getCancellationReasons = runInReplica QCR.findAll
