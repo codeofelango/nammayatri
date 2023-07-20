@@ -107,7 +107,7 @@ mkOnInitMessage res = do
                         value = fareDecimalValue,
                         offered_value = fareDecimalValue
                       },
-                  breakup = breakup_
+                  breakup = Just breakup_
                 },
             provider =
               res.driverId >>= \dId ->

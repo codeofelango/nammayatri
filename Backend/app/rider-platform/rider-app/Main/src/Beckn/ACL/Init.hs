@@ -57,7 +57,16 @@ buildInitMessage res = do
       { order =
           Init.Order
             { items = [mkOrderItem res.itemId mbBppFullfillmentId],
-              quote = Nothing,
+              quote =
+                Init.Quote
+                  { price =
+                      Init.QuotePrice
+                        { value = fromIntegral res.booking.estimatedFare,
+                          offered_value = fromIntegral res.booking.estimatedTotalFare,
+                          currency = "INR"
+                        },
+                    breakup = Nothing
+                  },
               billing = mkBilling res.riderPhone res.riderName,
               fulfillment = mkFulfillmentInfo fulfillmentType mbBppFullfillmentId res.fromLoc res.toLoc res.maxEstimatedDistance vehicleVariant,
               payment = mkPayment res.paymentMethodInfo,
