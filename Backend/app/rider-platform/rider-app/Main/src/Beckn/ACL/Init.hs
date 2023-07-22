@@ -170,7 +170,7 @@ mkPayment (Just DMPM.PaymentMethodInfo {..}) =
     { _type = Common.castDPaymentType paymentType,
       params =
         Init.PaymentParams
-          { collected_by = Common.castDPaymentCollector collectedBy,
+          { collected_by = Init.BPP, --Common.castDPaymentCollector collectedBy,
             instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
             currency = "INR",
             amount = Nothing
@@ -183,7 +183,7 @@ mkPayment Nothing =
     { _type = Init.ON_FULFILLMENT,
       params =
         Init.PaymentParams
-          { collected_by = Init.BAP,
+          { collected_by = Init.BPP,
             instrument = Nothing,
             currency = "INR",
             amount = Nothing
