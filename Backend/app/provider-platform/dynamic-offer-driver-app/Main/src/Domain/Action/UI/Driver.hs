@@ -503,7 +503,7 @@ setActivity (personId, _) isActive mode = do
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   QDriverInformation.updateActivity driverId isActive mode
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
-  logInfo $ "driverStatus " <> show driverStatus
+  logDebug $ "driverStatus " <> show driverStatus
   unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE, DDFS.SILENT]) $ do
     Esq.runNoTransaction $ QDFS.updateStatus personId (DMode.getDriverStatus mode isActive)
   pure APISuccess.Success
@@ -1069,7 +1069,7 @@ validate (personId, _) phoneNumber = do
     Just oldPerson -> do
       when (oldPerson.id == person.id) $ throwError $ InvalidRequest "Alternate number already linked"
       DeleteDriverOnCheck.validateDriver merchant oldPerson
-  logDebug $ "Delete Driver Check" <> show deleteOldPersonCheck
+  logInfo $ "Delete Driver Check" <> show deleteOldPersonCheck
   when deleteOldPersonCheck $ throwError $ InvalidRequest "Alternate number can't be validated"
   smsCfg <- asks (.smsCfg)
   let useFakeOtpM = useFakeSms smsCfg
