@@ -162,8 +162,8 @@ getInProgressOrNewRideIdAndStatusByDriverId driverId = do
     pure (ride ^. RideId, ride ^. RideStatus)
   pure $ first Id <$> mbTuple
 
-getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getActiveByDriverId driverId = Esq.findOne $ do
+findActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
+findActiveByDriverId driverId = Esq.findOne $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
@@ -249,8 +249,9 @@ updateAll rideId ride = do
         RideFareParametersId =. val (toKey <$> ride.fareParametersId),
         RideDistanceCalculationFailed =. val ride.distanceCalculationFailed,
         RidePickupDropOutsideOfThreshold =. val ride.pickupDropOutsideOfThreshold,
-        RideUpdatedAt =. val now,
-        RideNumberOfDeviation =. val ride.numberOfDeviation
+        RideNumberOfDeviation =. val ride.numberOfDeviation,
+        RideRouteDeviated =. val ride.routeDeviated,
+        RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 

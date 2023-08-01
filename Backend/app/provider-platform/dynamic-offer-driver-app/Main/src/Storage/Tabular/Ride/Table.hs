@@ -59,6 +59,7 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
       numberOfDeviation Bool Maybe
+      routeDeviated Bool Maybe
       Primary id
       deriving Generic
     |]

@@ -15,6 +15,7 @@
 module API.UI.Ride
   ( StartRideReq (..),
     EndRideReq (..),
+    EndRide2Req (..),
     CancelRideReq (..),
     DRide.DriverRideListRes (..),
     DRide.DriverRideRes (..),
@@ -38,7 +39,7 @@ import Environment
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
-import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
@@ -67,6 +68,10 @@ type API =
                     :> Get '[JSON] DRide.DriverRideListRes
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
+                    :> "status"
+                    :> Get '[JSON] DRide.DriverRideRes
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
                     :> "arrived"
                     :> "pickup"
                     :> ReqBody '[JSON] LatLong
@@ -80,6 +85,11 @@ type API =
                     :> Capture "rideId" (Id Ride.Ride)
                     :> "end"
                     :> ReqBody '[JSON] EndRideReq
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "end2"
+                    :> ReqBody '[JSON] EndRide2Req
                     :> Post '[JSON] APISuccess
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
@@ -101,6 +111,12 @@ data EndRideReq = EndRideReq
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+data EndRide2Req = EndRide2Req
+  { point :: LatLong,
+    routeDeviated :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
     additionalInfo :: Maybe Text
@@ -111,9 +127,11 @@ handler :: FlowServer API
 handler =
   otpRideCreateAndStart
     :<|> ( listDriverRides
+             :<|> rideStatus
              :<|> arrivedAtPickup
              :<|> startRide
              :<|> endRide
+             :<|> endRide2
              :<|> cancelRide
          )
 
@@ -139,14 +157,30 @@ otpRideCreateAndStart (requestorId, merchantId) req@DRide.OTPRideReq {..} = with
 endRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRideReq -> FlowHandler APISuccess
 endRide (requestorId, merchantId) rideId EndRideReq {point, numberOfDeviation} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  let driverReq = RideEnd.DriverEndRideReq {point, requestor, numberOfDeviation}
+  let driverReq = RideEnd.DriverEndRideReq {point, requestor, numberOfDeviation, routeDeviated = True}
   shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
+  return Success
+
+endRide2 :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> EndRide2Req -> FlowHandler APISuccess
+endRide2 (requestorId, merchantId) rideId EndRide2Req {..} = withFlowHandlerAPI $ do
+  requestor <- findPerson requestorId
+  let driverReq = RideEnd.DriverEndRideReq {numberOfDeviation = Nothing, ..}
+  shandle <- RideEnd.buildEndRideHandle merchantId
+  fork "End ride processing" $
+    RideEnd.driverEndRide shandle rideId driverReq
+  return Success
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant) -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess
 cancelRide (personId, _) rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
   let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo}
   RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle personId rideId driverReq
+
+rideStatus ::
+  (Id SP.Person, Id Merchant.Merchant) ->
+  Id Ride.Ride ->
+  FlowHandler DRide.DriverRideRes
+rideStatus (driverId, _) rideId = withFlowHandlerAPI $ DRide.rideStatus driverId rideId
 
 listDriverRides ::
   (Id SP.Person, Id Merchant.Merchant) ->

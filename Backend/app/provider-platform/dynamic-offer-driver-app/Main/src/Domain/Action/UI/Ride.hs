@@ -17,6 +17,7 @@ module Domain.Action.UI.Ride
   ( DriverRideRes (..),
     DriverRideListRes (..),
     OTPRideReq (..),
+    rideStatus,
     listDriverRides,
     arrivedAtPickup,
     otpRideCreate,
@@ -120,6 +121,22 @@ newtype DriverRideListRes = DriverRideListRes
   { list :: [DriverRideRes]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+rideStatus ::
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DP.Person ->
+  Id DRide.Ride ->
+  m DriverRideRes
+rideStatus driverId rideId = do
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (driverId == ride.driverId) $ throwError NotAnExecutor
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound $ ride.bookingId.getId)
+  rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+  rideRating <- runInReplica $ QR.findRatingForRide ride.id
+  driverNumber <- RD.getDriverNumber rideDetail
+  mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+  bapMetadata <- CQSM.findById (Id booking.bapId)
+  pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata
 
 listDriverRides ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -291,9 +308,10 @@ otpRideCreate driver otpCode booking = do
             tripEndPos = Nothing,
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
+            numberOfDeviation = Nothing,
+            routeDeviated = Nothing,
             createdAt = now,
-            updatedAt = now,
-            numberOfDeviation = Nothing
+            updatedAt = now
           }
 
     buildTrackingUrl rideId = do
