@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.ride ADD COLUMN safety_alert_count Int DEFAULT 0;
