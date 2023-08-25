@@ -14,21 +14,26 @@
 
 module Domain.Action.UI.Support
   ( SendIssueReq (..),
+    RiderBookingId (..),
     SendIssueRes,
     sendIssue,
     callbackRequest,
+    askSupport,
   )
 where
 
 import Data.OpenApi (ToSchema)
+import Domain.Types.Booking (Booking)
 import qualified Domain.Types.CallbackRequest as DCallback
 import qualified Domain.Types.Issue as DIssue
 import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -40,12 +45,18 @@ import Kernel.Utils.Validation
 import qualified Storage.Queries.CallbackRequest as QCallback
 import qualified Storage.Queries.Issues as Queries
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Ride as QRide
+import Tools.Metrics (CoreMetrics)
 import Tools.Ticket
 
 data Issue = Issue
   { reason :: Text,
     description :: Text
   }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+newtype RiderBookingId = RiderBookingId
+  {bookingId :: Id Booking}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 validateIssue :: Validate Issue
@@ -80,6 +91,43 @@ sendIssue personId request = do
   ticketResponse <- createTicket person.merchantId (mkTicket newIssue person phoneNumber)
   Queries.updateTicketId newIssue.id ticketResponse.ticketId
   return Success
+
+askSupport :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> RiderBookingId -> m SendIssueRes
+askSupport personId req = do
+  ride <- runInReplica $ QRide.findActiveByRBId req.bookingId >>= fromMaybeM (RideDoesNotExist "")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  phoneNumber <- mapM decrypt person.mobileNumber
+  void $ QRide.updateSafetyAlertCount ride.id ride.safetyAlertCount
+  _ <- createTicket person.merchantId (ticketReq ride person phoneNumber)
+  return Success
+  where
+    ticketReq ride person phoneNumber =
+      Ticket.CreateTicketReq
+        { category = "CODE_RED",
+          subCategory = Just "SAFETY_CHECK_ALERT",
+          issueId = Nothing,
+          issueDescription = "Please track and contact the rider using given url.",
+          mediaFiles = Just [show ride.trackingUrl],
+          name = Just (fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName),
+          phoneNo = phoneNumber,
+          personId = person.id.getId,
+          classification = Ticket.CUSTOMER,
+          rideDescription = Just $ rideInfo ride person phoneNumber
+        }
+    rideInfo ride person phoneNumber =
+      Ticket.RideInfo
+        { rideShortId = show ride.shortId,
+          customerName = Just (fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName),
+          customerPhoneNo = phoneNumber,
+          driverName = Just ride.driverName,
+          driverPhoneNo = Just ride.driverMobileNumber,
+          vehicleNo = ride.vehicleNumber,
+          status = show ride.status,
+          rideCreatedAt = ride.createdAt,
+          pickupLocation = "",
+          dropLocation = Nothing,
+          fare = Nothing
+        }
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue
 buildDBIssue (Id customerId) SendIssueReq {..} = do
