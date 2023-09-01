@@ -602,6 +602,8 @@ const bengaliStrings = {
   "NON_AC_TAXI": "কোন এসি ট্যাক্সি নেই",
   "GET_OTP_VIA_WHATSAPP" : "হোয়াটসঅ্যাপের মাধ্যমে ওটিপি পান",
   "OR" : "বা",
+  "WAITING_CHARGE_AFTER_3_MINUTES" : "প্রথম 3 মিনিটের জন্য ওয়েটিং চার্জ শূন্য। এর পরে অপেক্ষার সময় প্রতি মিনিটের জন্য আপনাকে ₹1 চার্জ করা হবে",
+  "WAITING_CHARGES" : "ওয়েটিং চার্জ",
   "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(ড্রাইভার নিশ্চিত করতে সাহায্য করে যে এটি আপনিই)",
   "LETS_GET_YOU_TRIP_READY" : "চলুন আপনাকে ভ্রমণের জন্য প্রস্তুত করি!",
   "GOT_AN_OTP" : "একটি OTP পেয়েছেন?",

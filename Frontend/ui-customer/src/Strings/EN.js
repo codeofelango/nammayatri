@@ -585,6 +585,8 @@ const englishStrings = {
   "NON_AC_TAXI" : "Non AC Taxi",
   "GET_OTP_VIA_WHATSAPP" : "Get OTP via WhatsApp",
   "OR" : "Or",
+  "WAITING_CHARGE_AFTER_3_MINUTES" : "Waiting charge is zero for the first 3 minutes. You will be charged for ₹1.per minute of wait time after that",
+  "WAITING_CHARGES" : "Waiting Charges",
   "HELPS_DRIVER_CONFIRM_ITS_YOU" : "(Helps driver confirm it is you)",
   "LETS_GET_YOU_TRIP_READY" : "Let’s get you trip-ready!", 
   "GOT_AN_OTP" : "Got an OTP?",
