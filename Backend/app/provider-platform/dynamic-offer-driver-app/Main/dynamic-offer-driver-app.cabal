@@ -52,6 +52,7 @@ library
       API.UI
       API.UI.Call
       API.UI.CancellationReason
+      API.UI.DisabilityType
       API.UI.Driver
       API.UI.DriverOnboarding
       API.UI.DriverProfileSummary
@@ -122,6 +123,7 @@ library
       Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
       Domain.Action.UI.CancellationReason
+      Domain.Action.UI.DisabilityType
       Domain.Action.UI.Driver
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense
@@ -168,6 +170,7 @@ library
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
       Domain.Types.Common
+      Domain.Types.DisabilityType
       Domain.Types.Driver.DriverFlowStatus
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
@@ -302,6 +305,7 @@ library
       Storage.Beam.CallStatus
       Storage.Beam.CancellationReason
       Storage.Beam.Common
+      Storage.Beam.DisabilityType
       Storage.Beam.Driver.DriverFlowStatus
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
@@ -383,6 +387,7 @@ library
       Storage.Beam.SearchTry
       Storage.Beam.Vehicle
       Storage.CachedQueries.BapMetadata
+      Storage.CachedQueries.DisabilityType
       Storage.CachedQueries.Driver.GoHomeRequest
       Storage.CachedQueries.DriverBlockReason
       Storage.CachedQueries.Exophone
@@ -418,6 +423,7 @@ library
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
       Storage.Queries.CancellationReason
+      Storage.Queries.DisabilityType
       Storage.Queries.Driver.DriverFlowStatus
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
