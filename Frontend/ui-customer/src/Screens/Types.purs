@@ -694,6 +694,7 @@ type HomeScreenStateProps =
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
   , showDisabilityPopUp :: Boolean
+  , isOffline :: Boolean
   }
 
 type RouteEndPoints = {
@@ -958,6 +959,7 @@ type DriverInfoCard =
   , initDistance :: Maybe Int
   , config :: AppConfig
   , vehicleVariant :: String
+  , isOffline :: Boolean
   }
 
 type RatingCard =
