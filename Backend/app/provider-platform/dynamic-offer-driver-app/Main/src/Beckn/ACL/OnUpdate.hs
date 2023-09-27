@@ -192,6 +192,7 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
           OnUpdate.RideStarted $
             RideStartedOU.RideStartedEvent
               { id = booking.id.getId,
+                state = "IN PROGRESS",
                 ..
               },
         update_target = "order.fufillment.state.code"
@@ -230,6 +231,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
           OnUpdate.RideCompleted
             RideCompletedOU.RideCompletedEvent
               { id = req.booking.id.getId,
+                state = "COMPLETED",
                 quote =
                   RideCompletedOU.RideCompletedQuote
                     { price,
@@ -244,7 +246,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                             { collected_by = maybe OnUpdate.BPP (Common.castDPaymentCollector . (.collectedBy)) req.paymentMethodInfo,
                               instrument = Nothing,
                               currency = "INR",
-                              amount = Nothing
+                              amount = realToFrac <$> req.ride.fare
                             },
                         uri = req.paymentUrl
                       },
