@@ -20,6 +20,7 @@ module Domain.Action.Beckn.Search
     handler,
     validateRequest,
     searchRequestKey,
+    multipleRouteKey,
   )
 where
 
@@ -88,7 +89,8 @@ data DSearchReq = DSearchReq
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
-    routePoints :: Maybe [LatLong]
+    routePoints :: Maybe [LatLong],
+    multipleRoutes :: Maybe [Maps.RouteInfo]
   }
 
 data SpecialZoneQuoteInfo = SpecialZoneQuoteInfo
@@ -248,6 +250,10 @@ handler merchant sReq = do
           let onlyFPWithDrivers = filter (\fp -> isJust (find (\dp -> dp.variant == fp.vehicleVariant) driverPool)) farePolicies
           searchReq <- buildSearchRequest sReq merchantId fromLocation toLocation result.distance result.duration specialLocationTag area
           Redis.setExp (searchRequestKey $ getId searchReq.id) routeInfo 3600
+          let allEstimatedRoutes = sReq.multipleRoutes
+          case allEstimatedRoutes of
+            Just routes -> Redis.setExp (multipleRouteKey $ getId searchReq.id) routes 3600
+            Nothing -> logInfo "No multiple routes found"
           estimates <- mapM (SHEst.buildEstimate searchReq.id sReq.pickupTime result.distance specialLocationTag) onlyFPWithDrivers
           triggerSearchEvent SearchEventData {searchRequest = Left searchReq, merchantId = merchantId}
 
@@ -475,3 +481,6 @@ isEmpty = maybe True (T.null . T.replace " " "")
 
 searchRequestKey :: Text -> Text
 searchRequestKey sId = "Driver:Search:Request:" <> sId
+
+multipleRouteKey :: Text -> Text
+multipleRouteKey id = "multiple-routes-" <> id
