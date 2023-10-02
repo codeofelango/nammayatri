@@ -39,6 +39,7 @@ import qualified "rider-app" Storage.Beam.Person as Person
 import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as PersonDefaultEmergencyNumber
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
 import qualified "rider-app" Storage.Beam.Quote as Quote
+import qualified "rider-app" Storage.Beam.Rating as Rating
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
 import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
 import qualified "rider-app" Storage.Beam.Ride as Ride
@@ -85,6 +86,7 @@ data DeleteModel
   | RegistrationTokenDelete
   | RentalSlabDelete
   | RideDelete
+  | RatingDelete
   | SavedReqLocationDelete
   | SearchRequestDelete
   | SearchReqLocationDelete
@@ -131,6 +133,7 @@ getTagDelete QuoteDelete = "QuoteOptions"
 getTagDelete RegistrationTokenDelete = "RegistrationTokenOptions"
 getTagDelete RentalSlabDelete = "RentalSlabOptions"
 getTagDelete RideDelete = "RideOptions"
+getTagDelete RatingDelete = "RatingOptions"
 getTagDelete SavedReqLocationDelete = "SavedReqLocationOptions"
 getTagDelete SearchRequestDelete = "SearchRequestOptions"
 getTagDelete SearchReqLocationDelete = "SearchReqLocationOptions"
@@ -176,6 +179,7 @@ parseTagDelete "QuoteOptions" = return QuoteDelete
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
 parseTagDelete "RentalSlabOptions" = return RentalSlabDelete
 parseTagDelete "RideOptions" = return RideDelete
+parseTagDelete "RatingOptions" = return RatingDelete
 parseTagDelete "SavedReqLocationOptions" = return SavedReqLocationDelete
 parseTagDelete "SearchRequestOptions" = return SearchRequestDelete
 parseTagDelete "SearchReqLocationOptions" = return SearchReqLocationDelete
@@ -222,6 +226,7 @@ data DBDeleteObject
   | RegistrationTokenDeleteOptions DeleteModel (Where Postgres RegistrationToken.RegistrationTokenT)
   | RentalSlabDeleteOptions DeleteModel (Where Postgres RentalSlab.RentalSlabT)
   | RideDeleteOptions DeleteModel (Where Postgres Ride.RideT)
+  | RatingDeleteOptions DeleteModel (Where Postgres Rating.RatingT)
   | SavedReqLocationDeleteOptions DeleteModel (Where Postgres SavedReqLocation.SavedReqLocationT)
   | SearchRequestDeleteOptions DeleteModel (Where Postgres SearchRequest.SearchRequestT)
   | SearchReqLocationDeleteOptions DeleteModel (Where Postgres SearchReqLocation.SearchReqLocationT)
@@ -340,6 +345,9 @@ instance FromJSON DBDeleteObject where
       RideDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ RideDeleteOptions deleteModel whereClause
+      RatingDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ RatingDeleteOptions deleteModel whereClause
       SavedReqLocationDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ SavedReqLocationDeleteOptions deleteModel whereClause
