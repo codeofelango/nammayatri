@@ -50,6 +50,7 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     disabilityTag
     merchant
     (getPoints shortestRouteInfo)
+    multipleRoutes
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
@@ -69,6 +70,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     Nothing
     merchant
     Nothing
+    Nothing
 
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -82,13 +84,14 @@ buildSearchReq ::
   Maybe Text ->
   DM.Merchant ->
   Maybe [Maps.LatLong] ->
+  Maybe [Maps.RouteInfo] ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant mbPoints = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant mbPoints multipleRoutes = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
-  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints
+  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints multipleRoutes
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
@@ -101,8 +104,9 @@ mkIntent ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe [Maps.LatLong] ->
+  Maybe [Maps.RouteInfo] ->
   Search.Intent
-mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints = do
+mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints multipleRoutes = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin
@@ -163,6 +167,12 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
                   code = (\_ -> Just "route_points") =<< mbPoints,
                   name = (\_ -> Just "Route Points") =<< mbPoints,
                   value = LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints
+                },
+              Search.Tag
+                { display = (\_ -> Just False) =<< multipleRoutes,
+                  code = (\_ -> Just "multiple_routes") =<< multipleRoutes,
+                  name = (\_ -> Just "Multiple Routes") =<< multipleRoutes,
+                  value = LT.toStrict . TE.decodeUtf8 . encode <$> multipleRoutes
                 }
             ]
         }

@@ -80,7 +80,8 @@ data OneWaySearchRes = OneWaySearchRes
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
     device :: Maybe Text,
-    shortestRouteInfo :: Maybe Maps.RouteInfo
+    shortestRouteInfo :: Maybe Maps.RouteInfo,
+    multipleRoutes :: Maybe [Maps.RouteInfo]
   }
 
 hotSpotUpdate ::
@@ -196,6 +197,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             disabilityTag = tag,
             device,
             shortestRouteInfo,
+            multipleRoutes = Just routeResponse,
             ..
           }
   fork "updating search counters" $ do
