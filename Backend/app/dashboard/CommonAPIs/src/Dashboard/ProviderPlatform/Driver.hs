@@ -52,6 +52,7 @@ data DriverEndpoint
   | ExemptCashEndpoint
   | SetRCStatusEndpoint
   | DeleteRCEndpoint
+  | SyncRCEndpoint
   | UpdateDriverHomeLocationEndpoint
   | IncrementDriverGoToCountEndPoint
   | UpdateSubscriptionDriverFeeAndInvoiceEndpoint
@@ -525,7 +526,15 @@ newtype DeleteRCReq = DeleteRCReq
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
+newtype SyncRCReq = SyncRCReq
+  { rcNo :: Text
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
 instance HideSecrets DeleteRCReq where
+  hideSecrets = identity
+
+instance HideSecrets SyncRCReq where
   hideSecrets = identity
 
 ---------------------------------------------------------
@@ -584,6 +593,14 @@ type DeleteRCAPI =
   Capture "driverId" (Id Driver)
     :> "deleteRC"
     :> ReqBody '[JSON] DeleteRCReq
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- update rc -----------------------------------
+
+type SyncRCAPI =
+  "syncRC"
+    :> ReqBody '[JSON] SyncRCReq
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------

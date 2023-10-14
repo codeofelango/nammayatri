@@ -77,6 +77,7 @@ type API =
            :<|> UpdateDriverNameAPI
            :<|> SetRCStatusAPI
            :<|> DeleteRCAPI
+           :<|> SyncRCAPI
            :<|> ClearOnRideStuckDriversAPI
            :<|> GetDriverHomeLocationAPI
            :<|> UpdateDriverHomeLocationAPI
@@ -169,6 +170,10 @@ type SetRCStatusAPI =
 type DeleteRCAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DELETE_RC
     :> Common.DeleteRCAPI
+
+type SyncRCAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'SYNC_RC
+    :> Common.SyncRCAPI
 
 type UnlinkDLAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_DL
@@ -276,6 +281,7 @@ handler merchantId =
     :<|> updateDriverName merchantId
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
+    :<|> syncRC merchantId
     :<|> clearOnRideStuckDrivers merchantId
     :<|> getDriverHomeLocation merchantId
     :<|> updateDriverHomeLocation merchantId
@@ -508,6 +514,11 @@ deleteRC merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.DeleteRCEndpoint apiTokenInfo driverId $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.deleteRC) driverId req
+
+syncRC :: ShortId DM.Merchant -> ApiTokenInfo -> Common.SyncRCReq -> FlowHandler APISuccess
+syncRC merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId -- should we store transaction without driverId?
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.syncRC) req
 
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> FlowHandler Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers merchantShortId apiTokenInfo dbSyncTime = withFlowHandlerAPI $ do

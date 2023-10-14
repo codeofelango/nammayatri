@@ -60,6 +60,7 @@ type API =
            :<|> Common.UpdateDriverNameAPI
            :<|> Common.SetRCStatusAPI
            :<|> Common.DeleteRCAPI
+           :<|> Common.SyncRCAPI
            :<|> Common.ClearOnRideStuckDriversAPI
            :<|> Common.GetDriverHomeLocationAPI
            :<|> Common.UpdateDriverHomeLocationAPI
@@ -194,6 +195,7 @@ handler merchantId =
     :<|> updateDriverName merchantId
     :<|> setRCStatus merchantId
     :<|> deleteRC merchantId
+    :<|> syncRC merchantId
     :<|> clearOnRideStuckDrivers merchantId
     :<|> getDriverHomeLocation merchantId
     :<|> updateDriverHomeLocation merchantId
@@ -311,6 +313,9 @@ setRCStatus merchantShortId driverId = withFlowHandlerAPI . DDriver.setRCStatus 
 
 deleteRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.DeleteRCReq -> FlowHandler APISuccess
 deleteRC merchantShortId driverId = withFlowHandlerAPI . DDriver.deleteRC merchantShortId driverId
+
+syncRC :: ShortId DM.Merchant -> Common.SyncRCReq -> FlowHandler APISuccess
+syncRC _ req = withFlowHandlerAPI $ DDriver.syncRC req
 
 getPaymentHistory :: ShortId DM.Merchant -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler Driver.HistoryEntityV2
 getPaymentHistory merchantShortId driverId invoicePaymentMode limit offset = withFlowHandlerAPI $ DDriver.getPaymentHistory merchantShortId driverId invoicePaymentMode limit offset
