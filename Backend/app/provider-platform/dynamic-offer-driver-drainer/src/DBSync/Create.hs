@@ -7,7 +7,9 @@ import Config.Env
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Data.Time.Clock.POSIX as Time
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
 import qualified EulerHS.Language as L
@@ -16,6 +18,12 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude (UTCTime)
+import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
+import Kernel.Types.Error
+import System.Timeout (timeout)
+import Text.Casing (quietSnake)
+import qualified "dynamic-offer-driver-app" Tools.Beam.UtilsTH as App
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -98,7 +106,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackForm" :: Text) [(obj, val, entryId, FeedbackFormObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackFormObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Feedback" :: Text) [(obj, val, entryId, FeedbackObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("FeedbackBadge" :: Text) [(obj, val, entryId, FeedbackBadgeObject obj) | (CreateDBCommand entryId _ _ _ _ (FeedbackBadgeObject obj), val) <- cmds]
-    |::| runCreate dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("RegistryMapFallback" :: Text) [(obj, val, entryId, RegistryMapFallbackObject obj) | (CreateDBCommand entryId _ _ _ _ (RegistryMapFallbackObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("DriverGoHomeRequest" :: Text) [(obj, val, entryId, DriverGoHomeRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverGoHomeRequestObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("DriverHomeLocation" :: Text) [(obj, val, entryId, DriverHomeLocationObject obj) | (CreateDBCommand entryId _ _ _ _ (DriverHomeLocationObject obj), val) <- cmds]
@@ -126,14 +134,19 @@ runCreateCommands cmds streamKey = do
           if null object
             then pure [Right []]
             else do
-              let dataObjects = map (\(_, _, _, dataObject) -> dataObject) object
-                  entryIds = map (\(_, _, entryId', _) -> entryId') object
+              let entryIds = map (\(_, _, entryId', _) -> entryId') object
               Env {..} <- ask
-              res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection dataObjects streamKey'
+              tables <- L.getOption KBT.Tables
+              let tableName = textToSnakeCaseText model
+              pushToS3 <- case tables of
+                Nothing -> L.throwException $ InternalError "Tables not found"
+                Just tables' -> do
+                  pure $ tableName `elem` tables'.kafkaS3Tables
+              res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection tableName pushToS3 object streamKey'
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) $ ("Kafka Driver Create Error: " :: Text) <> show err
                     pure [Left entryIds]
                 )
                 (\_ -> pure [Right entryIds])
@@ -178,16 +191,55 @@ runCreateCommands cmds streamKey = do
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
 
-streamDriverDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO (Either Text ())
-streamDriverDrainerCreates producer dbObject streamKey = do
-  let topicName = "driver-drainer"
-  result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
-  if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
+streamDriverDrainerCreates ::
+  ( ToJSON (table Identity)
+  ) =>
+  Producer.KafkaProducer ->
+  Text ->
+  Bool ->
+  [(table Identity, b, EL.KVDBStreamEntryID, DBCreateObject)] ->
+  Text ->
+  IO (Either Text ())
+streamDriverDrainerCreates producer tableName pushToS3 dbObject streamKey = do
+  result' <- forM dbObject $ \obj -> do
+    result'' <- KafkaProd.produceMessage producer . message $ obj
+    flushResult <- timeout (5 * 60 * 1000000) $ KafkaProd.flushProducer producer
+    pure $ case flushResult of
+      Just _ -> maybe (Right ()) (Left . show @Text) result''
+      Nothing -> Left "KafkaProd.flushProducer timed out after 5 minutes"
+
+  if any isLeft result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where
-    message topicName event =
+    message (obj, _, entryId, dbCreateObject) = do
+      let (topicName, kafkaObject) =
+            if pushToS3
+              then do
+                let timestamp = mkTimeStamp entryId
+                let kafkaTable =
+                      Kafka.KafkaTable
+                        { schemaName = T.pack App.currentSchemaName,
+                          tableName,
+                          tableContent = toJSON obj,
+                          timestamp
+                        }
+                (mkS3TableTopicName timestamp, encode kafkaTable)
+              else (driverDrainerTopicName, encode dbCreateObject)
       ProducerRecord
-        { prTopic = TopicName topicName,
+        { prTopic = topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 streamKey,
-          prValue = Just . LBS.toStrict $ encode event
+          prValue = Just . LBS.toStrict $ kafkaObject
         }
+
+driverDrainerTopicName :: TopicName
+driverDrainerTopicName = TopicName "driver-drainer"
+
+mkTimeStamp :: EL.KVDBStreamEntryID -> UTCTime
+mkTimeStamp (EL.KVDBStreamEntryID posixTime _) = Time.posixSecondsToUTCTime $ fromInteger (posixTime `div` 1000)
+
+mkS3TableTopicName :: UTCTime -> TopicName
+mkS3TableTopicName timestamp = do
+  TopicName $ "kafka-table" <> "_" <> show (Kafka.countTopicNumber timestamp)
+
+textToSnakeCaseText :: Text -> Text
+textToSnakeCaseText = T.pack . quietSnake . T.unpack

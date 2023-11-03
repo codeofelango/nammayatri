@@ -50,12 +50,23 @@ let consumerProperties =
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "broadcast-messages" ], consumerProperties }
+      { topicNames = [ "broadcast-messages" ]
+      , offsetReset = common.kafkaOffsetResetConfig.Default
+      , consumerProperties
+      }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
 
 let cacheConfig = { configsExpTime = +86400 }
+
+let tables =
+      { enableKVForWriteAlso =
+          [] : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead = [] : List Text
+      , kafkaNonKVTables = [] : List Text
+      , kafkaS3Tables = [] : List Text
+      }
 
 in  { hedisCfg
     , hedisClusterCfg
@@ -79,4 +90,6 @@ in  { hedisCfg
             }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , tables
+    , s3Config = None common.S3ConfigType
     }

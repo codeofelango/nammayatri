@@ -14,14 +14,18 @@
 
 module Environment where
 
+import AWS.S3
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
-import Kafka.Consumer
+import Kafka.Consumer hiding (OffsetReset (..), offsetReset)
+import qualified Kafka.Consumer as Consumer
+import qualified Kernel.Prelude as P (maybe, throwIO)
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import qualified Kernel.Streaming.Kafka.Producer.Types as KT
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common (Tables)
+import Kernel.Types.Error
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -34,15 +38,25 @@ import System.Environment (lookupEnv)
 import Prelude (show)
 
 data ConsumerConfig = ConsumerConfig
-  { topicNames :: [TopicName],
-    consumerProperties :: !ConsumerProperties
+  { topicNames :: [Consumer.TopicName],
+    offsetReset :: !(Maybe Consumer.OffsetReset),
+    consumerProperties :: !Consumer.ConsumerProperties
   }
+
+data OffsetResetConfig = Earliest | Latest | Default
+  deriving (Generic, FromDhall)
+
+castOffsetReset :: OffsetResetConfig -> Maybe Consumer.OffsetReset
+castOffsetReset Earliest = Just Consumer.Earliest
+castOffsetReset Latest = Just Consumer.Latest
+castOffsetReset Default = Nothing
 
 instance FromDhall ConsumerConfig where
   autoWith _ =
     record
       ( ConsumerConfig
           <$> field "topicNames" (map TopicName <$> list strictText)
+          <*> field "offsetReset" (castOffsetReset <$> auto @OffsetResetConfig)
           <*> field "consumerProperties" customeDecoder
       )
     where
@@ -63,7 +77,12 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS deriving (Generic, FromDhall, Read)
+data ConsumerType
+  = AVAILABILITY_TIME
+  | BROADCAST_MESSAGE
+  | PERSON_STATS
+  | KAFKA_TABLE
+  deriving (Generic, FromDhall, Read)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -71,6 +90,7 @@ instance Show ConsumerType where
   show AVAILABILITY_TIME = "availability-time"
   show BROADCAST_MESSAGE = "broadcast-message"
   show PERSON_STATS = "person-stats"
+  show KAFKA_TABLE = "kafka-table"
 
 type Seconds = Integer
 
@@ -95,9 +115,12 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    tables :: Tables
+    tables :: Tables,
+    s3Config :: Maybe S3Config
   }
   deriving (Generic, FromDhall)
+
+-- FIXME each consumer should have own env: AppEnv (ct :: ConsumerType)
 
 data AppEnv = AppEnv
   { hedisCfg :: HedisCfg,
@@ -122,7 +145,8 @@ data AppEnv = AppEnv
     coreMetrics :: Metrics.CoreMetricsContainer,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    s3Env :: S3Env Flow
   }
   deriving (Generic)
 
@@ -144,4 +168,15 @@ buildAppEnv AppCfg {..} consumerType = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  s3Env <-
+    case consumerType of
+      KAFKA_TABLE -> P.maybe (P.throwIO $ InternalError "s3Config required for this consumer type") (pure . buildS3Env) s3Config
+      _ -> do
+        whenJust s3Config $ const (P.throwIO $ InternalError "s3Config not required for this consumer type")
+        pure
+          S3Env
+            { pathPrefix = "",
+              getH = \_ -> P.throwIO $ InternalError "s3Config not provided for this consumer type",
+              putH = \_ _ -> P.throwIO $ InternalError "s3Config not provided for this consumer type"
+            }
   pure $ AppEnv {..}

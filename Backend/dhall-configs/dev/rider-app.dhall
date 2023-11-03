@@ -149,9 +149,11 @@ let hccfg =
 
 let tables =
       { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
+            [ { nameOfTable = "beckn_request", percentEnable = 100 } ]
+          : List { nameOfTable : Text, percentEnable : Natural }
+      , enableKVForRead = [ "beckn_request" ] : List Text
       , kafkaNonKVTables = [] : List Text
+      , kafkaS3Tables = [ "beckn_request" ] : List Text
       }
 
 let dontEnableForDb = [] : List Text

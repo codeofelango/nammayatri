@@ -50,7 +50,10 @@ let consumerProperties =
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "rider-app-events-updates" ], consumerProperties }
+      { topicNames = [ "rider-app-events-updates" ]
+      , offsetReset = common.kafkaOffsetResetConfig.Default
+      , consumerProperties
+      }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
@@ -62,6 +65,7 @@ let tables =
           [] : List { nameOfTable : Text, percentEnable : Natural }
       , enableKVForRead = [] : List Text
       , kafkaNonKVTables = [] : List Text
+      , kafkaS3Tables = [] : List Text
       }
 
 in  { hedisCfg
@@ -87,4 +91,5 @@ in  { hedisCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , tables
+    , s3Config = None common.S3ConfigType
     }

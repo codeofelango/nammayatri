@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let sec = ./secrets/dynamic-offer-driver-app.dhall
+let sec = ./secrets/rider-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -8,7 +8,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "atlas_driver_offer_bpp"
+      , connectSchemaName = "atlas_app"
       , connectionPoolCount = +25
       }
 
@@ -19,7 +19,7 @@ let esqDBReplicaCfg =
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
       , connectSchemaName = esqDBCfg.connectSchemaName
-      , connectionPoolCount = esqDBCfg.connectionPoolCount
+      , connectionPoolCount = +25
       }
 
 let hedisCfg =
@@ -42,6 +42,22 @@ let hedisClusterCfg =
       , connectTimeout = None Integer
       }
 
+let consumerProperties =
+      { groupId = "kafka-table-compute"
+      , brockers = [ "localhost:29092" ]
+      , autoCommit = None Integer
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
+let kafkaConsumerCfg =
+      { topicNames = [ "kafka-table" ]
+      , offsetReset = common.kafkaOffsetResetConfig.Earliest
+      , consumerProperties
+      }
+
+let availabilityTimeWindowOption =
+      { period = +7, periodType = common.periodType.Days }
+
 let cacheConfig = { configsExpTime = +86400 }
 
 let tables =
@@ -60,23 +76,20 @@ in  { hedisCfg
     , cutOffHedisCluster = False
     , esqDBCfg
     , esqDBReplicaCfg
+    , cacheConfig
+    , dumpEvery = +10
+    , kafkaConsumerCfg
+    , timeBetweenUpdates = +10
+    , availabilityTimeWindowOption
+    , granualityPeriodType = common.periodType.Hours
+    , httpClientOptions = common.httpClientOptions
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/producer.log", prettyPrinting = True }
+        //  { logFilePath = "/tmp/kafka-consumers-kafka-table.log"
+            , logRawSql = False
+            }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
-    , waitTimeMilliSec = +1000.0
-    , producerTimestampKey = "producerTimestampKey"
-    , batchSize = +1
-    , streamName = "Available_Jobs"
-    , cacheConfig
-    , schedulerSetName = "Scheduled_Jobs"
-    , entryId = "*"
-    , reviverInterval = +2
-    , reviveThreshold = +2
-    , schedulerType = common.schedulerType.RedisBased
-    , maxShards = +5
-    , metricsPort = +9990
     , tables
-    , runReviver = True
+    , s3Config = Some common.s3Config
     }

@@ -24,6 +24,7 @@ import qualified Kafka.Consumer as Consumer
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.KafkaTable as Kafka
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
@@ -32,7 +33,7 @@ import System.Environment (lookupEnv)
 startKafkaConsumer :: IO ()
 startKafkaConsumer = do
   consumerType :: ConsumerType <- read . fromMaybe "AVAILABILITY_TIME" <$> lookupEnv "CONSUMER_TYPE"
-  configFile <- CF.getConfigNameFromConsumertype consumerType
+  configFile <- CF.getConfigNameFromConsumerType consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
   startConsumerWithEnv appCfg appEnv
@@ -57,8 +58,20 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
       )
     CF.runConsumer flowRt appEnv consumerType kafkaConsumer
   where
-    newKafkaConsumer =
+    newKafkaConsumer = do
+      consumerTopicNames <- case appEnv.consumerType of
+        KAFKA_TABLE -> buildKafkaTableConsumerTopics
+        _ -> pure kafkaConsumerCfg.topicNames
       either (error . ("Unable to open a kafka consumer: " <>) . show) id
         <$> Consumer.newConsumer
           (kafkaConsumerCfg.consumerProperties)
-          (Consumer.topics kafkaConsumerCfg.topicNames)
+          (Consumer.topics consumerTopicNames <> maybe mempty Consumer.offsetReset kafkaConsumerCfg.offsetReset)
+
+    buildKafkaTableConsumerTopics = do
+      now <- getCurrentTime
+      let currentTopicNumber = Kafka.countTopicNumber now
+      let topicNumbers = filter (/= currentTopicNumber) [0 .. 23 :: Int]
+      let topicNameTemplate = case kafkaConsumerCfg.topicNames of
+            [tn] -> tn
+            _ -> error "Should be exactly one topic name"
+      pure $ Consumer.TopicName . ((Consumer.unTopicName topicNameTemplate <> "_") <>) . show <$> topicNumbers

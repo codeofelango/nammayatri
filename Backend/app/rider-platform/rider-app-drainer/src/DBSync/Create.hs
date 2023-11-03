@@ -1,13 +1,12 @@
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 module DBSync.Create where
 
 import Config.Env
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromJust)
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Data.Time.Clock.POSIX as Time
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
 import qualified EulerHS.Language as L
@@ -16,6 +15,12 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
+import Kernel.Prelude (UTCTime)
+import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
+import Kernel.Types.Error
+import System.Timeout (timeout)
+import Text.Casing (quietSnake)
+import qualified "rider-app" Tools.Beam.UtilsTH as App
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -91,14 +96,19 @@ runCreateCommands cmds streamKey = do
           if null object
             then pure [Right []]
             else do
-              let dataObjects = map (\(_, _, _, dataObject) -> dataObject) object
-                  entryIds = map (\(_, _, entryId', _) -> entryId') object
+              let entryIds = map (\(_, _, entryId', _) -> entryId') object
               Env {..} <- ask
-              res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection dataObjects streamKey'
+              tables <- L.getOption KBT.Tables
+              let tableName = textToSnakeCaseText model
+              pushToS3 <- case tables of
+                Nothing -> L.throwException $ InternalError "Tables not found"
+                Just tables' -> do
+                  pure $ tableName `elem` tables'.kafkaS3Tables
+              res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection tableName pushToS3 object streamKey'
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) $ ("Kafka Rider Create Error: " :: Text) <> show err
                     pure [Left entryIds]
                 )
                 (\_ -> pure [Right entryIds])
@@ -117,7 +127,6 @@ runCreateCommands cmds streamKey = do
               case kResults of
                 [Right _] -> runCreate dbConf streamKey' model object
                 _ -> pure [Left entryIds]
-
     runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds index maxRetries ignoreDuplicates = do
       res <- CDB.createMultiSqlWoReturning dbConf dbObjects ignoreDuplicates
       case (res, index) of
@@ -140,16 +149,55 @@ runCreateCommands cmds streamKey = do
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
 
-streamRiderDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO (Either Text ())
-streamRiderDrainerCreates producer dbObject streamKey = do
-  let topicName = "rider-drainer"
-  result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
-  if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
+streamRiderDrainerCreates ::
+  ( ToJSON (table Identity)
+  ) =>
+  Producer.KafkaProducer ->
+  Text ->
+  Bool ->
+  [(table Identity, b, EL.KVDBStreamEntryID, DBCreateObject)] ->
+  Text ->
+  IO (Either Text ())
+streamRiderDrainerCreates producer tableName pushToS3 dbObject streamKey = do
+  result' <- forM dbObject $ \obj -> do
+    result'' <- KafkaProd.produceMessage producer . message $ obj
+    flushResult <- timeout (5 * 60 * 1000000) $ KafkaProd.flushProducer producer
+    pure $ case flushResult of
+      Just _ -> maybe (Right ()) (Left . show @Text) result''
+      Nothing -> Left "KafkaProd.flushProducer timed out after 5 minutes"
+
+  if any isLeft result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where
-    message topicName event =
+    message (obj, _, entryId, dbCreateObject) = do
+      let (topicName, kafkaObject) =
+            if pushToS3
+              then do
+                let timestamp = mkTimeStamp entryId
+                let kafkaTable =
+                      Kafka.KafkaTable
+                        { schemaName = T.pack App.currentSchemaName,
+                          tableName,
+                          tableContent = toJSON obj,
+                          timestamp
+                        }
+                (mkS3TableTopicName timestamp, encode kafkaTable)
+              else (riderDrainerTopicName, encode dbCreateObject)
       ProducerRecord
-        { prTopic = TopicName topicName,
+        { prTopic = topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 streamKey,
-          prValue = Just . LBS.toStrict $ encode event
+          prValue = Just . LBS.toStrict $ kafkaObject
         }
+
+riderDrainerTopicName :: TopicName
+riderDrainerTopicName = TopicName "rider-drainer"
+
+mkTimeStamp :: EL.KVDBStreamEntryID -> UTCTime
+mkTimeStamp (EL.KVDBStreamEntryID posixTime _) = Time.posixSecondsToUTCTime $ fromInteger (posixTime `div` 1000)
+
+mkS3TableTopicName :: UTCTime -> TopicName
+mkS3TableTopicName timestamp = do
+  TopicName $ "kafka-table" <> "_" <> show (Kafka.countTopicNumber timestamp)
+
+textToSnakeCaseText :: Text -> Text
+textToSnakeCaseText = T.pack . quietSnake . T.unpack
