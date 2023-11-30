@@ -15,6 +15,8 @@ import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
 import Data.Text as T hiding (elem, map)
 import qualified Data.Text.Encoding as TE
+import Data.Time (UTCTime)
+import qualified Data.Time.Clock.POSIX as Time
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.KVConnector.Types as EKT
@@ -27,8 +29,10 @@ import Kafka.Producer as Producer
 import qualified Kernel.Beam.Functions as BeamFunction
 import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
+import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
 import Sequelize (Model, Set, Where)
-import Text.Casing (pascal)
+import Text.Casing (pascal, quietSnake)
+import qualified "dynamic-offer-driver-app" Tools.Beam.UtilsTH as App
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -178,32 +182,35 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     -- If KAFKA_PUSH is false then entry will be there in DB Else Updates entry in Kafka only.
     runUpdateInKafka id value dbStreamKey' setClause whereClause model dbConf tag = do
       isPushToKafka' <- EL.runIO isPushToKafka
+      Env {..} <- ask
+      let tableName' = textToSnakeCaseText model
+          pushToS3 = tableName' `elem` _kafkaS3Tables
       if not isPushToKafka'
         then runUpdate id value dbStreamKey' setClause whereClause model dbConf
         else do
           res <- getUpdatedValue tag whereClause
           case res of
             Right dataObj -> do
-              Env {..} <- ask
               let mappings = getMappings [dataObj]
                   newObject = replaceMappings (toJSON dataObj) mappings
-              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection newObject dbStreamKey' model
+              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection newObject dbStreamKey' model id pushToS3
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Driver Update Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) $ ("Kafka Driver Update Error " :: Text) <> show err
                     pure $ Left (UnexpectedError "Kafka Driver Update Error", id)
                 )
                 (\_ -> pure $ Right id)
                 res''
-            Left _ -> do
+            Left updErr -> do
+              EL.logDebug ("updErr:" :: Text) (show updErr)
               let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
               Env {..} <- ask
-              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
+              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model id pushToS3
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Driver Update Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) $ ("Kafka Driver Update Error " :: Text) <> show err
                     pure $ Left (UnexpectedError "Kafka Driver Update Error", id)
                 )
                 (\_ -> pure $ Right id)
@@ -232,20 +239,37 @@ runUpdateCommands (cmd, val) dbStreamKey = do
         (Right _, _) -> do
           pure $ Right id
 
-streamDriverDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> Text -> IO (Either Text ())
-streamDriverDrainerUpdates producer dbObject dbStreamKey model = do
+streamDriverDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> Text -> EL.KVDBStreamEntryID -> Bool -> IO (Either Text ())
+streamDriverDrainerUpdates producer dbObject dbStreamKey model entryId pushToS3 = do
   let topicName = "adob-sessionizer-" <> T.toLower model
   result' <- KafkaProd.produceMessage producer (message topicName dbObject)
+  when pushToS3 $ void $ KafkaProd.produceMessage producer (getS3Message model dbObject)
   case result' of
     Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
     _ -> pure $ Right ()
   where
-    message topicName event =
+    message topicName obj =
       ProducerRecord
         { prTopic = TopicName topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 dbStreamKey,
-          prValue = Just . LBS.toStrict $ encode event
+          prValue = Just . LBS.toStrict $ A.encode obj
+        }
+
+    getS3Message tableName' obj = do
+      let timeStamp = mkTimeStamp entryId
+          kafkaTableObject =
+            Kafka.KafkaTable
+              { schemaName = T.pack App.currentSchemaName,
+                tableName = tableName',
+                tableContent = toJSON obj,
+                timestamp = timeStamp
+              }
+      ProducerRecord
+        { prTopic = mkS3TableTopicName timeStamp,
+          prPartition = UnassignedPartition,
+          prKey = Just $ TE.encodeUtf8 dbStreamKey,
+          prValue = Just . LBS.toStrict $ A.encode kafkaTableObject
         }
 
 getDbUpdateDataJson :: ToJSON a => Text -> a -> A.Value
@@ -268,3 +292,13 @@ getPKeyandValuesList pKeyAndValue = go (T.splitOn "_" pKeyTrimmed) []
     pKeyTrimmed = case T.splitOn "{" pKeyAndValue of
       [] -> ""
       (x : _) -> x
+
+mkTimeStamp :: EL.KVDBStreamEntryID -> UTCTime
+mkTimeStamp (EL.KVDBStreamEntryID posixTime _) = Time.posixSecondsToUTCTime $ fromInteger (posixTime `div` 1000)
+
+mkS3TableTopicName :: UTCTime -> TopicName
+mkS3TableTopicName timestamp' = do
+  TopicName $ "kafka-table" <> "_" <> show (Kafka.countTopicNumber timestamp')
+
+textToSnakeCaseText :: Text -> Text
+textToSnakeCaseText = T.pack . quietSnake . T.unpack

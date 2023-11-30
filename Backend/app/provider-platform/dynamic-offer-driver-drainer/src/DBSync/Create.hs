@@ -4,11 +4,13 @@
 module DBSync.Create where
 
 import Config.Env
-import Data.Aeson (encode)
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
+import Data.Time
+import Data.Time.Clock.POSIX as Time
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
 import qualified EulerHS.Language as L
@@ -18,6 +20,9 @@ import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
+import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
+import Text.Casing (quietSnake)
+import qualified "dynamic-offer-driver-app" Tools.Beam.UtilsTH as App
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -131,12 +136,15 @@ runCreateCommands cmds streamKey = do
                   mappings = getMappings objectIdentity
                   newObjects = map (\object' -> replaceMappings (toJSON object') mappings) objectIdentity
                   entryIds = map (\(_, _, entryId', _) -> entryId') object
+                  newObjectsWithEntryId = zip newObjects entryIds
               Env {..} <- ask
-              res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection newObjects streamKey' model
+              let tableName = textToSnakeCaseText model
+                  pushToS3 = tableName `elem` _kafkaS3Tables
+              res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection newObjectsWithEntryId streamKey' model pushToS3
               either
-                ( \_ -> do
+                ( \err -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) $ ("Kafka Driver Create Error: " :: Text) <> show err
                     pure [Left entryIds]
                 )
                 (\_ -> pure [Right entryIds])
@@ -181,16 +189,43 @@ runCreateCommands cmds streamKey = do
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
 
-streamDriverDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> Text -> IO (Either Text ())
-streamDriverDrainerCreates producer dbObject streamKey model = do
+streamDriverDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [(a, EL.KVDBStreamEntryID)] -> Text -> Text -> Bool -> IO (Either Text ())
+streamDriverDrainerCreates producer dbObject streamKey model pushToS3 = do
   let topicName = "adob-sessionizer-" <> T.toLower model
   result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
+  when pushToS3 $ mapM_ (KafkaProd.produceMessage producer . getS3Message model) dbObject
   if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where
-    message topicName event =
+    message topicName (obj, _) =
       ProducerRecord
         { prTopic = TopicName topicName,
           prPartition = UnassignedPartition,
           prKey = Just $ TE.encodeUtf8 streamKey,
-          prValue = Just . LBS.toStrict $ encode event
+          prValue = Just . LBS.toStrict $ A.encode obj
         }
+
+    getS3Message tableName (obj, entryId) = do
+      let timestamp = mkTimeStamp entryId
+          kafkaTableObject =
+            Kafka.KafkaTable
+              { schemaName = T.pack App.currentSchemaName,
+                tableName = tableName,
+                tableContent = toJSON obj,
+                timestamp = timestamp
+              }
+      ProducerRecord
+        { prTopic = mkS3TableTopicName timestamp,
+          prPartition = UnassignedPartition,
+          prKey = Just $ TE.encodeUtf8 streamKey,
+          prValue = Just . LBS.toStrict $ A.encode kafkaTableObject
+        }
+
+mkTimeStamp :: EL.KVDBStreamEntryID -> UTCTime
+mkTimeStamp (EL.KVDBStreamEntryID posixTime _) = Time.posixSecondsToUTCTime $ fromInteger (posixTime `div` 1000)
+
+mkS3TableTopicName :: UTCTime -> TopicName
+mkS3TableTopicName timestamp = do
+  TopicName $ "kafka-table" <> "_" <> show (Kafka.countTopicNumber timestamp)
+
+textToSnakeCaseText :: Text -> Text
+textToSnakeCaseText = T.pack . quietSnake . T.unpack

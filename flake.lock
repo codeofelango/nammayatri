@@ -2973,15 +2973,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1701326860,
-        "narHash": "sha256-Dwt50cBB8rIuHpwVwZJKD1sO6mElhdiIMLHBiISGps4=",
+        "lastModified": 1701333238,
+        "narHash": "sha256-/woGFJu4s1lpVk6+zXT2uVBE77IgIooETrJ0JwW/yUE=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "db9aad4e54b6f72a75021fc0d3b91bd4dad57605",
+        "rev": "fed75625d1e7b6241496c56dbf79776408c00407",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/feat/updated/push-table-to-s3",
         "repo": "shared-kernel",
         "type": "github"
       }

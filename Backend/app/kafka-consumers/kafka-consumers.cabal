@@ -35,6 +35,7 @@ library
       Consumer.BroadcastMessage.Processor
       Consumer.CustomerStats.Processor
       Consumer.Flow
+      Consumer.KafkaTable.Processor
       Environment
   other-modules:
       Paths_kafka_consumers
@@ -82,6 +83,7 @@ library
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-services
     , bytestring
     , cereal
     , containers
@@ -164,6 +166,7 @@ executable kafka-consumers-exe
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-services
     , bytestring
     , cereal
     , containers

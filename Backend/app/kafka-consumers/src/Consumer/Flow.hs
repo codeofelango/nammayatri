@@ -18,19 +18,25 @@ module Consumer.Flow where
 import qualified Consumer.AvailabilityTime.Processor as ATProcessor
 import qualified Consumer.BroadcastMessage.Processor as BMProcessor
 import qualified Consumer.CustomerStats.Processor as PSProcessor
-import Control.Error.Util
+import qualified Consumer.KafkaTable.Processor as KTProcessor
+import Control.Error.Util hiding (err)
 import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
 import qualified Data.HashMap as HM
+import Data.IORef
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import qualified Data.Time as Time
 import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
 import Kernel.Prelude
+import qualified Kernel.Streaming.Kafka.KafkaTable as Kafka
+import Kernel.Types.Error
 import Kernel.Types.Flow
-import Kernel.Utils.Common (generateGUID, withLogTag)
+import Kernel.Utils.Common (generateGUID, getCurrentTime, withLogTag)
 import qualified Streamly.Internal.Data.Fold as SF
 import Streamly.Internal.Data.Stream.Serial (SerialT)
 import qualified Streamly.Prelude as S
@@ -41,6 +47,7 @@ runConsumer flowRt appEnv consumerType kafkaConsumer = do
     AVAILABILITY_TIME -> availabilityConsumer flowRt appEnv kafkaConsumer
     BROADCAST_MESSAGE -> broadcastMessageConsumer flowRt appEnv kafkaConsumer
     PERSON_STATS -> updateCustomerStatsConsumer flowRt appEnv kafkaConsumer
+    KAFKA_TABLE -> kafkaTableConsumer flowRt appEnv kafkaConsumer
 
 updateCustomerStatsConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 updateCustomerStatsConsumer flowRt appEnv kafkaConsumer =
@@ -110,6 +117,88 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
         start = SF.Partial ([], Nothing)
         extract = id
 
+kafkaTableConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
+kafkaTableConsumer flowRt appEnv kafkaConsumer = do
+  flip finally (Consumer.closeConsumer kafkaConsumer) $ do
+    readKafkaTableMessages kafkaConsumer
+      & S.foldr foldFunc Map.empty
+      >>= riderDrainerWithFlow
+      >>= commitAllTopics
+  where
+    riderDrainerWithFlow messages = do
+      now <- getCurrentTime
+      runFlowR flowRt appEnv $
+        generateGUID
+          >>= flip withLogTag (KTProcessor.kafkaTableProcessor messages now)
+      pure messages
+
+    commitAllTopics messages =
+      if Map.null messages
+        then print ("Nothing to commit" :: Text)
+        else do
+          mbErr <- Consumer.commitAllOffsets Consumer.OffsetCommit kafkaConsumer
+          whenJust mbErr $ \err -> print ("Error while commit: message: " <> show err :: Text)
+
+    foldFunc ::
+      Kafka.KafkaTable ->
+      Map.Map String [Kafka.KafkaTable] ->
+      Map.Map String [Kafka.KafkaTable]
+    foldFunc kafkaTable mapKafkaTable = do
+      let filePath = mkFilePathWithoutPrefix kafkaTable
+      Map.insertWithKey (\_key newList oldList -> newList <> oldList) filePath [kafkaTable] mapKafkaTable
+
+    mkFilePathWithoutPrefix :: Kafka.KafkaTable -> String
+    mkFilePathWithoutPrefix kafkaTable =
+      do
+        T.unpack kafkaTable.schemaName
+        <> "/"
+        <> T.unpack kafkaTable.tableName
+        <> "/"
+        <> Time.formatTime Time.defaultTimeLocale "%Y.%m.%d-%H" kafkaTable.timestamp
+
+readKafkaTableMessages ::
+  Consumer.KafkaConsumer ->
+  SerialT IO Kafka.KafkaTable
+readKafkaTableMessages kafkaConsumer = do
+  let eitherRecords = S.bracket before after pollMessageR
+  let records = S.mapMaybe hush eitherRecords
+  flip S.mapMaybeM records $ \record -> do
+    case Consumer.crValue record of
+      Just value -> do
+        case A.eitherDecode @Kafka.KafkaTable . LBS.fromStrict $ value of
+          Right v -> pure (Just v)
+          Left err -> throwIO (InternalError $ "Could not decode record: " <> show value <> "; message: " <> show err) -- only when KafkaTable type changed
+      Nothing -> pure Nothing
+  where
+    before = do
+      pollStartTime <- getCurrentTime
+      emptyMessagesCount <- newIORef (0 :: Int)
+      let currentTopic = Kafka.countTopicNumber pollStartTime
+      pure (currentTopic, emptyMessagesCount)
+
+    after (_currentTopic, _emptyMessagesCount) = do
+      pure () -- consumer will be closed after messages handled and commited
+    predicate currentTopic emptyMessagesCount message = do
+      now <- getCurrentTime
+      if Kafka.countTopicNumber now /= currentTopic
+        then do
+          print ("Close consumer: current partition changed, not all messages was read!" :: Text)
+          pure False
+        else do
+          let isEmptyMessage = either (const True) (isNothing . Consumer.crValue) message
+          if isEmptyMessage
+            then do
+              newCount <- atomicModifyIORef emptyMessagesCount (\count -> (count + 1, count + 1))
+              unless (newCount < 10) $
+                print ("Close consumer: received 10 empty messages" :: Text)
+              pure $ newCount < 10
+            else do
+              atomicModifyIORef emptyMessagesCount (const (0, True))
+
+    pollMessageR (currentTopic, emptyMessagesCount) =
+      S.takeWhileM (predicate currentTopic emptyMessagesCount) $
+        S.repeatM $ Consumer.pollMessage kafkaConsumer (Consumer.Timeout 500)
+
 readMessages ::
   (FromJSON message, ConvertUtf8 messageKey ByteString) =>
   Consumer.KafkaConsumer ->
@@ -131,8 +220,9 @@ readMessages kafkaConsumer = do
     removeMaybeFromTuple (mbMessage, (mbMessageKey, cr)) =
       (\message messageKey -> (message, messageKey, cr)) <$> mbMessage <*> mbMessageKey
 
-getConfigNameFromConsumertype :: ConsumerType -> IO String
-getConfigNameFromConsumertype = \case
+getConfigNameFromConsumerType :: ConsumerType -> IO String
+getConfigNameFromConsumerType = \case
   AVAILABILITY_TIME -> pure "driver-availability-calculator"
   BROADCAST_MESSAGE -> pure "broadcast-message"
   PERSON_STATS -> pure "person-stats"
+  KAFKA_TABLE -> pure "kafka-table-consumer"

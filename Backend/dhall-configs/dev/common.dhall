@@ -50,4 +50,6 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , authServiceUrl = "http://localhost:8013/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
+    , kafkaOffsetResetConfig = globalCommon.kafkaOffsetResetConfig
+    , S3ConfigType = globalCommon.S3Config
     }
