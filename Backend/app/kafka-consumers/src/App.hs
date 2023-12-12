@@ -12,9 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module App (startKafkaConsumer) where
+module App (startKafkaConsumers) where
 
 import qualified Consumer.Flow as CF
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.Supervisor
 import Data.Function
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -27,15 +30,36 @@ import Kernel.Prelude
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
-import System.Environment (lookupEnv)
 
-startKafkaConsumer :: IO ()
-startKafkaConsumer = do
-  consumerType :: ConsumerType <- read . fromMaybe "AVAILABILITY_TIME" <$> lookupEnv "CONSUMER_TYPE"
+runConsumer :: ConsumerType -> IO ()
+runConsumer consumerType = do
+  putStrLn (("Thread started " <> show consumerType <> "\n") :: Text)
   configFile <- CF.getConfigNameFromConsumertype consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
   startConsumerWithEnv appCfg appEnv
+  putStrLn ("Thread ended\n" :: Text)
+
+startKafkaConsumers :: IO ()
+startKafkaConsumers =
+  bracketOnError
+    ( do
+        putStrLn ("Running consumers in thread" :: Text)
+        baseConfigFile <- CF.getConfigNameFromConsumertype AVAILABILITY_TIME
+        baseConfig :: AppCfg <- readDhallConfigDefault baseConfigFile
+        let consumerTypes = baseConfig.consumerTypes
+        supervisors <- mapM (\_ -> newSupervisor OneForOne) consumerTypes
+        mapM_ (\(sup, consumerType) -> forkSupervised sup fibonacciRetryPolicy (runConsumer consumerType)) (zip supervisors consumerTypes)
+        _ <- forkIO (go (eventStream (head supervisors)))
+        return (head supervisors)
+    )
+    shutdownSupervisor
+    (\_ -> Control.Concurrent.threadDelay 10000000000)
+  where
+    go eS = do
+      newE <- atomically $ readTQueue eS
+      print newE
+      go eS
 
 startConsumerWithEnv :: AppCfg -> AppEnv -> IO ()
 startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
