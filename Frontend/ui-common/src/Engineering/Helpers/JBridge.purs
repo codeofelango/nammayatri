@@ -203,7 +203,7 @@ foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> 
 foreign import storeCallBackNotificationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import isInternetAvailable :: Unit -> Effect Boolean
 foreign import storeCallBackInternetAction :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-
+foreign import storeCallBackEditLocation :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
@@ -414,6 +414,7 @@ type LocateOnMapConfig = {
   , points :: (Array Location)
   , zoomLevel :: Number
   , labelId :: String
+  , editPickUpThreshold :: Number
 }
 
 locateOnMapConfig :: LocateOnMapConfig
@@ -425,6 +426,7 @@ locateOnMapConfig = {
   , points : []
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
   , labelId : ""
+  , editPickUpThreshold : 100.0
 }
 
 
@@ -434,6 +436,8 @@ type MapRouteConfig = {
   , vehicleSizeTagIcon :: Int
   , isAnimation :: Boolean
   , polylineAnimationConfig :: PolylineAnimationConfig
+  , pickUpLocationEditable :: Boolean
+  , dropLocationEditable :: Boolean
 }
 
 type Coordinates = Array Paths
@@ -486,6 +490,7 @@ type UpdateRouteConfig = {
   , srcMarker :: String
   , specialLocation :: MapRouteConfig
   , zoomLevel :: Number
+  , locationName :: String
 }
 
 updateRouteConfig :: UpdateRouteConfig
@@ -504,8 +509,11 @@ updateRouteConfig = {
         draw: 0, 
         fade: 0, 
         delay: 0
-      } 
+      } ,
+      pickUpLocationEditable : true,
+      dropLocationEditable : true
   }
+  , locationName : ""
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
 }
 
