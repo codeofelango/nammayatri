@@ -276,6 +276,7 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
+      Domain.Types.SearchRequestMapping
       Domain.Types.SearchRequestSpecialZone
       Domain.Types.SearchTry
       Domain.Types.Vehicle
@@ -331,6 +332,7 @@ library
       SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.RiderDetails
+      SharedLogic.SearchRequestMapping
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       Storage.Beam.BapMetadata
@@ -422,6 +424,7 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.SearchRequestForDriver
+      Storage.Beam.SearchRequestMapping
       Storage.Beam.SearchRequestSpecialZone
       Storage.Beam.SearchTry
       Storage.Beam.SystemConfigs
@@ -550,6 +553,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SearchRequestForDriver
+      Storage.Queries.SearchRequestMapping
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
       Storage.Queries.Vehicle
