@@ -186,7 +186,11 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "showCustomerReferral" : false,
+        "referralConfig":{
+          "showKnowMore" : false
+        }
       },
       {
         "cityName" : "Hyderabad",
@@ -198,7 +202,11 @@ window.getMerchantConfig = function () {
         "supportNumber" : "+918069724900",
         "languageKey" : "TE_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "showCustomerReferral" : false,
+        "referralConfig":{
+          "showKnowMore" : false
+        }
       },
       {
         "cityName" : "Mysore",
@@ -210,7 +218,11 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "showCustomerReferral" : false,
+        "referralConfig":{
+          "showKnowMore" : false
+        }
       },
       {
         "cityName" : "Delhi",
@@ -222,7 +234,11 @@ window.getMerchantConfig = function () {
         "supportNumber" : "+918069724848",
         "languageKey" : "HI_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "showCustomerReferral" : true,
+        "referralConfig":{
+          "showKnowMore" : false
+        }
       },
       {
         "cityName" : "Chennai",
@@ -234,7 +250,11 @@ window.getMerchantConfig = function () {
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : false
+        "uploadRCandDL" : false,
+        "showCustomerReferral" : false,
+        "referralConfig":{
+          "showKnowMore" : false
+        }
       },
       {
         "cityName" : "Coimbatore",
@@ -246,7 +266,11 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "showCustomerReferral" : false,
+        "referralConfig":{
+          "showKnowMore" : false
+        }
       },
       {
         "cityName" : "Puducherry",
@@ -258,7 +282,11 @@ window.getMerchantConfig = function () {
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "showCustomerReferral" : false,
+        "referralConfig":{
+          "showKnowMore" : false
+        }
       },
       {
         "cityName" : "Tumakuru",
@@ -270,7 +298,11 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "showCustomerReferral" : false,
+        "referralConfig":{
+          "showKnowMore" : false
+        }
       }
   ]
   , "dashboard" : {

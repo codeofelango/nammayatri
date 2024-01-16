@@ -123,7 +123,11 @@ config =
               supportNumber : "",
               languageKey : "KN_IN",
               showDriverReferral : false,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              showCustomerReferral : false,
+              referralConfig : {
+                showKnowMore : false
+              }
             },
             {
               cityName : "Hyderabad",
@@ -135,7 +139,11 @@ config =
               supportNumber : "+918069724900",
               languageKey : "TE_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              showCustomerReferral : false,
+              referralConfig : {
+                showKnowMore : false
+              }
             },
             {
               cityName : "Mysore",
@@ -147,7 +155,11 @@ config =
               supportNumber : "",
               languageKey : "KN_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              showCustomerReferral : false,
+              referralConfig : {
+                showKnowMore : false
+              }
             },
             {
               cityName : "Delhi",
@@ -159,7 +171,11 @@ config =
               supportNumber : "+918069724848",
               languageKey : "HI_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              showCustomerReferral : false,
+              referralConfig : {
+                showKnowMore : false
+              }
             },
             {
               cityName : "Chennai",
@@ -171,7 +187,11 @@ config =
               supportNumber : "08069724899",
               languageKey : "TA_IN",
               showDriverReferral : true,
-              uploadRCandDL : false
+              uploadRCandDL : false,
+              showCustomerReferral : false,
+              referralConfig : {
+                showKnowMore : false
+              }
             },
             {
               cityName : "Coimbatore",
@@ -183,7 +203,11 @@ config =
               supportNumber : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              showCustomerReferral : false,
+              referralConfig : {
+                showKnowMore : false
+              }
             },
             {
               cityName : "Puducherry",
@@ -195,7 +219,11 @@ config =
               supportNumber : "08069724899",
               languageKey : "TA_IN",
               showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              showCustomerReferral : false,
+              referralConfig : {
+                showKnowMore : false
+              }
             }--, For future use
             -- {
             --   cityName : "Madurai",
