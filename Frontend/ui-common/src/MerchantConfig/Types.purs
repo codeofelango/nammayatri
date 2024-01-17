@@ -93,7 +93,13 @@ type CityConfig = {
   supportNumber :: String,
   languageKey :: String,
   showDriverReferral :: Boolean,
-  uploadRCandDL :: Boolean
+  uploadRCandDL :: Boolean,
+  showCustomerReferral :: Boolean,
+  referralConfig :: ReferralConfig
+}
+
+type ReferralConfig = {
+  showKnowMore :: Boolean
 }
 
 type DashboardConfig = {

@@ -1111,4 +1111,12 @@ getTE stringKey =
         ENTER_CODE -> "కోడ్ వ్రాయండి"
         COMPLETE_REGISTRATION -> "నమోదును పూర్తి చెయ్యండి"
         CANT_FIND_OPTION -> "ఎంపికను కనుగొనలేకపోయాము"
-        
+        REFER_AND_EARN -> "Refer and Earn"
+        REFER -> "Refer "
+        EARN_CASH -> "Earn Cash"
+        SHARE -> "Share"
+        REFERRED_CUSTOMERS_INFO -> "Customers who have successfully completed their first ride, referred by you"
+        REFERRED_DRIVERS_INFO -> "Drivers who have onboarded on Namma yatri with your referral code"
+        GOT_IT_TEXT -> "Got it"
+        CUSTOMER_TEXT -> "Customer"
+        DRIVER_TEXT -> "Driver"
