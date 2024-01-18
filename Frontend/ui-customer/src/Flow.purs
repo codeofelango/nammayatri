@@ -424,7 +424,7 @@ updateDisabilityList screenType = do
     Left err -> pure $ getDisabilityList []
 
 homeScreenFlow :: FlowBT String Unit
-homeScreenFlow = do
+homeScreenFlow = do 
   logField_ <- lift $ lift $ getLogFields
   (GlobalState currentState) <- getState
   _ <- checkAndUpdateSavedLocations currentState.homeScreen
@@ -2913,4 +2913,11 @@ rideScheduledFlow = do
   action <- lift $ lift $ runScreen $ UI.rideScheduledScreen currentState.rideScheduledScreen 
   case action of
     RideScheduledScreenOutput.GoToHomeScreen -> homeScreenFlow
+    _ -> pure unit
+
+rentalScreenFlow :: FlowBT String Unit
+rentalScreenFlow = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.rentalScreen currentState.rentalScreen 
+  case action of
     _ -> pure unit
