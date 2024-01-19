@@ -28,6 +28,7 @@ initData = {
         , nearByGates : []
         , specialZoneCoordinates : ""
         , confirmLocCategory : ""
+        , predictionSelectedFromHome : locationListStateObj
   } ,
   props : {
     searchLocStage : PredictionsStage ,
@@ -39,7 +40,12 @@ initData = {
     showLoader : false,
     canClearText : false,
     locUnserviceable : false,
-    isAutoComplete : false
+    isAutoComplete : false,
+    textFieldText : {
+      pickUpLoc : "",
+      dropLoc : ""
+    },
+    pickUpSelectedOnMap : false
   },
   appConfig : getAppConfig appConfig
 }

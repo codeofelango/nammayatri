@@ -50,7 +50,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, 
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, showKeyboard)
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
@@ -136,12 +136,17 @@ import Locale.Utils
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
 import Screens.SearchLocationScreen.Controller as SearchLocationController
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
+import Screens.RentalBookingFlow.RentalScreen.Controller as RentalScreenController
+import Screens.RentalBookingFlow.RentalScreen.ScreenData as RentalScreenData
 import Screens (ScreenName(..), getScreen) as Screen
+import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
+import Helpers.API (callApiBT)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
   baseAppStorage -- TODO:: Restructure the files and names
   baseAppLogs
+  
   let showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
   when callInitUI $ lift $ lift $ initUI -- TODO:: Can we move this to Main
   when showSplashScreen $ toggleSplash true
@@ -443,10 +448,19 @@ homeScreenFlow = do
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
   flow <- UI.homeScreen
   case flow of
+    GO_TO_SEARCH_LOCATION_SCREEN state isSource-> do 
+      { currentLoc, sourceLoc, destLoc, address, destAddress } <- fetchSrcAndDestLoc state
+      (GlobalState globalState) <- getState
+      modifyScreenState 
+        $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData{data{srcLoc = Just sourceLoc, currentLoc = Just currentLoc, destLoc = destLoc , locationList = globalState.globalProps.cachedSearches  }
+            , props{focussedTextField = Just SearchLocPickup , actionType = SearchLocationAction , areBothLocMandatory = true, textFieldText{ pickUpLoc = address.formattedAddress}}})
+      searchLocationFlow
     ADD_STOP state -> do 
       let _ = spy "ADD_STOP" state
+      (GlobalState globalState) <- getState
       modifyScreenState 
-        $ SearchLocationScreenStateType (\slsState -> slsState{props{focussedTextField = Just SearchLocDrop}})
+        $ SearchLocationScreenStateType (\slsState -> slsState{ props{focussedTextField = Just SearchLocDrop}
+                                                              , data {locationList = globalState.globalProps.cachedSearches}})
       searchLocationFlow
     CHECK_FLOW_STATUS -> currentFlowStatus
     GO_TO_MY_RIDES -> do
@@ -485,8 +499,10 @@ homeScreenFlow = do
       if (not sourceServiceabilityResp.serviceable) then do
         updateLocalStage SearchLocationModel
         setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = SearchLocationModel ,rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false, city = getCityNameFromCode sourceServiceabilityResp.city }})
-        homeScreenFlow
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen ,rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = false, isSource = Just true, isRideServiceable = false, city = getCityNameFromCode sourceServiceabilityResp.city }})
+        modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{props{focussedTextField = Just SearchLocPickup, locUnserviceable = true}, data{locationList = globalState.globalProps.cachedSearches}})
+        searchLocationFlow
+        -- homeScreenFlow
         else pure unit
       let currentTime = (convertUTCtoISC (getCurrentUTC "") "h:mm:ss A")
           currentDate =  getCurrentDate ""
@@ -570,86 +586,16 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip{enableTips = homeScreen.props.customerTip.enableTips } , tipViewProps = tipViewData, findingQuotesProgress = 0.0 }})
       homeScreenFlow
     LOCATION_SELECTED item addToRecents-> do
-        void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
-        void $ lift $ lift $ toggleLoader true
-        (GlobalState newState) <- getState
-        let state = newState.homeScreen
+      (GlobalState globalStatee) <- getState
+      let state = globalStatee.homeScreen
+      { currentLoc, sourceLoc, destLoc, address, destAddress } <- fetchSrcAndDestLoc state
+      (GlobalState globalState) <- getState
+      modifyScreenState 
+        $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData{data{srcLoc = Just sourceLoc, predictionSelectedFromHome = item, currentLoc = Just currentLoc , locationList = globalState.globalProps.cachedSearches  }
+            , props{focussedTextField = Just SearchLocDrop , searchLocStage = PredictionSelectedFromHome, actionType = SearchLocationAction , areBothLocMandatory = true, textFieldText{ pickUpLoc = address.formattedAddress}}})
+      searchLocationFlow
 
-        case state.props.sourceSelectedOnMap of
-          true | state.props.isSource == Just true -> pure unit
-          _ -> 
-            case state.props.isSource of
-              Just true -> do
-                (GetPlaceNameResp sourceDetailResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) state.props.sourcePlaceId state.props.sourceLat state.props.sourceLong (if state.props.isSource == Just false then dummyLocationListItemState else item)
-                let (PlaceName sourceDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (sourceDetailResp !! 0))
-                    (LatLong sourceLocation) = sourceDetailResponse.location
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{sourceLat = sourceLocation.lat, sourceLong = sourceLocation.lon} })
-              Just false  -> do
-                (GetPlaceNameResp destinationDetailResp) <- getPlaceNameResp (item.title <> ", " <> item.subTitle) state.props.destinationPlaceId state.props.destinationLat state.props.destinationLong (if state.props.isSource == Just true then dummyLocationListItemState else item)
-                let (PlaceName destinationDetailResponse) = (fromMaybe HomeScreenData.dummyLocationName (destinationDetailResp!!0))
-                    (LatLong destinationLocation) = (destinationDetailResponse.location)
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{destinationLat = destinationLocation.lat, destinationLong = destinationLocation.lon} })
-              _          -> pure unit
-        updateSourceLocation ""
-        (GlobalState updatedState) <- getState
-        let bothLocationChangedState = updatedState.homeScreen
-        (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.sourceLat bothLocationChangedState.props.sourceLong)
-        let srcServiceable = sourceServiceabilityResp.serviceable
-        let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
-        let pickUpPoints = map (\(GatesInfo item) -> {
-                                                place: item.name,
-                                                lat  : (item.point)^._lat,
-                                                lng : (item.point)^._lon,
-                                                address : item.address,
-                                                city : Nothing
-                                              }) srcSpecialLocation.gates
-        (ServiceabilityResDestination destServiceabilityResp) <- Remote.destServiceabilityBT (Remote.makeServiceabilityReqForDest bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong)
-        let destServiceable = destServiceabilityResp.serviceable
-        let pickUpLoc = if length pickUpPoints > 0 then (if state.props.defaultPickUpPoint == "" then fetchDefaultPickupPoint pickUpPoints state.props.sourceLat state.props.sourceLong else state.props.defaultPickUpPoint) else (fromMaybe HomeScreenData.dummyLocation (state.data.nearByPickUpPoints!!0)).place
-        setValueToLocalStore CUSTOMER_LOCATION $ show (getCityNameFromCode sourceServiceabilityResp.city)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson,nearByPickUpPoints=pickUpPoints},props{city = getCityNameFromCode sourceServiceabilityResp.city , isSpecialZone =  (sourceServiceabilityResp.geoJson) /= Nothing, confirmLocationCategory = if length pickUpPoints > 0 then state.props.confirmLocationCategory else "", findingQuotesProgress = 0.0 }})
-        when (addToRecents) $ do
-          addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
-          fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
-        (GlobalState globalState) <- getState
-        let updateScreenState = globalState.homeScreen
-            recentList = 
-                updateLocListWithDistance 
-                  updateScreenState.data.recentSearchs.predictionArray 
-                  updateScreenState.props.sourceLat 
-                  updateScreenState.props.sourceLong 
-                  true 
-                  state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
-        if (not srcServiceable && (updateScreenState.props.sourceLat /= -0.1 && updateScreenState.props.sourceLong /= -0.1) && (updateScreenState.props.sourceLat /= 0.0 && updateScreenState.props.sourceLong /= 0.0)) then do
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isSrcServiceable = false, isRideServiceable= false, isSource = Just true}, data {recentSearchs {predictionArray = recentList}}})
-          homeScreenFlow
-        else if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
-          if (getValueToLocalStore LOCAL_STAGE == "HomeScreen") then do
-            _ <- pure $ toast (getString STR.LOCATION_UNSERVICEABLE)
-            pure unit
-            else pure unit
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isDestServiceable = false, isRideServiceable = false,isSource = Just false, isSrcServiceable = true}, data {recentSearchs {predictionArray = recentList}}})
-          homeScreenFlow
-        else 
-          modifyScreenState $ 
-            HomeScreenStateType 
-              (\homeScreen -> 
-                updateScreenState
-                  { props
-                      { isRideServiceable = true
-                      , isSrcServiceable = true
-                      , isDestServiceable = true
-                      }
-                  , data 
-                      { recentSearchs 
-                          { predictionArray = 
-                              recentList
-                          }
-                      }
-                  }
-              )
-        rideSearchFlow "NORMAL_FLOW"
-
+    
     SEARCH_LOCATION input state -> do
       (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( state.props.sourceLat) ( state.props.sourceLong) getSearchRadius (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "")
       let event =
@@ -719,7 +665,7 @@ homeScreenFlow = do
             srcMarker = (Remote.normalRoute "").srcMarker
             destMarker = (Remote.normalRoute "").destMarker
         case state.props.routeEndPoints of
-          Just points -> lift $ lift $ liftFlow $ updateRouteMarker $ updateRouteMarkerConfig (Remote.walkCoordinate points.source.lat points.source.lng points.destination.lat points.destination.lng) points.source.place points.destination.place srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig)
+          Just points -> lift $ lift $ liftFlow $ updateRouteMarker $ updateRouteMarkerConfig (Remote.walkCoordinate points.source.lat points.source.lng points.destination.lat points.destination.lng) points.source.place points.destination.place srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) (getNewIDWithTag "CustomerHomeScreen")
           Nothing -> pure unit
         homeScreenFlow
     GET_SELECT_LIST state -> do
@@ -931,9 +877,10 @@ homeScreenFlow = do
       updateUserInfoToState state
       if state.props.currentStage == RideCompleted then
         if (getSearchType unit) == "direct_search" then do
-          _ <- updateLocalStage SearchLocationModel
+          _ <- updateLocalStage HomeScreen
           checkAndUpdateLocations
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = SearchLocationModel}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen}})
+          searchLocationFlow
           else pure unit
         else pure unit
       if state.data.rideRatingState.rating == 5 then do
@@ -1368,14 +1315,19 @@ homeScreenFlow = do
               }
           )
       rideSearchFlow "REPEAT_RIDE_FLOW"
+    GO_TO_RIDE_SEARCH_FLOW -> do 
+      let _ = spy "Inissde Go to ride search Flow" "dsfgdjkh"
+      -- _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+      rideSearchFlowV2 --
+      -- rideSearchFlow "NORMAL_FLOW"
     EXIT_TO_TICKETING _ -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = true}})
       modifyScreenState $ TicketingScreenStateType (\_ -> PlaceListData.initData{ props { hideMyTickets = false }})
       placeListFlow
     GO_TO_HELP_AND_SUPPORT -> helpAndSupportScreenFlow
-    GO_TO_RENTALS_FLOW -> do 
-      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-      searchLocationFlow --rentalsScreenFlow
+    GO_TO_RENTALS_FLOW state -> do 
+      modifyScreenState $ RentalScreenStateType (\_ -> RentalScreenData.initData{data{pickUpLoc {address = (getString STR.CURRENT_LOCATION), city = Just state.props.city , lat = Just state.props.currentLocation.lat , lon = Just state.props.currentLocation.lng, placeId = Nothing}}})
+      rentalScreenFlow
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
     _ -> homeScreenFlow
 
@@ -1478,10 +1430,12 @@ rideSearchFlow flowType = do
                   void $ lift $ lift $ toggleLoader false
 
                 Nothing -> pure unit
-    else
+      homeScreenFlow
+    else do
       let updatedLocationList = updateLocListWithDistance finalState.data.destinationSuggestions finalState.props.sourceLat finalState.props.sourceLong true finalState.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
-      in modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {locationList = updatedLocationList}, props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel}})
-  homeScreenFlow
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {locationList = updatedLocationList}, props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = HomeScreen}})
+      modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{data{locationList = updatedLocationList}})
+      searchLocationFlow
 
 getfeedbackReq :: HomeScreenState -> FeedbackReq
 getfeedbackReq state = (Remote.makeFeedBackReq (state.data.rideRatingState.rating) (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedback) (state.data.ratingViewState.wasOfferedAssistance))
@@ -2046,7 +2000,7 @@ savedLocationFlow = do
       addNewAddressScreenFlow "edit Location"
 
     GO_BACK_FROM_SAVED_LOCATION -> do
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       homeScreenFlow
   pure unit
 
@@ -2154,7 +2108,7 @@ addNewAddressScreenFlow input = do
                                                                                                       } )
         addNewAddressScreenFlow ""
     GO_TO_FAVOURITES -> do
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       savedLocationFlow
 
     CHECK_LOCATION_SERVICEABILITY state locItemType-> do
@@ -2227,7 +2181,7 @@ addNewAddressScreenFlow input = do
                 } )
         updateDistanceInfo state recentItem.lat recentItem.lon
     GO_TO_HOME_SCREEN_FLOW -> do
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       homeScreenFlow
     GO_TO_SEARCH_LOC_SCREEN -> do 
       _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "SearchLocationScreenMap")
@@ -2270,7 +2224,7 @@ drawDottedRoute state = do
       srcLng = state.data.driverInfoCardState.driverLng
       destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
       destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-  lift $ lift $ liftFlow $ drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarker destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
+  lift $ lift $ liftFlow $ drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) {points : []} "DOT" "#323643" false srcMarker destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" (specialLocationConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "CustomerHomeScreen") 
 
 isForLostAndFound :: Boolean
 isForLostAndFound = true
@@ -2969,6 +2923,12 @@ rideScheduledFlow = do
   action <- lift $ lift $ runScreen $ UI.rideScheduledScreen currentState.rideScheduledScreen 
   case action of
     RideScheduledScreenOutput.GoToHomeScreen -> homeScreenFlow
+    RideScheduledScreenOutput.GoToSearchLocationScreen updatedState -> do
+      modifyScreenState
+        $ SearchLocationScreenStateType 
+            (\_ -> SearchLocationScreenData.initData{data{fromScreen = (Screen.getScreen Screen.RIDE_SCHEDULED_SCREEN), srcLoc = Just updatedState.source , destLoc = updatedState.destination}
+                                                     , props {focussedTextField = Just SearchLocDrop, actionType = ST.AddingStopAction}})
+      searchLocationFlow
     _ -> pure unit
     
 
@@ -2990,9 +2950,16 @@ searchLocationFlow = do
     SearchLocationController.ConfirmAndSaveFav state -> confirmAndSaveLocFlow state
     SearchLocationController.PredictionClicked prediction state -> predictionClickedFlow prediction state
     SearchLocationController.AddFavLoc state tag -> addFavLocFlow state tag
-    SearchLocationController.HomeScreen state -> homeScreenFlow 
-    SearchLocationController.RentalsScreen state -> pure unit
+    SearchLocationController.HomeScreen state -> do 
+      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      (GlobalState globalState) <- getState 
+      let _ = spy "Inside Backpressed for HomeScreen" globalState.homeScreen.props.currentStage 
+      when (globalState.homeScreen.props.currentStage == HomeScreen ) $ do
+        modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
+      homeScreenFlow 
+    SearchLocationController.RentalsScreen state -> rentalScreenFlow
     SearchLocationController.LocSelectedOnMap state -> locSelectedOnMapFlow state 
+    SearchLocationController.RideScheduledScreen state -> rideScheduledFlow
     _ -> pure unit
   where 
   
@@ -3003,9 +2970,40 @@ searchLocationFlow = do
           lonNum = fromMaybe 0.0 state.data.latLonOnMap.lon
           focussedField = fromMaybe SearchLocPickup state.props.focussedTextField
       {pickUpPoints, locServiceable , city, geoJson, specialLocCategory} <- getServiceability latNum lonNum $ fromMaybe SearchLocPickup state.props.focussedTextField
-      if locServiceable then 
-        -- we already have the data inside srcLoc and destLoc
-        pure unit
+      
+      if locServiceable then do
+        case state.props.searchLocStage of 
+          ConfirmLocationStage -> do 
+            case state.props.actionType of 
+              SearchLocationAction -> do 
+                updateLocationFromMap state{props{focussedTextField = Just SearchLocPickup}}
+                enterRideSearchFLow
+              AddingStopAction -> do 
+                updateRentalsData focussedField geoJson state  
+                addStopFlow state
+              _ -> pure unit  
+
+          LocateOnMapStage -> do
+            case state.props.actionType of 
+              SearchLocationAction -> do 
+                updateLocationFromMap state
+                (GlobalState globalState) <- getState
+                let updatedSlsState = globalState.searchLocationScreen
+                if state.props.areBothLocMandatory then do
+                  checkForBothLocs state state.data.srcLoc state.data.destLoc 
+                else do 
+                  void $ pure $ showKeyboard $ getNewIDWithTag (show SearchLocDrop)
+                  modifyScreenState
+                    $ SearchLocationScreenStateType (\slsState -> slsState{props{searchLocStage = PredictionsStage, focussedTextField = Just SearchLocDrop}
+                                                                          , data {latLonOnMap = SearchLocationScreenData.dummyLocationInfo, specialZoneCoordinates = "", confirmLocCategory = "", nearByGates = []}}) -- restoring to previous state
+                  searchLocationFlow
+            
+              AddingStopAction -> do 
+                -- updateRentalsData focussedField geoJson state -- depending on fromScreen change the screen addStopFlow
+                addStopFlow state
+              _ -> pure unit
+          _ -> pure unit
+
         else 
           modifyScreenState 
             $ SearchLocationScreenStateType (\slsState -> 
@@ -3017,6 +3015,58 @@ searchLocationFlow = do
                           }
                         })
       searchLocationFlow 
+
+    addStopFlow :: SearchLocationScreenState -> FlowBT String Unit
+    addStopFlow state = do 
+      if state.data.fromScreen == (Screen.getScreen Screen.HOME_SCREEN) then do 
+        (GlobalState globalState) <- getState 
+        let bookingId = globalState.homeScreen.props.bookingId 
+            isEdit = globalState.homeScreen.data.destination /= ""
+            destLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.destLoc
+            stopLocation = encodeAddress destLoc.address [] Nothing
+        if isEdit then do 
+          let req = Remote.makeEditStopReq bookingId stopLocation
+          response <- callApiBT (EditStopRequest bookingId req)
+          pure unit
+        else do 
+          let req = Remote.makeAddStopReq bookingId stopLocation
+          response <- callApiBT (AddStopRequest bookingId req)
+          pure unit
+        -- addStopFLow 
+        pure unit
+        else 
+          pure unit
+
+
+    updateRentalsData :: SearchLocationTextField -> String -> SearchLocationScreenState -> FlowBT String Unit
+    updateRentalsData focussedField geoJson state =  do 
+      if focussedField == SearchLocPickup && geoJson /= "" then do 
+        modifyScreenState $ 
+          SearchLocationScreenStateType (\slsState -> slsState {props{searchLocStage = PredictionsStage, focussedTextField = Nothing ,locUnserviceable = true }
+                                                                , data {latLonOnMap = SearchLocationScreenData.dummyLocationInfo, specialZoneCoordinates = "", confirmLocCategory = "", nearByGates = []}}) -- restoring to previous state
+        searchLocationFlow
+      else do 
+        if focussedField == SearchLocPickup then 
+          modifyScreenState $ 
+            RentalScreenStateType (\rentalScreen -> rentalScreen {data{pickUpLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.srcLoc}})
+          else
+            modifyScreenState $ 
+              RentalScreenStateType (\rentalScreen -> rentalScreen {data{dropLoc = state.data.destLoc}}) 
+        rentalScreenFlow
+
+    updateLocationFromMap :: SearchLocationScreenState -> FlowBT String Unit
+    updateLocationFromMap state = do
+      (GlobalState globalState) <- getState
+      let focussedField = fromMaybe SearchLocPickup globalState.searchLocationScreen.props.focussedTextField
+      if focussedField == SearchLocPickup then do 
+        modifyScreenState 
+          $ SearchLocationScreenStateType
+              (\slsState -> slsState{data{srcLoc = Just state.data.latLonOnMap}, props{pickUpSelectedOnMap = true}})
+        else 
+          modifyScreenState 
+            $ SearchLocationScreenStateType
+                (\slsState -> slsState{data{destLoc = Just state.data.latLonOnMap}})
+      pure unit 
 
     handleUpdateLocNameFlow :: SearchLocationScreenState -> String -> String -> FlowBT String Unit
     handleUpdateLocNameFlow state lat lon =  do 
@@ -3032,9 +3082,9 @@ searchLocationFlow = do
           updatedState = { lat : fromString lat, lon : fromString lon, placeId : locOnMap.placeId, address : locOnMap.address, addressComponents : locOnMap.addressComponents , city : Just cityName  } 
       modifyScreenState 
         $ SearchLocationScreenStateType 
-            (\slsState -> slsState{data{ latLonOnMap = updatedState}})
+            (\slsState -> slsState{data{ latLonOnMap = updatedState, confirmLocCategory = specialLocCategory}})
       if isSpecialZone then 
-        specialLocFlow geoJson pickUpPoints specialLocCategory latNum lonNum
+        specialLocFlow geoJson pickUpPoints latNum lonNum
         else 
           updateLocDetailsFlow state latNum lonNum pickUpPoints cityName
 
@@ -3051,21 +3101,13 @@ searchLocationFlow = do
         let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing}
         modifyScreenState 
           $ SearchLocationScreenStateType 
-              (\ slsState -> slsState { data  {latLonOnMap = updatedAddress, confirmLocCategory = ""} }) 
+              (\ slsState -> slsState { data  {latLonOnMap = updatedAddress} }) 
       searchLocationFlow
 
-    specialLocFlow :: String -> Array Location -> String -> Number -> Number -> FlowBT String Unit
-    specialLocFlow geoJson pickUpPoints category lat lon = do
-      modifyScreenState
-          $ SearchLocationScreenStateType 
-              (\searchLocScreen -> searchLocScreen 
-                  { data {
-                      specialZoneCoordinates = geoJson ,
-                      nearByGates = pickUpPoints ,
-                      confirmLocCategory = category
-                  }
-                  })
+    specialLocFlow :: String -> Array Location -> Number -> Number -> FlowBT String Unit
+    specialLocFlow geoJson pickUpPoints lat lon = do
       void $ pure $ removeAllPolylines "" 
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{data{specialZoneCoordinates = geoJson, nearByGates = pickUpPoints}})
       liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapSLSPin" }
       searchLocationFlow 
 
@@ -3092,7 +3134,6 @@ searchLocationFlow = do
                                 item { lat = item.lat, lon = item.lon, locationItemType = item.locationItemType, postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav"}
                             )
                             (filteredRecentsList <> filteredPredictionList)
-
       modifyScreenState   
         $ SearchLocationScreenStateType   
           ( \searchLocationScreen -> 
@@ -3184,7 +3225,7 @@ searchLocationFlow = do
 predictionClickedFlow :: LocationListItemState -> SearchLocationScreenState -> FlowBT String Unit
 predictionClickedFlow prediction state = do 
   modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
-  if state.props.actionType == AddingStopAction then do 
+  if state.props.actionType == AddingStopAction || true then do 
     void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
     void $ lift $ lift $ toggleLoader true
     let {lat, lon, placeId} = {lat : fromMaybe 0.0 prediction.lat, lon : fromMaybe 0.0 prediction.lon, placeId : prediction.placeId}
@@ -3196,7 +3237,10 @@ predictionClickedFlow prediction state = do
       (pure unit) 
       (\ currTextField -> onPredictionClicked placeLat placeLon currTextField prediction) 
       state.props.focussedTextField
+    void $ lift $ lift $ toggleLoader false
+    searchLocationFlow
     else do 
+      void $ lift $ lift $ toggleLoader false
       searchLocationFlow
 
   where 
@@ -3205,23 +3249,31 @@ predictionClickedFlow prediction state = do
     onPredictionClicked placeLat placeLon currTextField prediction = do
       {pickUpPoints , locServiceable, city, geoJson, specialLocCategory} <- getServiceability placeLat placeLon currTextField
       let focussedField = show currTextField
-      pure $ setText (getNewIDWithTag focussedField) $ prediction.description
       if locServiceable then do 
         let {sourceLoc, destinationLoc, updatedState} = mkSrcAndDestLoc placeLat placeLon state currTextField prediction city
-        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapSLSPin" }
         modifyScreenState 
           $ SearchLocationScreenStateType 
-              (\slsScreen -> slsScreen{ props {searchLocStage = ConfirmLocationStage, locUnserviceable = false}
-                              , data { srcLoc = sourceLoc, destLoc = destinationLoc, latLonOnMap = updatedState, confirmLocCategory = specialLocCategory }
+              (\slsScreen -> slsScreen{ props {locUnserviceable = false}
+                              , data { srcLoc = sourceLoc, destLoc = destinationLoc }
                               })
         void $ lift $ lift $ toggleLoader false
         updateCachedLocation prediction placeLat placeLon state locServiceable
-        -- srcLoc and destLoc consists of the data to be used for API calls.
-        searchLocationFlow 
+        if state.props.areBothLocMandatory then do 
+          checkForBothLocs state sourceLoc destinationLoc
+          else do
+            let defaultPP = fetchDefaultPickupPoint pickUpPoints placeLat placeLon 
+            modifyScreenState
+              $ SearchLocationScreenStateType 
+                    (\slsState -> slsState {props { searchLocStage = ConfirmLocationStage}
+                                      , data {latLonOnMap = updatedState, confirmLocCategory = specialLocCategory, nearByGates = pickUpPoints, defaultGate = defaultPP }})  
+            liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapSLSPin" }
+            searchLocationFlow
+
         else do 
-          modifyScreenState $ SearchLocationScreenStateType (\state -> state{props{ locUnserviceable = true}})
+          modifyScreenState $ SearchLocationScreenStateType (\state -> state{props{ searchLocStage = PredictionsStage, locUnserviceable = true}})
           void $ lift $ lift $ toggleLoader false
           searchLocationFlow
+
 
     mkSrcAndDestLoc :: Number -> Number -> SearchLocationScreenState -> SearchLocationTextField -> LocationListItemState -> Maybe String -> {sourceLoc :: Maybe LocationInfo, destinationLoc :: Maybe LocationInfo, updatedState :: LocationInfo}
     mkSrcAndDestLoc placeLat placeLon state currTextField prediction city = 
@@ -3239,24 +3291,100 @@ predictionClickedFlow prediction state = do
         setSuggestionsMapInLocal prediction srcLat srcLon placeLat placeLon locServiceable state.appConfig
       pure unit
 
+checkForBothLocs :: SearchLocationScreenState -> Maybe LocationInfo -> Maybe LocationInfo -> FlowBT String Unit
+checkForBothLocs state sourceLoc destinationLoc = 
+  if isJust sourceLoc && isJust destinationLoc then do 
+    if (not state.props.pickUpSelectedOnMap) then do 
+      let lat = maybe 0.0 (\loc -> fromMaybe 0.0 loc.lat) sourceLoc
+          lon = maybe 0.0 (\loc -> fromMaybe 0.0 loc.lon) sourceLoc
+      {pickUpPoints , locServiceable, city, geoJson, specialLocCategory} <- getServiceability lat lon SearchLocPickup
+      let defaultPP = fetchDefaultPickupPoint pickUpPoints lat lon 
+      modifyScreenState
+        $ SearchLocationScreenStateType 
+            (\slsState -> slsState {props { searchLocStage = ConfirmLocationStage, focussedTextField = Just SearchLocPickup}
+                              , data {latLonOnMap = fromMaybe SearchLocationScreenData.dummyLocationInfo sourceLoc, confirmLocCategory = specialLocCategory, nearByGates = pickUpPoints, defaultGate = defaultPP}})
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints , zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapSLSPin" }
+      searchLocationFlow
+      else enterRideSearchFLow
+  else do 
+    void $ pure $ showKeyboard $ getNewIDWithTag (show SearchLocDrop)
+    modifyScreenState 
+      $ SearchLocationScreenStateType 
+          (\slsState -> slsState {props{focussedTextField = Just SearchLocDrop, searchLocStage = PredictionsStage}
+                                  , data {latLonOnMap = SearchLocationScreenData.dummyLocationInfo}}) -- restoring to previous statez
+    searchLocationFlow
+
+rideSearchFlowV2 = do 
+  (GlobalState globalState) <- getState
+  let slsState = globalState.searchLocationScreen
+      {currLat, currLon} = maybe ({currLat : 0.0, currLon : 0.0}) (\loc -> {currLat : fromMaybe 0.0 loc.lat, currLon : fromMaybe 0.0 loc.lon}) slsState.data.currentLoc
+      {srcLat, srcLon, srcAddressComponents , srcAddress ,  destLat, destLon, destAddressComponents, destAddress} = getSrcAndDestLoc slsState
+  (SearchRes rideSearchRes) <- Remote.rideSearchBT $ Remote.makeRideSearchReq srcLat srcLon destLat destLon srcAddressComponents destAddressComponents
+  routeResponse <- Remote.drawMapRoute srcLat srcLon destLat destLon (Remote.normalRoute "") "NORMAL" srcAddress destAddress rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
+  case rideSearchRes.routeInfo of 
+    Just (Route response) -> do
+      let distance = if response.distance < 1000 then toStringJSON(response.distance)  <> " m" else parseFloat(INT.toNumber(response.distance) / 1000.0) 2 <> " km"
+          duration = (show (response.duration / 60)) <> " min"
+          Snapped points = response.points
+      case head points, last points of
+        Just (LatLong source), Just (LatLong dest) -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ routeEndPoints = Just ({ source : { lat : source.lat, lng : source.lon, place : srcAddress, address : Nothing, city : Nothing }, destination : { lat : dest.lat, lng : dest.lon, place : destAddress, address : Nothing, city : Nothing } }) } })
+        _ , _ -> pure unit
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = srcAddress, sourceAddress = srcAddressComponents}})
+      let distanceBtwCurrentAndSource = getDistanceBwCordinates srcLat srcLon currLat currLon
+          isDistMoreThanThreshold = distanceBtwCurrentAndSource > slsState.appConfig.mapConfig.locateOnMapConfig.pickUpToSourceThreshold
+      if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000) then do
+        updateLocalStage DistanceOutsideLimits
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0, isShorterTrip = false}})
+        homeScreenFlow
+        else if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false ) [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) then do 
+          let currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
+          updateLocalStage currentStage
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = currentStage ,rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance, isShorterTrip = response.distance < 500, findingQuotesProgress = 0.0}})
+          homeScreenFlow
+        else pure unit
+      pure unit
+    Nothing -> pure unit
+  void $ liftFlowBT $ setFlowStatusData (FlowStatusData { source : {lat : srcLat, lng : srcLon, place : srcAddress, address : Nothing, city : Nothing} -- updated city here
+                                                      , destination : {lat : destLat, lng : destLon, place : destAddress, address : Nothing, city : Nothing}
+                                                      , sourceAddress : srcAddressComponents
+                                                      , destinationAddress : destAddressComponents })
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0}, data{nearByDrivers = Nothing}})
+  updateLocalStage FindingEstimate
+  homeScreenFlow
+
+
+-- getSrcAndDestLoc :: SearchLocationScreenState -> {srcLat :: Number, srcLon :: Number, srcAddressComponents :: Array AddressComponents, srcAddress :: String, destLat :: Number, destLon :: Number, destAddressComponents :: Array AddressComponents, destAddress :: String}
+getSrcAndDestLoc state = 
+  let {srcLat, srcLon, srcAddressComponents, srcAddress } = maybe ({srcLat : 0.0, srcLon : 0.0, srcAddressComponents : dummyAddress, srcAddress : ""}) (\loc -> {srcLat : fromMaybe 0.0 loc.lat, srcLon : fromMaybe 0.0 loc.lon, srcAddressComponents : loc.addressComponents, srcAddress : loc.address}) state.data.srcLoc
+      {destLat, destLon, destAddressComponents, destAddress } = maybe ({destLat : 0.0, destLon : 0.0, destAddressComponents : dummyAddress, destAddress : ""}) (\loc -> {destLat : fromMaybe 0.0 loc.lat, destLon : fromMaybe 0.0 loc.lon, destAddressComponents : loc.addressComponents, destAddress : loc.address}) state.data.destLoc
+  in {srcLat, srcLon, srcAddressComponents, srcAddress , destLat, destLon, destAddressComponents, destAddress}
+
 getServiceability :: Number -> Number -> SearchLocationTextField -> FlowBT String {pickUpPoints :: Array Location, locServiceable :: Boolean, city :: Maybe String, geoJson :: String, specialLocCategory :: String}
-getServiceability placeLat placeLon currTextField = do
-  (ServiceabilityRes pickUpServiceability) <- Remote.originServiceabilityBT $ Remote.makeServiceabilityReq placeLat placeLon
-  (ServiceabilityResDestination dropServiceability) <- Remote.destServiceabilityBT $ Remote.makeServiceabilityReqForDest placeLat placeLon
-  let serviceabilityRes = if currTextField == SearchLocPickup then pickUpServiceability else dropServiceability
-      city = serviceabilityRes.city
-      geoJson = fromMaybe "" serviceabilityRes.geoJson
-      locServiceable = serviceabilityRes.serviceable
-      (SpecialLocation specialLoc) = fromMaybe HomeScreenData.specialLocation (serviceabilityRes.specialLocation)
-      specialLocCategory = specialLoc.category
-      pickUpPoints = map (\(GatesInfo item) -> {
-        place: item.name,
-        lat  : (item.point)^._lat,
-        lng : (item.point)^._lon,
-        address : item.address,
-        city : Nothing
-      }) specialLoc.gates
-  pure $ {pickUpPoints , locServiceable, city, geoJson, specialLocCategory}
+getServiceability placeLat placeLon currTextField = 
+  if currTextField == SearchLocPickup then do
+    (ServiceabilityRes pickUpServiceability) <- Remote.originServiceabilityBT $ Remote.makeServiceabilityReq placeLat placeLon
+    getServiceabilityRes pickUpServiceability
+    else do
+      (ServiceabilityResDestination dropServiceability) <- Remote.destServiceabilityBT $ Remote.makeServiceabilityReqForDest placeLat placeLon
+      getServiceabilityRes dropServiceability
+  where 
+    -- getServiceabilityRes :: ServiceabilityRes -> FlowBT String {pickUpPoints :: Array Location, locServiceable :: Boolean, city :: Maybe String, geoJson :: String, specialLocCategory :: String}
+    getServiceabilityRes serviceabilityRes = do
+      let city = serviceabilityRes.city
+          geoJson = fromMaybe "" serviceabilityRes.geoJson
+          locServiceable = serviceabilityRes.serviceable
+          (SpecialLocation specialLoc) = fromMaybe HomeScreenData.specialLocation (serviceabilityRes.specialLocation)
+          specialLocCategory = specialLoc.category
+          pickUpPoints = map (\(GatesInfo item) -> {
+            place: item.name,
+            lat  : (item.point)^._lat,
+            lng : (item.point)^._lon,
+            address : item.address,
+            city : Nothing
+          }) specialLoc.gates
+      pure $ {pickUpPoints , locServiceable, city, geoJson, specialLocCategory}
+
 
 fetchLatLong :: LocationListItemState -> String -> FlowBT String {lat :: Maybe Number, long :: Maybe Number, addressComponents :: Array AddressComponents}
 fetchLatLong selectedItem tag = do
@@ -3289,3 +3417,88 @@ fetchGlobalSavedLocations :: FlowBT String (Array LocationListItemState)
 fetchGlobalSavedLocations = do
   (GlobalState globalState) <- getState
   pure $ (globalState.globalProps.savedLocations)
+
+rentalScreenFlow :: FlowBT String Unit
+rentalScreenFlow = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.rentalScreen currentState.rentalScreen 
+  case action of
+    RentalScreenController.GoToHomeScreen -> homeScreenFlow
+    RentalScreenController.SearchLocationForRentals updatedState locToBeUpdated -> do 
+      let locToBeUpdated' = case locToBeUpdated of 
+                              "PickUpLoc" -> SearchLocPickup
+                              "FirstStop" -> SearchLocDrop 
+                              _ -> SearchLocPickup
+      
+      modifyScreenState
+        $ RentalScreenStateType (\rentalScreen -> updatedState)
+      (GlobalState globalState) <- getState
+      let _ = spy "Going to searchLocationFlow" globalState
+      modifyScreenState
+        $ SearchLocationScreenStateType 
+            (\_ -> SearchLocationScreenData.initData{data{locationList = globalState.globalProps.cachedSearches, fromScreen = (Screen.getScreen Screen.RENTAL_SCREEN), srcLoc = Just updatedState.data.pickUpLoc , destLoc = updatedState.data.dropLoc}
+                                                     , props {focussedTextField = Just locToBeUpdated'}})
+      searchLocationFlow
+    RentalScreenController.GoToRideScheduledScreen updatedState -> do
+      modifyScreenState $ RideScheduledScreenStateType 
+        (\_ -> RideScheduledScreenData.initData {
+            primaryButtonText = getString STR.GO_HOME
+          , source = updatedState.data.pickUpLoc
+          , destination = updatedState.data.dropLoc
+          , startTime = updatedState.data.startTimeUTC
+          , finalPrice = ""
+          , baseDuration = show updatedState.data.rentalBookingData.baseDuration
+          , baseDistance = show updatedState.data.rentalBookingData.baseDistance
+          , driverAllocationTime = "15"
+        })
+      rideScheduledFlow
+    _ -> pure unit
+    
+
+enterRideSearchFLow :: FlowBT String Unit
+enterRideSearchFLow = do
+  (GlobalState globalState) <- getState
+  let slsState = globalState.searchLocationScreen
+      {currLat, currLon, currAddressComponents, currPlace, currCity} = maybe ({currLat : 0.0, currLon : 0.0, currAddressComponents  : dummyAddress , currPlace : "" , currCity : Nothing}) (\loc -> {currLat : fromMaybe 0.0 loc.lat, currLon : fromMaybe 0.0 loc.lon, currAddressComponents : loc.addressComponents , currPlace : loc.address , currCity : loc.city}) slsState.data.currentLoc
+      {srcLat, srcLon, srcAddressComponents , srcAddress ,  destLat, destLon, destAddressComponents, destAddress} = getSrcAndDestLoc slsState
+  modifyScreenState 
+    $ HomeScreenStateType 
+        (\homeScreen -> HomeScreenData.initData{
+          data {
+            source = srcAddress
+          , destination = destAddress
+          , sourceAddress = srcAddressComponents
+          , destinationAddress = destAddressComponents
+          , polygonCoordinates = slsState.data.specialZoneCoordinates
+          , nearByPickUpPoints = slsState.data.nearByGates
+          }
+        , props {
+            sourceSelectedOnMap = true 
+          , sourceLat = srcLat
+          , sourceLong = srcLon
+          , destinationLat = destLat
+          , isSpecialZone = slsState.data.specialZoneCoordinates /= ""
+          , destinationLong = destLon
+          , currentStage = RideSearch
+          , rideRequestFlow = true 
+          , currentLocation = {
+            lat : currLat ,
+            lng : currLon ,
+            place : currPlace ,
+            city : Nothing,
+            address : Just currPlace
+          }
+        }
+        })
+  updateLocalStage RideSearch
+  homeScreenFlow
+
+
+fetchSrcAndDestLoc state = do
+  PlaceName address <- getPlaceName state.props.sourceLat state.props.sourceLong HomeScreenData.dummyLocation
+  PlaceName destAddress <- getPlaceName state.props.destinationLat state.props.destinationLong HomeScreenData.dummyLocation
+  let currentLoc = {lat : Just state.props.currentLocation.lat, lon : Just state.props.currentLocation.lng , city : Just state.props.city, addressComponents : encodeAddress "" [] Nothing , placeId : Nothing , address : ""}
+      sourceLoc = {lat : Just state.props.sourceLat, lon : Just state.props.sourceLong , city : Just state.props.city, addressComponents : encodeAddress address.formattedAddress [] Nothing , placeId : Nothing , address : address.formattedAddress} 
+      destLoc = if state.props.destinationLat /= 0.0 then Just {lat : Just state.props.destinationLat, lon : Just state.props.destinationLong , city : Just state.props.city, addressComponents : encodeAddress destAddress.formattedAddress [] Nothing , placeId : Nothing , address : destAddress.formattedAddress} else Nothing
+  pure $ {currentLoc, sourceLoc, destLoc, address, destAddress}
+
