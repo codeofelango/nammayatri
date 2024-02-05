@@ -43,6 +43,7 @@ import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)
@@ -119,12 +120,12 @@ data ServiceHandle m = ServiceHandle
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
-    finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Bool -> m (),
+    finalDistanceCalculation :: Maybe (Id DSR.SearchRequest) -> Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
-    getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> m Meters,
+    getDistanceBetweenPoints :: Maybe (Id DSR.SearchRequest) -> LatLong -> LatLong -> [LatLong] -> m Meters,
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
     sendDashboardSms :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
@@ -144,7 +145,7 @@ buildEndRideHandle merchantId merchantOpCityId = do
         calculateFareParameters = Fare.calculateFareParameters,
         putDiffMetric = RideEndInt.putDiffMetric,
         isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
-        finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
+        finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler . (cast @DSR.SearchRequest @LocUpd.SearchRequest <$>),
         getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
         clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
         findConfig = QTConf.findByMerchantOpCityId merchantOpCityId,
@@ -287,7 +288,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             case mbDriverGoHomeReq of
               Just driverGoHomeReq -> do
                 let driverHomeLocation = Maps.LatLong {lat = driverGoHomeReq.lat, lon = driverGoHomeReq.lon}
-                routesResp <- DMaps.getTripRoutes (driverId, booking.providerId, booking.merchantOperatingCityId) (buildRoutesReq tripEndPoint driverHomeLocation)
+                routesResp <- DMaps.getTripRoutes (driverId, booking.providerId, booking.merchantOperatingCityId) booking.searchRequestId (buildRoutesReq tripEndPoint driverHomeLocation)
                 logDebug $ "Routes resp for EndRide API :" <> show routesResp <> "(source, dest) :" <> show (tripEndPoint, driverHomeLocation)
                 let driverHomeDists = mapMaybe (.distance) routesResp
                 if any ((<= goHomeConfig.destRadiusMeters) . getMeters) driverHomeDists
@@ -326,7 +327,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               -- here we update the current ride, so below we fetch the updated version
               pickupDropOutsideOfThreshold <- isPickupDropOutsideOfThreshold booking rideOld tripEndPoint thresholdConfig
               whenJust (nonEmpty tripEndPoints) \tripEndPoints' -> do
-                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation rideOld.id driverId tripEndPoints' estimatedDistance pickupDropOutsideOfThreshold
+                withTimeAPI "endRide" "finalDistanceCalculation" $ finalDistanceCalculation booking.searchRequestId rideOld.id driverId tripEndPoints' estimatedDistance pickupDropOutsideOfThreshold
 
               ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
@@ -480,7 +481,7 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
   if not pickupDropOutsideOfThreshold
     then recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig -- TODO: Fix with rentals
     else do
-      approxTraveledDistance <- getDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints
+      approxTraveledDistance <- getDistanceBetweenPoints booking.searchRequestId tripStartPoint tripEndPoint interpolatedPoints
       logTagInfo "endRide" $ "approxTraveledDistance when pickup and drop are not outside threshold: " <> show approxTraveledDistance
       distanceDiff <- getDistanceDiff booking approxTraveledDistance
       if distanceDiff < 0

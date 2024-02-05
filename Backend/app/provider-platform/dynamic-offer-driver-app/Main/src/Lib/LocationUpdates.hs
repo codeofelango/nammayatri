@@ -26,6 +26,7 @@ import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
+import qualified Domain.Types.SearchRequest as DSR
 import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps
@@ -125,9 +126,10 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   now <- getLocalCurrentTime transportConfig.timeDiffFromUtc
   let snapToRoad' =
         if transportConfig.useWithSnapToRoadFallback
-          then TMaps.snapToRoadWithFallback merchantId merchantOpCityId
+          then (\_searchRequestId -> TMaps.snapToRoadWithFallback merchantId merchantOpCityId)
           else snapToRoadWithService
       enableNightSafety = checkNightSafetyTimeConstraint transportConfig now
+
   return $
     mkRideInterpolationHandler
       isEndRide
@@ -138,8 +140,9 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       )
       snapToRoad'
   where
-    snapToRoadWithService req = do
-      resp <- TMaps.snapToRoad merchantId merchantOpCityId req
+    snapToRoadWithService searchRequestId' req = do
+      let searchRequestId = cast @SearchRequest @DSR.SearchRequest <$> searchRequestId'
+      resp <- TMaps.snapToRoad merchantId merchantOpCityId searchRequestId req
       return ([Google], Right resp)
 
     checkNightSafetyTimeConstraint config now = do

@@ -452,8 +452,9 @@ calculateGoHomeDriverPool ::
   ) =>
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
+  Id SearchRequest ->
   m [DriverPoolWithActualDistResult]
-calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
+calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId searchRequestId = do
   now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
@@ -487,7 +488,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
     case convertedDriverPoolRes of
       [] -> return []
       _ -> do
-        driverGoHomePoolWithActualDistance <- zipWith (curry (\((ghr, driver, _), dpwAD) -> (ghr, driver, dpwAD))) convertedDriverPoolRes . NE.toList <$> computeActualDistance merchantId merchantOpCityId fromLocation (NE.fromList $ map (\(_, _, c) -> c) convertedDriverPoolRes)
+        driverGoHomePoolWithActualDistance <- zipWith (curry (\((ghr, driver, _), dpwAD) -> (ghr, driver, dpwAD))) convertedDriverPoolRes . NE.toList <$> computeActualDistance merchantId merchantOpCityId searchRequestId fromLocation (NE.fromList $ map (\(_, _, c) -> c) convertedDriverPoolRes)
         case driverPoolCfg.actualDistanceThreshold of
           Nothing -> return driverGoHomePoolWithActualDistance
           Just threshold -> do
@@ -527,7 +528,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
       mapM
         ( \(ghReq, driver, driverGoHomePoolWithActualDistance) -> do
             routes <-
-              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) $
+              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) (Just searchRequestId) $
                 Maps.GetRoutesReq
                   { waypoints = getCoordinates driver :| [getCoordinates ghReq],
                     mode = Just Maps.CAR,
@@ -635,15 +636,16 @@ calculateDriverPoolWithActualDist ::
   a ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Id SearchRequest ->
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId merchantOpCityId onlyNotOnRide mRadiusStep = do
+calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId merchantOpCityId searchRequestId onlyNotOnRide mRadiusStep = do
   driverPool <- calculateDriverPool poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do
-      driverPoolWithActualDist <- computeActualDistance merchantId merchantOpCityId pickup (a :| pprox)
+      driverPoolWithActualDist <- computeActualDistance merchantId merchantOpCityId searchRequestId pickup (a :| pprox)
       let filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
             Nothing -> NE.toList driverPoolWithActualDist
             Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActualDist
@@ -720,16 +722,17 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   a ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Id SearchRequest ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId merchantOpCityId mRadiusStep = do
+calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId merchantOpCityId searchRequestId mRadiusStep = do
   driverPool <- calculateDriverPoolCurrentlyOnRide poolCalculationStage driverPoolCfg mbVariant pickup merchantId mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do
       let driverPoolResultsWithDriverLocationAsDestinationLocation = driverResultFromDestinationLocation <$> (a :| pprox)
           driverToDestinationDistanceThreshold = driverPoolCfg.driverToDestinationDistanceThreshold
-      driverPoolWithActualDistFromDestinationLocation <- computeActualDistance merchantId merchantOpCityId pickup driverPoolResultsWithDriverLocationAsDestinationLocation
+      driverPoolWithActualDistFromDestinationLocation <- computeActualDistance merchantId merchantOpCityId searchRequestId pickup driverPoolResultsWithDriverLocationAsDestinationLocation
       driverPoolWithActualDistFromCurrentLocation <- traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
       let driverPoolWithActualDist = NE.zipWith (curry combine) driverPoolWithActualDistFromDestinationLocation driverPoolWithActualDistFromCurrentLocation
           filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
@@ -767,7 +770,7 @@ calculateDriverCurrentlyOnRideWithActualDist poolCalculationStage driverPoolCfg 
                 keepHiddenForSeconds = Seconds 0,
                 goHomeReqId = Nothing
               }
-        else computeActualDistanceOneToOne merchantId merchantOpCityId (LatLong destinationLat destinationLon) temp
+        else computeActualDistanceOneToOne merchantId merchantOpCityId searchRequestId (LatLong destinationLat destinationLon) temp
     combine (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y}, DriverPoolWithActualDistResult {..}) =
       DriverPoolWithActualDistResult
         { actualDistanceToPickup = x + actualDistanceToPickup,
@@ -783,11 +786,12 @@ computeActualDistanceOneToOne ::
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Id SearchRequest ->
   a ->
   DriverPoolResult ->
   m DriverPoolWithActualDistResult
-computeActualDistanceOneToOne merchantId merchantOpCityId pickup driverPoolResult = do
-  (ele :| _) <- computeActualDistance merchantId merchantOpCityId pickup (driverPoolResult :| [])
+computeActualDistanceOneToOne merchantId merchantOpCityId searchRequestId pickup driverPoolResult = do
+  (ele :| _) <- computeActualDistance merchantId merchantOpCityId searchRequestId pickup (driverPoolResult :| [])
   pure ele
 
 computeActualDistance ::
@@ -798,14 +802,15 @@ computeActualDistance ::
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Id SearchRequest ->
   a ->
   NonEmpty DriverPoolResult ->
   m (NonEmpty DriverPoolWithActualDistResult)
-computeActualDistance orgId merchantOpCityId pickup driverPoolResults = do
+computeActualDistance orgId merchantOpCityId searchRequestId pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
   transporter <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   getDistanceResults <-
-    Maps.getEstimatedPickupDistances orgId merchantOpCityId $
+    Maps.getEstimatedPickupDistances orgId merchantOpCityId (Just searchRequestId) $
       Maps.GetDistancesReq
         { origins = driverPoolResults,
           destinations = pickupLatLong :| [],

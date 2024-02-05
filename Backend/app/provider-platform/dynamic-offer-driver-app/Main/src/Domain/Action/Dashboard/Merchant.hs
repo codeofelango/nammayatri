@@ -600,6 +600,7 @@ mkServiceUsageConfigRes DMSUC.MerchantServiceUsageConfig {..} =
     { getEstimatedPickupDistances = Just getEstimatedPickupDistances,
       getPickupRoutes = Just getPickupRoutes,
       getTripRoutes = Just getTripRoutes,
+      getDistancesForCancelRide = Just getDistancesForCancelRide,
       ..
     }
 
@@ -625,8 +626,11 @@ mapsServiceUsageConfigUpdate merchantShortId opCity req = do
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
+                                   getDistancesForCancelRide = fromMaybe merchantServiceUsageConfig.getDistancesForCancelRide req.getDistancesForCancelRide,
                                    getEstimatedPickupDistances = fromMaybe merchantServiceUsageConfig.getEstimatedPickupDistances req.getEstimatedPickupDistances,
                                    getRoutes = fromMaybe merchantServiceUsageConfig.getRoutes req.getRoutes,
+                                   getPickupRoutes = fromMaybe merchantServiceUsageConfig.getPickupRoutes req.getPickupRoutes,
+                                   getTripRoutes = fromMaybe merchantServiceUsageConfig.getTripRoutes req.getTripRoutes,
                                    snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
                                    getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
