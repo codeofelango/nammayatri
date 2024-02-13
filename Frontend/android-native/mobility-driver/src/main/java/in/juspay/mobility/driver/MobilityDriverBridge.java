@@ -101,6 +101,7 @@ import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.OverlaySheetService;
+import in.juspay.mobility.app.TextRecognizerKit;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.Utils;
 import in.juspay.mobility.app.callbacks.CallBack;
@@ -186,6 +187,12 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             TranslatorMLKit translator = new TranslatorMLKit("en", lang, bridgeComponents.getContext());
             translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
         });
+    }
+
+    @JavascriptInterface
+    public void decodeImageInText(String callback, String base64){
+        TextRecognizerKit textRecognizerKit = new TextRecognizerKit();
+        textRecognizerKit.decodeImageInText(callback, base64, bridgeComponents);
     }
 
     @JavascriptInterface
