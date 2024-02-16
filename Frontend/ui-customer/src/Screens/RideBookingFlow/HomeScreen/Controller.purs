@@ -30,6 +30,7 @@ import Components.FavouriteLocationModel as FavouriteLocationModelController
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.LocationListItem.Controller as LocationListItemController
 import Components.LocationTagBar as LocationTagBarController
+import Components.LocationTagBarV2 as LocationTagBarV2Controller
 import Components.MenuButton as MenuButton
 import Components.MenuButton as MenuButton
 import Components.RideCompletedCard.Controller as RideCompletedCard
@@ -50,12 +51,12 @@ import Components.SearchLocationModel.Controller as SearchLocationModelControlle
 import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
-import Constants (defaultDensity)
+import Constants (defaultDensity, languageKey)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
@@ -67,13 +68,13 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion, safeMarginBottom, getDeviceHeight, screenHeight)
+import Engineering.Helpers.Commons
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -90,9 +91,10 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
+import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip)
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..))
+import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -102,7 +104,7 @@ import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm, safetyIssueOptions)
-import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..))
+import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..))
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
@@ -110,10 +112,21 @@ import Data.Function (const)
 import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
+import Data.Function.Uncurried
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
+import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Timers (clearTimerWithId)
 import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
+import Data.Tuple (Tuple(..))
+import PrestoDOM.Core (getPushFn)
+import Components.BannerCarousel as BannerCarousel
+import PrestoDOM.List
+import PrestoDOM.Core
+import Locale.Utils (getLanguageLocale)
+import RemoteConfig as RC
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -700,10 +713,10 @@ data ScreenOutput = LogoutUser
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
+                  | GoToNammaSafety HomeScreenState Boolean Boolean
                   | PastRides HomeScreenState
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
-                  | GoToEmergencyContacts HomeScreenState
                   | Retry HomeScreenState
                   | GetQuotes HomeScreenState
                   | UpdatedState HomeScreenState Boolean
@@ -746,6 +759,16 @@ data ScreenOutput = LogoutUser
                   | ExitToTicketing HomeScreenState
                   | GoToHelpAndSupport HomeScreenState
                   | ReAllocateRide HomeScreenState
+                  | GoToRentalsFlow 
+                  | GoToScheduledRides
+                  | Add_Stop HomeScreenState
+                  | SafetySupport HomeScreenState Boolean
+                  | GoToShareRide HomeScreenState
+                  | GoToNotifyRideShare HomeScreenState
+                  | ExitToFollowRide HomeScreenState
+                  | GoToReportSafetyIssue HomeScreenState
+                  | GoToMyMetroTickets HomeScreenState
+                  | GoToMetroTicketBookingFlow HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -862,6 +885,7 @@ data Action = NoAction
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
             | SpecialZoneOTPExpiryAction Int String String
             | TicketBookingFlowBannerAC Banner.Action
+            | MetroTicketBookingBannerAC Banner.Action
             | WaitingInfo
             | ShareRide
             | ScrollStateChanged String
@@ -888,10 +912,30 @@ data Action = NoAction
             | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
             | ReportIssueClick
+            | DateTimePickerAction String Int Int Int String Int Int
             | ChooseSingleVehicleAction ChooseVehicleController.Action
+            | UpdateSheetState BottomSheetState
+            | LocationTagBarAC LocationTagBarV2Controller.Action
+            | RentalBannerAction Banner.Action
+            | BottomNavBarAction BottomNavBarIcon
+            | BannerCarousel BannerCarousel.Action
+            | SetBannerItem ListItem
+            | UpdateBanner
+            | BannerChanged String
+            | BannerStateChanged String
+            | MetroTicketBannerClickAC Banner.Action
+            | SafetyBannerAction Banner.Action
+            | SafetyAlertAction PopUpModal.Action
+            | ContactAction ContactCircle.Action
+            | ShowShareRide
+            | NotifyRideShare PrimaryButtonController.Action
+            | ToggleShare Int
+            | DismissShareRide
+            | UpdateFollowers FollowRideRes
+            | GoToFollowRide 
+            | PopUpModalReferralAction PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
   continue state 
     { props 
@@ -906,9 +950,21 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
       }
     }
 
-eval ShowMoreSuggestions state = continue state { props {suggestionsListExpanded = not state.props.suggestionsListExpanded} }
+eval ShowMoreSuggestions state = do
+  void $ pure $ map (\item -> startLottieProcess lottieAnimationConfig{ rawJson =  (getAssetsBaseUrl FunctionCall) <> "lottie/right_arrow.json" , speed = 1.0,lottieId = (getNewIDWithTag $ "movingArrowView" <> show item), minProgress = 0.0 }) [0,1]
+  continue state { props {suggestionsListExpanded = not state.props.suggestionsListExpanded} }
 
 eval RemoveShimmer state = continue state{props{showShimmer = false}}
+
+eval (UpdateFollowers (FollowRideRes resp)) state = do
+  let followers = map (\(Followers follower) -> follower) resp
+  continue state{
+    data{
+      followers = Just followers
+    }
+  }
+
+eval GoToFollowRide state = exit $ ExitToFollowRide state
 
 eval (UpdateRepeatTrips rideList) state = do
   void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
@@ -939,6 +995,52 @@ eval ReAllocate state =
     void $ pure $ setValueToLocalStore LOCAL_STAGE ( show FindingQuotes)
     updateAndExit updatedState $ ReAllocateRide updatedState
   else continue state
+  
+eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
+
+eval UpdateBanner state = do
+  if state.data.bannerData.bannerScrollState == "1" then continue state
+  else do
+    let nextBanner = state.data.bannerData.currentBanner + 1
+        bannerArray = if state.props.currentStage == HomeScreen then getBannerConfigs state BannerCarousel else getDriverInfoCardBanners state BannerCarousel
+        updatedIdx = if nextBanner >= (length bannerArray) then 0 else nextBanner
+        newState = state{data {bannerData{currentBanner = updatedIdx, currentPage = updatedIdx}}}
+    continue newState
+
+eval (BannerChanged item) state = do
+  let currentBanner = fromString item
+  case currentBanner of
+    Just idx -> do 
+        let newState = state{data {bannerData{currentBanner = idx}}}
+        if state.data.bannerData.currentPage /= idx then void $ pure $ unsafePerformEffect $ processEvent "RestartAutoScroll" unit -- To stop and stop the new autosroll
+          else pure unit
+        continue newState
+    Nothing  -> continue state
+
+eval (BannerStateChanged item) state = do
+  let newState = state{data {bannerData{bannerScrollState = item}}}
+  continue newState
+
+eval (BannerCarousel (BannerCarousel.OnClick idx)) state = 
+  continueWithCmd state [do
+    let banners = if state.props.currentStage == HomeScreen then getBannerConfigs state BannerCarousel else getDriverInfoCardBanners state BannerCarousel
+    case index banners idx of
+      Just config -> do
+        let _ = runFn2 updatePushInIdMap "bannerCarousel" false
+        case config.type of
+          BannerCarousel.Gender -> pure $ GenderBannerModal $ Banner.OnClick
+          BannerCarousel.Disability -> pure $ DisabilityBannerAC $ Banner.OnClick
+          BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
+          BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
+          BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
+          BannerCarousel.Remote link -> do
+            void $ openUrlInApp link
+            pure NoAction
+          _ -> pure NoAction
+      Nothing -> pure NoAction
+  ] 
+
+eval (MetroTicketBannerClickAC Banner.OnClick) state =  exit $ GoToMetroTicketBookingFlow state
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -998,7 +1100,7 @@ eval StopAutoScrollTimer state =  do
 eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
-  continue state{props{isMockLocation = val}}
+  continue state{props{isMockLocation = false}}
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
@@ -1046,7 +1148,7 @@ eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = save
 
 eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = 
   case state.data.ratingViewState.issueFacedView of
-    true -> continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == (boolToInt $ not state.props.nightSafetyFlow)}}}
+    true -> continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = true}}}
     false -> continue state {data { ratingViewState{selectedYesNoButton = index, doneButtonVisibility = true, wasOfferedAssistance = Just (index==0)}}} 
 
 eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
@@ -1094,7 +1196,7 @@ eval LoadMessages state = do
                             suggestions = getSuggestionsfromKey value.message
                             isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
                             showNotification = isChatNotificationDismissed && unReadMessages
-                        updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
+                        updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
       Nothing -> continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
@@ -1109,6 +1211,26 @@ eval MessageDriver state = do
     ]
 
 eval (MessagingViewActionController (MessagingView.TextChanged value)) state = continue state{data{messageToBeSent = (STR.trim value)},props{sendMessageActive = (STR.length (STR.trim value)) >= 1}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.BannerCarousel act)) state = 
+  continueWithCmd state [do
+      pure $ BannerCarousel act
+    ]
+    
+eval (DriverInfoCardActionController (DriverInfoCardController.UpdateBanner)) state = 
+  continueWithCmd state [do
+      pure $ UpdateBanner
+    ]
+
+eval (DriverInfoCardActionController (DriverInfoCardController.BannerChanged value)) state = 
+  continueWithCmd state [do
+      pure $ BannerChanged value
+    ]
+
+eval (DriverInfoCardActionController (DriverInfoCardController.BannerStateChanged value)) state = 
+  continueWithCmd state [do
+      pure $ BannerStateChanged value
+    ]
 
 eval(MessagingViewActionController (MessagingView.Call)) state = do
   void $ pure $ performHapticFeedback unit
@@ -1168,15 +1290,14 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages FunctionCall
-      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = COLLAPSED}} 
-      -- [ do
-      --   pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
-      -- ]
+      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
   else continueWithCmd state[ do
         pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
       ]
 
-eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = COLLAPSED}}
+eval (UpdateSheetState sheetState) state = continue state {props {sheetState = Nothing, currentSheetState = sheetState}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = Just COLLAPSED, currentSheetState = COLLAPSED}}
 
 eval RemoveNotification state = do
   continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
@@ -1223,7 +1344,7 @@ eval (ScrollStateChanged scrollState) state = do
               "5" -> STATE_HIDDEN
               "6" -> STATE_HALF_EXPANDED
               _ -> STATE_HIDDEN
-  continue state {props {bottomSheetState = sheetState, sheetState = if sheetState == STATE_EXPANDED then EXPANDED else state.props.sheetState}}
+  continue state {props {bottomSheetState = sheetState, currentSheetState = if sheetState == STATE_EXPANDED then EXPANDED else state.props.currentSheetState, sheetState = Nothing}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) state = do
   if length state.data.config.callOptions > 1 then
@@ -1339,7 +1460,7 @@ eval HandleCallback state = do
 
 eval (UpdateSource lat lng name) state = do
   _ <- pure $ printLog "Name::" name
-  exit $ UpdatedState state { data { source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}, props { sourceLat = lat, sourceLong = lng, searchLocationModelProps{crossBtnSrcVisibility = (STR.length name) > 2}} } true
+  exit $ UpdatedState state { data { source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId lat lng}, props { sourceLat = lat, sourceLong = lng, searchLocationModelProps{crossBtnSrcVisibility = (STR.length name) > 2}} } true
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =false}}
 
@@ -1353,7 +1474,7 @@ eval LiveDashboardAction state = do
   else continue state {props {showLiveDashboard = true}}
 
 
-eval (UpdateSourceName lat lon name) state = continue state {data{source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}, props{searchLocationModelProps{crossBtnSrcVisibility = (STR.length name) > 2}} }
+eval (UpdateSourceName lat lon name) state = continue state {data{source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId lat lon}, props{searchLocationModelProps{crossBtnSrcVisibility = (STR.length name) > 2}} }
 
 eval (MAPREADY key latitude longitude) state =
   case key of
@@ -1435,13 +1556,16 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_about"
   exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contacts"
-  exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+eval (SettingSideBarActionController (SettingSideBarController.GoToNammaSafety)) state = do
+  exit $ GoToNammaSafety state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false false
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToMyTickets)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_zoo_tickets"
   exit $ GoToMyTickets state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+
+eval (SettingSideBarActionController (SettingSideBarController.GoToMyMetroTickets)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_metro_tickets"
+  exit $ GoToMyMetroTickets state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
   do
@@ -1534,18 +1658,21 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
     true -> do
             void $ pure $ toggleBtnLoader "SkipButton" false
             _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-            continue
-              state
-                { props { nightSafetyFlow = false }
-                , data
-                  { rideRatingState =
-                    dummyRideRatingState
-                      { driverName = state.data.driverInfoCardState.driverName
-                      , rideId = state.data.driverInfoCardState.rideId
-                      },
-                    ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
-                  }
-                }
+            let newState = state
+                           { props { nightSafetyFlow = false }
+                           , data
+                             { rideRatingState =
+                               dummyRideRatingState
+                                 { driverName = state.data.driverInfoCardState.driverName
+                                 , rideId = state.data.driverInfoCardState.rideId
+                                 },
+                               ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
+                             }
+                           }
+            if state.props.nightSafetyFlow && state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow  then 
+              exit $ GoToReportSafetyIssue newState
+            else continue newState
+              
     false ->  
       if state.props.showOfferedAssistancePopUp then do
         void $ pure $ toggleBtnLoader "SkipButton" false
@@ -1584,8 +1711,6 @@ eval (SearchExpireCountDown seconds status timerID) state = do
     if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime "LazyCheck")-30 || state.props.tipViewProps.isVisible) && (state.props.customerTip.tipActiveIndex >0) }, customerTip{enableTips = enableTips}} }
       else do
         _ <- pure $ clearTimerWithId timerID
-        let tipViewData = HomeScreenData.initData.props.tipViewProps
-        _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
         continue state { props { searchExpire = (getSearchExpiryTime "LazyCheck") ,timerId = timerID , tipViewProps {isVisible = false}} }
 
 eval CancelSearch state = case state.props.currentStage of
@@ -1669,14 +1794,16 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
-  continue state{props{emergencyHelpModal = true}}
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_ic_safety_center_clicked"
+  exit $ GoToNammaSafety state true false
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
+eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
 eval ShareRide state = do
   continueWithCmd state
         [ do
-            _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            _ <- pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/journey/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]
 
@@ -1689,18 +1816,6 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupportPopup)) state 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallContactPopUp item)) state= continue state{props{emergencyHelpModelState{showCallContactPopUp = true, currentlySelectedContact = item}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showCallContactPopUp = false}}}
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.StoreContacts)) state  = do
-  if ((getValueToLocalStore CONTACTS == "__failed") || (getValueToLocalStore CONTACTS == "(null)")) then do
-        exit $ FetchContacts state
-  else do
-    contacts <- pure $ getValueToLocalStore CONTACTS
-    contactsInJson <- pure $ parseNewContacts contacts
-    let newContacts = transformContactList contactsInJson
-        newState = state{props{emergencyHelpModelState{emergencyContactData = newContacts}}}
-    continue newState
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.AddedEmergencyContacts)) state  =  updateAndExit state{props{emergencyHelpModelState{isSelectEmergencyContact = true}}} $ GoToEmergencyContacts state {props {emergencyHelpModelState{isSelectEmergencyContact = true}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
     void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo false -- TODO: FIX_DIALER
@@ -1774,7 +1889,7 @@ eval (PredictionClickedAction (LocationListItemController.FavClick item)) state 
   if (length state.data.savedLocations >= 20) then do
     void $ pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     continue state
-    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, tagData = [], isBtnActive = false }, selectedLocationListItem = Just item}}
+    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, isBtnActive = false }, selectedLocationListItem = Just item}}
 
 eval (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose)) state = continue state{props{isSaveFavourite = false},data{selectedLocationListItem = Nothing, saveFavouriteCard {address = "" , tag = "", isBtnActive = false}}}
 
@@ -1866,7 +1981,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
     pure unit
   else
     pure unit
-  let predicArray = (recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong)
+  let predicArray = (updateLocListWithDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist)
   continue state { data { source = "", recentSearchs {predictionArray = predicArray}, locationList = predicArray, searchLocationModelData{prevLocation = state.data.source}}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList} } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
@@ -1876,7 +1991,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
     pure unit
   else
     pure unit
-  let predicArray = (recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong)
+  let predicArray = (updateLocListWithDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist)
   continue state { data { destination = "", locationList = predicArray }, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false, findPlaceIllustration = null state.data.locationList}} }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
@@ -1933,10 +2048,10 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if state.props.isSource == Just true then do
-    let newState = state{data{source = (getString CURRENT_LOCATION),sourceAddress = encodeAddress name [] Nothing},props{ sourceLat= lat,  sourceLong = lng, sourcePlaceId = Nothing, searchLocationModelProps{isAutoComplete = false}}}
+    let newState = state{data{source = (getString CURRENT_LOCATION),sourceAddress = encodeAddress name [] Nothing lat lng},props{ sourceLat= lat,  sourceLong = lng, sourcePlaceId = Nothing, searchLocationModelProps{isAutoComplete = false}}}
     updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
     else do
-      let newState = state{data{destination = name,destinationAddress = encodeAddress name [] Nothing},props{ destinationLat = lat,  destinationLong = lng, destinationPlaceId = Nothing}}
+      let newState = state{data{destination = name,destinationAddress = encodeAddress name [] Nothing lat lng},props{ destinationLat = lat,  destinationLong = lng, destinationPlaceId = Nothing}}
       updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
 
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.Click quote))) state = do
@@ -2260,13 +2375,18 @@ eval (DisabilityBannerAC Banner.OnClick) state = if (addCarouselWithVideoExists 
 
 eval (TicketBookingFlowBannerAC Banner.OnClick) state = exit $ GoToTicketBookingFlow state
 
+eval (MetroTicketBookingBannerAC Banner.OnClick) state = exit $ GoToMetroTicketBookingFlow state
+
 eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do 
   _ <- pure $ pauseYoutubeVideo unit
+  let _ = runFn2 updatePushInIdMap "bannerCarousel" true
   continue state{props{showEducationalCarousel = false}}
 
 eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do 
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
+
+eval (SafetyBannerAction Banner.OnClick) state = exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
@@ -2278,6 +2398,16 @@ eval (PopUpModalShareAppAction PopUpModal.OnButton2Click) state= do
   let shareAppConfig = state.data.config.shareAppConfig
   _ <- pure $ shareTextMessage shareAppConfig.title shareAppConfig.description
   continue state{props{showShareAppPopUp=false}}
+
+eval (PopUpModalReferralAction PopUpModal.OnButton1Click) state = 
+  case state.props.referral.referralStatus of
+    REFERRAL_INVALID -> exit $ GoToReferral state{ props{ referral{ referralStatus = NO_REFERRAL } } }
+    REFERRAL_APPLIED -> do
+      void $ pure $ setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"
+      continue state{ props{ referral{ referralStatus = NO_REFERRAL }, isReferred = true } } 
+    _ -> continue state{ props{ referral{ referralStatus = NO_REFERRAL } } } 
+
+eval (PopUpModalReferralAction PopUpModal.OnButton2Click) state = continue state{ props{ referral{ referralStatus = NO_REFERRAL } } }
 
 eval (CallSupportAction PopUpModal.OnButton1Click) state= do
   _ <- pure $ performHapticFeedback unit
@@ -2330,7 +2460,7 @@ eval UpdateSourceFromPastLocations state = do
       savedLocationArr = (getNearestSavedLocation state.props.sourceLat state.props.sourceLong state.data.savedLocations)
       arr = (sortBy compareByDistance (currLocationArr <> savedLocationArr))
       nearestLocation = (fromMaybe {locationDetails: {lat:0.0, lon : 0.0, placeName : ""}, distance: 0.0} ((arr)!!0))
-  continue state{data{source = nearestLocation.locationDetails.placeName, sourceAddress = encodeAddress nearestLocation.locationDetails.placeName [] Nothing}}
+  continue state{data{source = nearestLocation.locationDetails.placeName, sourceAddress = encodeAddress nearestLocation.locationDetails.placeName [] Nothing 0.0 0.0}}
 
 eval (UpdateLocAndLatLong lat lng) state = do
   let slat = fromMaybe 0.0 (NUM.fromString lat)
@@ -2419,10 +2549,44 @@ eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state tru
 
 eval ReportIssueClick state = exit $  GoToHelp state
 
-eval _ state = continue state
+eval (DateTimePickerAction dateResp year month day timeResp hour minute) state = do 
+  continue state
 
-dummyChatComponent :: MessagingView.ChatComponent
-dummyChatComponent = { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
+eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
+  case tag of 
+    "RENTALS" -> exit $ GoToRentalsFlow 
+    _ -> continue state
+  
+eval (RentalBannerAction Banner.OnClick) state = exit $ GoToScheduledRides
+
+eval (BottomNavBarAction id) state = do 
+  let newState = state {props {focussedBottomIcon = id}}
+  case id of 
+    TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
+    MOBILITY -> continue newState 
+    _ -> continue state 
+    
+eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
+  void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_i_feel_safe"
+  exit $ SafetySupport state true
+
+eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
+    void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_need_help"
+    void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
+    exit $ GoToNammaSafety state true false
+
+eval ShowShareRide state = 
+  if state.data.config.feature.shareWithEmergencyContacts 
+    then exit $ GoToShareRide state
+    else continueWithCmd state [pure ShareRide]
+
+eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotifyRideShare state
+
+eval (ToggleShare index) state = continue state {data{contactList = mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) state.data.contactList}}
+
+eval DismissShareRide state = continue state {props{showShareRide = false}}
+
+eval _ state = continue state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =
@@ -2631,13 +2795,13 @@ locationSelected item addToRecents state = do
   if state.props.isSource == Just true then do
     let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_pickup_select" $ [ {key : "Source", value : unsafeToForeign item.title},
                                                                                                               {key : "Favourite", value : unsafeToForeign favClick}]
-    let newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = (item.tag /= "") }}
+    let newState = state {data{ source = item.title, sourceAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = (item.tag /= "") }}
     pure $ setText (getNewIDWithTag "SourceEditText") item.title
     updateAndExit state $ LocationSelected item addToRecents newState
     else do
       let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_user_destination_select" $ [{key : "Destination", value : unsafeToForeign item.title},
                                                                                                                     {key : "Favourite", value : unsafeToForeign favClick}]
-      let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
+      let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon)},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
       pure $ setText (getNewIDWithTag "DestinationEditText") item.title
       updateAndExit state{props{currentStage = LoadMap}} $ LocationSelected item addToRecents newState
 
@@ -2744,6 +2908,7 @@ estimatesListFlow estimates state = do
           , extraFare = estimatesInfo.extraFare
           , pickUpCharges = estimatesInfo.pickUpCharges
           , additionalFare = estimatesInfo.additionalFare
+          , createdTime = estimatesInfo.createdTime
           }
         , selectedEstimatesObject = estimatesInfo.defaultQuote
         , pickUpCharges = estimatesInfo.pickUpCharges
@@ -2876,4 +3041,3 @@ getPeekHeight state =
 
 logChatSuggestion :: HomeScreenState -> String -> Unit
 logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
-

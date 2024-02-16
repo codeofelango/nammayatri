@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -20,7 +21,7 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketPlac
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TicketPlace.TicketPlace] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m (Maybe (Domain.Types.TicketPlace.TicketPlace))
 findById (Kernel.Types.Id.Id id) = do
@@ -44,24 +45,25 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketPlace.TicketPlace -> m ()
 updateByPrimaryKey Domain.Types.TicketPlace.TicketPlace {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.closeTimings $ closeTimings,
-      Se.Set Beam.description $ description,
-      Se.Set Beam.gallery $ gallery,
-      Se.Set Beam.iconUrl $ iconUrl,
-      Se.Set Beam.lat $ lat,
-      Se.Set Beam.lon $ lon,
-      Se.Set Beam.mapImageUrl $ mapImageUrl,
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.name $ name,
-      Se.Set Beam.openTimings $ openTimings,
-      Se.Set Beam.placeType $ placeType,
-      Se.Set Beam.shortDesc $ shortDesc,
-      Se.Set Beam.termsAndConditions $ termsAndConditions,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.closeTimings closeTimings,
+      Se.Set Beam.description description,
+      Se.Set Beam.gallery gallery,
+      Se.Set Beam.iconUrl iconUrl,
+      Se.Set Beam.lat lat,
+      Se.Set Beam.lon lon,
+      Se.Set Beam.mapImageUrl mapImageUrl,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.name name,
+      Se.Set Beam.openTimings openTimings,
+      Se.Set Beam.placeType placeType,
+      Se.Set Beam.shortDesc shortDesc,
+      Se.Set Beam.status status,
+      Se.Set Beam.termsAndConditions termsAndConditions,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
@@ -86,6 +88,7 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
             openTimings = openTimings,
             placeType = placeType,
             shortDesc = shortDesc,
+            status = status,
             termsAndConditions = termsAndConditions,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             createdAt = createdAt,
@@ -108,6 +111,7 @@ instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
         Beam.openTimings = openTimings,
         Beam.placeType = placeType,
         Beam.shortDesc = shortDesc,
+        Beam.status = status,
         Beam.termsAndConditions = termsAndConditions,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.createdAt = createdAt,

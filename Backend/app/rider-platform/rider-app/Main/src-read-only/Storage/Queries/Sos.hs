@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -22,7 +23,7 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.Sos.Sos ->
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Sos.Sos] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m (Maybe (Domain.Types.Sos.Sos))
 findById (Kernel.Types.Id.Id id) = do
@@ -30,30 +31,18 @@ findById (Kernel.Types.Id.Id id) = do
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-findByRideIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Domain.Types.Sos.SosStatus -> m (Maybe (Domain.Types.Sos.Sos))
-findByRideIdAndStatus (Kernel.Types.Id.Id rideId) status = do
+findByRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe (Domain.Types.Sos.Sos))
+findByRideId (Kernel.Types.Id.Id rideId) = do
   findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.rideId $ Se.Eq rideId,
-          Se.Is Beam.status $ Se.Eq status
-        ]
-    ]
-
-findByRideIdinStatusList :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Domain.Types.Sos.SosStatus] -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe (Domain.Types.Sos.Sos))
-findByRideIdinStatusList status (Kernel.Types.Id.Id rideId) = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.status $ Se.In status,
-          Se.Is Beam.rideId $ Se.Eq rideId
-        ]
+    [ Se.Is Beam.rideId $ Se.Eq rideId
     ]
 
 updateStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ()
 updateStatus status (Kernel.Types.Id.Id id) = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.status $ status,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.status status,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.Is Beam.id $ Se.Eq id
     ]
@@ -68,17 +57,17 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Sos.Sos -> m ()
 updateByPrimaryKey Domain.Types.Sos.Sos {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.flow $ flow,
-      Se.Set Beam.personId $ (Kernel.Types.Id.getId personId),
-      Se.Set Beam.rideId $ (Kernel.Types.Id.getId rideId),
-      Se.Set Beam.status $ status,
-      Se.Set Beam.ticketId $ ticketId,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.flow flow,
+      Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+      Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
+      Se.Set Beam.status status,
+      Se.Set Beam.ticketId ticketId,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

@@ -2,6 +2,7 @@ module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
 import Common.DefaultConfig
+import Common.Types.Config as CTC
 
 config :: AppConfig
 config =
@@ -60,7 +61,8 @@ config =
     showFeeBreakup : true
   },
   showPaymentDetails : true,
-  enableDriverReferral: false,
+  enableDriverReferral : false,
+  enableCustomerReferral : false,
   rideActionModelConfig : {
     showVehicleVariant : true
   }
@@ -80,11 +82,14 @@ config =
   , profile : { 
     bookingOptionMenuForTaxi : false,
     showBookingOption : true
+  , checkRCStatusForBookingOption : true 
   }
   , waitTimeConfig : {
     enableWaitTime : true,
     thresholdDist : 0.05,
-    thresholdTime : 180
+    thresholdTime : 180,
+    routeDistance : 30,
+    diffBtwTwoHeartBeats : 10
   }
   , bottomNavConfig : {
       home : 
@@ -126,9 +131,12 @@ config =
               cityLong : 77.594566,
               supportNumber : "",
               languageKey : "KN_IN",
-              showDriverReferral : false,
+              showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : true
+              enableYatriCoins : true,
+              registration : registrationConfig,
+              appName : "ನಮ್ಮ ಯಾತ್ರಿ"
             },
             {
               cityName : "Hyderabad",
@@ -140,8 +148,11 @@ config =
               supportNumber : "+918069724900",
               languageKey : "TE_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig,
+              appName : "నమ్మ యాత్రి"
             },
             {
               cityName : "Mysore",
@@ -153,8 +164,11 @@ config =
               supportNumber : "",
               languageKey : "KN_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig,
+              appName : "ನಮ್ಮ ಯಾತ್ರಿ"
             },
             {
               cityName : "Delhi",
@@ -166,8 +180,11 @@ config =
               supportNumber : "+918069724848",
               languageKey : "HI_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig,
+              appName : "नम्मा यात्री"
             },
             {
               cityName : "Chennai",
@@ -179,8 +196,11 @@ config =
               supportNumber : "08069724899",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : false,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig,
+              appName : "நம்ம யாத்ரி"
             },
             {
               cityName : "Coimbatore",
@@ -192,8 +212,11 @@ config =
               supportNumber : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig,
+              appName : "நம்ம யாத்ரி"
             },
             {
               cityName : "Puducherry",
@@ -205,8 +228,43 @@ config =
               supportNumber : "08069724899",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig,
+              appName : "நம்ம யாத்ரி"
+            },
+            {
+              cityName : "Gurugram",
+              mapImage : "ny_ic_gurugram_map",
+              cityCode : "std:0124",
+              showSubscriptions : false,
+              cityLat : 28.457523,
+              cityLong : 77.026344,
+              supportNumber : "",
+              languageKey : "HI_IN",
+              showDriverReferral : true,
+              showCustomerReferral : true,
+              uploadRCandDL : true,
+              enableYatriCoins : false,
+              registration : registrationConfig,
+              appName : "नम्मा यात्री"
+            },
+            {             
+              cityName : "Noida",
+              mapImage : "ny_ic_noida_map",
+              cityCode : "std:01189",
+              showSubscriptions : false,
+              cityLat : 28.535517,
+              cityLong : 77.391029,
+              supportNumber : "",
+              languageKey : "HI_IN",
+              showDriverReferral : true,
+              showCustomerReferral : true,
+              uploadRCandDL : true,
+              enableYatriCoins : false,
+              registration : registrationConfig,
+              appName : "नम्मा यात्री"
             }--, For future use
             -- {
             --   cityName : "Madurai",
@@ -241,6 +299,7 @@ config =
   , loaderConfig : defaultLoaderConfig
   , otpRegex :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   , termsLink : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA"
+  , termsVersion : 1.0
   , privacyLink : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F"
   , navigationAppConfig : defaultNavigationAppConfig
   , genericHeaderConfig : defaultGenericHeader
@@ -253,21 +312,24 @@ config =
   , enableOtpRide: false
   , enableSuggestions : true
   , enableYatriCoins : false
+  , enableAutoReferral : true
   }
   , showCorporateAddress : false
   , engilshInNative: "English"
   , allowAllMobileNumber: false
   , vehicle : {
-    validationPrefix :  "KA|AP|TS|DL|TN|PY"
+    validationPrefix : "KA|AP|TS|DL|TN|PY|UP|HR"
   }
   , appData : defaultAppData
   , banners :{
     autoPay : true
   }
   ,referral: {
-    "type" : "QRScreen"
-  , link : "https://nammayatri.in/link/rider/mvnw"
-  }
+      "type" : "QRScreen"
+    , link : "https://nammayatri.in/link/rider/mvnw"
+    , customerAppId : "in.juspay.nammayatri"
+    , driverAppId : "in.juspay.nammayatripartner"
+    }
   , dashboard : {
       enable : false,
       url : ""
@@ -290,7 +352,10 @@ config =
       rideCompletedCoins : "+1",
       fiveStarRatingCoins : "+1",
       oneOrTwoStarRatingCoins : "-1",
-      rideCancellationCoins : "-5"
+      rideCancellationCoins : "-5",
+      whatAreYatriCoinFAQ : "https://www.youtube.com/shorts/vt_Z4wu4otY",
+      howToEarnYatriCoinFAQ : "https://www.youtube.com/shorts/teQyPdP1fRc",
+      howToRedeemYatriCoinFAQ : "https://www.youtube.com/shorts/dU3XxAisGjo"
   }
   , inAppKeyboardModalConfig : {
       enableDeviceKeyboard : true
@@ -298,4 +363,16 @@ config =
   , chooseCity : {
       straightLineDistLogic : false
   }
+  , bannerCarousel : defaultBannerCarousel
+  , safetyRide : {
+    startTime : "21:00:00"
+  , endTime : "06:00:00"
+  }
+}
+
+registrationConfig :: CTC.RegistrationConfig
+registrationConfig = {
+  supportWAN : "919625724848",
+  callSupport : true,
+  whatsappSupport : false
 }

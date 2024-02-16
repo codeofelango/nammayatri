@@ -48,13 +48,11 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     dobNotEmpty = not $ DS.null state.data.dob
+    id = "UploadDrivingLicenseButton"
     driverLicenseLengthValid = DS.length state.data.driver_license_number >= 9
-    driverLicensesMatch = caseInsensitiveCompare state.data.driver_license_number state.data.reEnterDriverLicenseNumber
-    uploadRCandDLNotRequired = not state.data.cityConfig.uploadRCandDL
     dateOfIssueNotEmpty = state.data.dateOfIssue /= Just ""
     isDriverInfoValid = dobNotEmpty 
-                        && driverLicenseLengthValid 
-                        && (driverLicensesMatch || uploadRCandDLNotRequired) 
+                        && driverLicenseLengthValid
                         && dateOfIssueNotEmpty
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfIssue then getString CONFIRM 

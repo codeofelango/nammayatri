@@ -46,6 +46,7 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , height = (V 60)
+      , id = "RegistrationScreenButton"
       }
   in primaryButtonConfig'
 
@@ -77,7 +78,8 @@ logoutPopUp  dummy = let
       height = WRAP_CONTENT,
       background = Color.blue600,
       margin = (MarginBottom 12),
-      padding = PaddingVertical 16 16
+      padding = (PaddingVertical 16 16),
+      enableRipple = true
       },
     option2 {
       text = (getString CANCEL),
@@ -88,7 +90,8 @@ logoutPopUp  dummy = let
       width = MATCH_PARENT,
       padding = PaddingVertical 16 16,
       margin = (MarginBottom 0),
-      background = Color.blue600
+      background = Color.blue600,
+      enableRipple = true
       },
     optionButtonOrientation = "VERTICAL"
   }

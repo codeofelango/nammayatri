@@ -15,8 +15,8 @@
 module Domain.Action.UI.Ride
   ( GetDriverLocResp,
     GetRideStatusResp (..),
-    EditLocationReq (..),
     EditLocation (..),
+    EditLocationReq (..),
     getDriverLoc,
     getRideStatus,
     editLocation,
@@ -162,9 +162,10 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.OneWayDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.RentalDetails _ -> Nothing
           DB.OneWaySpecialZoneDetails details -> Just $ makeLocationAPIEntity details.toLocation
+          DB.InterCityDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation,
         ride = makeRideAPIEntity ride,
-        customer = SPerson.makePersonAPIEntity decRider tag Nothing,
+        customer = SPerson.makePersonAPIEntity decRider tag,
         driverPosition = mbPos <&> (.currPoint)
       }
 
@@ -232,6 +233,7 @@ editLocation rideId (_, merchantId) req = do
               bppUrl = booking.providerUrl,
               transactionId = booking.transactionId,
               destination = Nothing,
+              city = merchant.defaultCity, -- TODO: Correct during interoperability
               ..
             }
     becknUpdateReq <- ACL.buildUpdateReq dUpdateReq

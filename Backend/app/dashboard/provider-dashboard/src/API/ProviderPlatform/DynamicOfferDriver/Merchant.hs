@@ -31,6 +31,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -56,6 +57,7 @@ type API =
            :<|> CreateFPDriverExtraFee
            :<|> UpdateFPDriverExtraFee
            :<|> UpdateFPPerExtraKmRate
+           :<|> UpdateFarePolicy
            :<|> SchedulerTriggerAPI
        )
 
@@ -139,6 +141,10 @@ type UpdateFPPerExtraKmRate =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FP_PER_EXTRA_KM_RATE
     :> Common.UpdateFPPerExtraKmRate
 
+type UpdateFarePolicy =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FARE_POLICY
+    :> Common.UpdateFarePolicy
+
 type SchedulerTriggerAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SCHEDULER_TRIGGER
     :> Common.SchedulerTriggerAPI
@@ -165,6 +171,7 @@ handler merchantId city =
     :<|> createFPDriverExtraFee merchantId city
     :<|> updateFPDriverExtraFee merchantId city
     :<|> updateFPPerExtraKmRate merchantId city
+    :<|> updateFarePolicy merchantId city
     :<|> schedulerTrigger merchantId city
 
 buildTransaction ::
@@ -239,14 +246,15 @@ driverPoolConfigUpdate ::
   ApiTokenInfo ->
   Meters ->
   Maybe Common.Variant ->
+  Maybe Text ->
   Common.DriverPoolConfigUpdateReq ->
   FlowHandler APISuccess
-driverPoolConfigUpdate merchantShortId opCity apiTokenInfo tripDistance variant req = withFlowHandlerAPI' $ do
+driverPoolConfigUpdate merchantShortId opCity apiTokenInfo tripDistance variant tripCategory req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateDriverPoolConfigUpdateReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.DriverPoolConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.driverPoolConfigUpdate) tripDistance variant req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.driverPoolConfigUpdate) tripDistance variant tripCategory req
 
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->
@@ -254,14 +262,15 @@ driverPoolConfigCreate ::
   ApiTokenInfo ->
   Meters ->
   Maybe Common.Variant ->
+  Maybe Text ->
   Common.DriverPoolConfigCreateReq ->
   FlowHandler APISuccess
-driverPoolConfigCreate merchantShortId opCity apiTokenInfo tripDistance variant req = withFlowHandlerAPI' $ do
+driverPoolConfigCreate merchantShortId opCity apiTokenInfo tripDistance variant tripCategory req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateDriverPoolConfigCreateReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.DriverPoolConfigCreateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.driverPoolConfigCreate) tripDistance variant req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.driverPoolConfigCreate) tripDistance variant tripCategory req
 
 driverIntelligentPoolConfig ::
   ShortId DM.Merchant ->
@@ -406,8 +415,14 @@ updateFPDriverExtraFee merchantShortId opCity apiTokenInfo farePolicyId startDis
   transaction <- buildTransaction Common.UpdateFPDriverExtraFeeEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFPDriverExtraFee) farePolicyId startDistance req
 
-updateFPPerExtraKmRate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.FarePolicy -> Common.UpdateFPPerExtraKmRateReq -> FlowHandler APISuccess
-updateFPPerExtraKmRate merchantShortId opCity apiTokenInfo farePolicyId req = withFlowHandlerAPI' $ do
+updateFPPerExtraKmRate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> FlowHandler APISuccess
+updateFPPerExtraKmRate merchantShortId opCity apiTokenInfo farePolicyId startDistance req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.UpdateFPPerExtraKmRate apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFPPerExtraKmRate) farePolicyId req
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFPPerExtraKmRate) farePolicyId startDistance req
+
+updateFarePolicy :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> FlowHandler APISuccess
+updateFarePolicy merchantShortId opCity apiTokenInfo farePolicyId req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpdateFarePolicy apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFarePolicy) farePolicyId req

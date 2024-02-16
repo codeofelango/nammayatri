@@ -439,8 +439,8 @@ export const scanQrCode = function (requestCode) {
 export const timePicker = function (cb) {
   return function (action) {
     return function () {
-      const callback = callbackMapper.map(function (hour, min) {
-        cb(action(hour)(min))();
+      const callback = callbackMapper.map(function (resp, hour, min) {
+        cb(action(resp)(hour)(min))();
       });
       return window.JBridge.timePicker(callback);
     };
@@ -964,7 +964,15 @@ export const saveAudioFile = function (source) {
 
 export const differenceBetweenTwoUTC = function (date1, date2) {
   const diffInSeconds = Math.round((new Date(date1) - new Date(date2)) / 1000);
+  if (isNaN(diffInSeconds)){
+    return 0;
+  }
   return diffInSeconds;
+}
+
+export const differenceBetweenTwoUTCInMinutes = function (date1, date2) {
+  const diffInMinutes = Math.round((new Date(date1) - new Date(date2)) / 60000);
+  return diffInMinutes;
 }
 
 export const isCoordOnPath = function (data) {
@@ -1127,6 +1135,22 @@ export const getCurrentPositionWithTimeoutImpl = function (cb, action, delay, sh
   }
 }
 
+export const datePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (str, year, month, date) {
+    cb(action(str)(year)(month)(date))();
+  })
+  window.JBridge.datePicker(callback, "");
+}
+
+export const timePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (str, hour, min) {
+    cb(action(str)(hour)(min))();
+  })
+  window.JBridge.timePicker(callback);
+}
+
+
+
 export const translateStringWithTimeout = function (cb) {
   return function (action) {
     return function (delay) {
@@ -1158,12 +1182,14 @@ export const openNavigation = function (slat) {
       return function (dlong) {
         return function (mode) {
           if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery) {
-            if (window.__OS == "IOS") {
-              const query = mode == "WALK" ? window.appConfig.navigationAppConfig.ios.walkQuery : window.appConfig.navigationAppConfig.ios.query;
+            const config = window.appConfig.navigationAppConfig;
+            const isIOS = window.__OS === "IOS";
+            const platformConfig = isIOS ? config.ios : config.android;
+            const query = mode == "WALK" ? platformConfig.walkQuery : platformConfig.query;
+            if (isIOS) {
               return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
             } else {
-              const query = mode == "WALK" ? window.appConfig.navigationAppConfig.android.walkQuery : window.appConfig.navigationAppConfig.android.query;
-              const packageName = window.appConfig.navigationAppConfig.android.packageName;
+              const packageName = platformConfig.packageName;
               return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
             }
           } else {
@@ -1701,7 +1727,11 @@ export const requestKeyboardShow = function (id) {
 }
 
 export const showKeyboard = function (id) {
-  JBridge.showKeyboard(id); // imeOptions is set to IME_ACTION_SEARCH and IME_ACTION_DONE
+  if ( window.__OS == "IOS")
+    return JBridge.requestKeyboardShow(id);
+  else 
+    return JBridge.showKeyboard(id);
+  // JBridge.showKeyboard(id); // imeOptions is set to IME_ACTION_SEARCH and IME_ACTION_DONE
 }
 
 export const locateOnMap = (configObj) => {
@@ -2190,12 +2220,26 @@ export const scrollViewFocus = function (parentID) {
   }
 }
 
-export const setYoutubePlayer = function (json, viewId, videoStatus) {
-  if (JBridge.setYoutubePlayer) {
+export const addMediaPlayer = function (id) {
+  return function(source) {
+    return function () {
+      if (JBridge.addMediaPlayer) {
+        JBridge.addMediaPlayer(id,source);
+      }
+    }
+  };
+};
+
+export const setYoutubePlayer = function (json, viewId, videoStatus, cb, action) {
+  if (window.JBridge.setYoutubePlayer) {
     try {
+      const callback = callbackMapper.map(function (id) {
+        cb(action(id))();
+      });
       console.log("Inside setYoutubePlayer ------------");
-      return JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus);
+      JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus, callback);
     } catch (err) {
+      JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus);
       console.log("error in setYoutubePlayer");
     }
   }
@@ -2204,6 +2248,12 @@ export const setYoutubePlayer = function (json, viewId, videoStatus) {
 export const pauseYoutubeVideo = function (unit){
   if (JBridge.pauseYoutubeVideo) {
     return JBridge.pauseYoutubeVideo();
+  }
+}
+
+export const releaseYoutubeView = function (){
+  if (window.JBridge.releaseYoutubeView) {
+    return window.JBridge.releaseYoutubeView();
   }
 }
 
@@ -2316,3 +2366,80 @@ export const displayBase64Image = (configObj) => {
     }
   }
 } 
+
+export const askRequestedPermissions = function(permissions){
+  if(window.JBridge.askRequestedPermissions)
+    return window.JBridge.askRequestedPermissions(permissions);
+}
+
+export const askRequestedPermissionsWithCallback = function(permissions){
+  return function(cb) {
+    return function(action) {
+      const callback = callbackMapper.map(function (isPermissionGranted) {
+        cb(action(isPermissionGranted))();
+      });
+      if(window.JBridge.askRequestedPermissionsWithCallback)
+        return window.JBridge.askRequestedPermissionsWithCallback(permissions, callback);
+    }
+  }
+}
+
+export const setupCamera = function(id){
+  return function(isBackCamera){
+    if (window.__OS == "IOS" && window.JBridge.renderCameraView) {
+      return window.JBridge.renderCameraView(id);
+    }
+    else if(window.JBridge.setupCamera){
+      return window.JBridge.setupCamera(id, isBackCamera);
+    }
+  }
+}
+
+export const startRecord = function (cb){
+  return function (action){
+    return function () {
+      const callback = callbackMapper.map(function (videostatus, videoUri) {
+        cb(action(videostatus)(videoUri))();
+      });
+      if (window.__OS == "IOS" && window.JBridge.startRecording) {
+        return window.JBridge.startRecording(callback);
+      }
+      else if(window.JBridge.recordVideo){
+        return window.JBridge.recordVideo(callback);
+      }
+    }
+  }
+}
+  
+
+export const stopRecord = function(){
+  if(window.JBridge.stopRecord){
+    return window.JBridge.stopRecord();
+  }
+}
+
+export const switchYoutubeVideo = function(videoId) {
+  if (window.JBridge.switchYoutubeVideo){
+    return window.JBridge.switchYoutubeVideo(videoId);
+  }
+}
+
+export const startAudioPlayer = function (fileName, cb, action) {
+  if (JBridge.startAudioPlayer) {
+    const callback = callbackMapper.map(function (mediaStatus) {
+      cb(action(mediaStatus))();
+    });
+    return JBridge.startAudioPlayer(fileName, callback);
+  }
+}
+
+export const pauseAudioPlayer = function () {
+  if (JBridge.pauseAudioPlayer) {
+    JBridge.pauseAudioPlayer()
+  }
+}
+export const clearAudioPlayer = function () {
+  if (JBridge.clearAudioPlayer) {
+    JBridge.clearAudioPlayer()
+  }
+}

@@ -67,7 +67,9 @@ import MerchantConfig.Utils as MU
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import ConfigProvider as CP
 import Locale.Utils
-import RemoteConfigs as RemoteConfig
+import RemoteConfig (RCCarousel(..))
+import Mobility.Prelude (boolToVisibility)
+import Constants 
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -110,8 +112,8 @@ endRidePopUp state = let
   popUpConfig' = config'{
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
-    option1 {text =(getString GO_BACK)},
-    option2 {text = (getString END_RIDE)}
+    option1 {text = (getString GO_BACK), enableRipple = true},
+    option2 {text = (getString END_RIDE), enableRipple = true}
   }
 in popUpConfig'
 
@@ -180,30 +182,6 @@ genderBannerConfig _ action =
       }
   in config'
 
-remoteConfigTransformer :: forall a. Array RemoteConfig.RCCarousel -> (BannerCarousel.Action -> a) -> Array (BannerCarousel.Config (BannerCarousel.Action -> a))
-remoteConfigTransformer remoteConfig action = 
-  map (\(RemoteConfig.RCCarousel config) -> 
-    let
-      config' = BannerCarousel.config action
-      config'' = config'{
-        backgroundColor = config.banner_color,
-        title = config.text,
-        titleColor = config.text_color,
-        actionText = config.cta_text,
-        actionTextColor = config.cta_text_color,
-        imageUrl = config.banner_image,
-        "type" = BannerCarousel.Remote config.cta_link,
-        actionIconUrl = config.cta_icon,
-        actionIconVisibility = not $ DS.null config.cta_text,
-        actionTextBackgroundColour = config.cta_background_color,
-        actionTextCornerRadius = config.cta_corner_radius,
-        actionImageUrl = config.cta_image_url,
-        showImageAsCTA = not $ DS.null config.cta_image_url,
-        actionImageVisibility = not $ DS.null config.cta_image_url,
-        actionTextVisibility = DS.null config.cta_image_url 
-      }
-    in config'') remoteConfig
-
 autpPayBannerCarousel :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config (BannerCarousel.Action -> a)
 autpPayBannerCarousel state action =
   let config = BannerCarousel.config action
@@ -213,12 +191,16 @@ autpPayBannerCarousel state action =
         title = bannerConfig.title,
         titleColor = bannerConfig.titleColor,
         actionText = bannerConfig.actionText,
-        actionTextColor =bannerConfig.actionTextColor,
+        actionTextColor = Color.white900,
+        actionTextBackgroundColour = Color.black900,
+        actionIconUrl = (HU.getAssetLink FunctionCall) <> "ny_ic_money_filled.png",
+        actionIconVisibility = true,
         imageUrl = bannerConfig.imageUrl,
         isBanner = bannerConfig.isBanner,
         imageHeight = bannerConfig.imageHeight,
         imageWidth = bannerConfig.imageWidth,
         actionTextStyle = bannerConfig.actionTextStyle,
+        actionArrowIconVisibility = false,
         titleStyle = bannerConfig.titleStyle,
         "type" = BannerCarousel.AutoPay,
         imagePadding = bannerConfig.imagePadding
@@ -348,6 +330,7 @@ freeTrialEndingPopupConfig state =
       text = if autoPayStatus == NO_AUTOPAY then getString JOIN_NOW else getString SETUP_AUTOPAY
     , background = Color.black900
     , color = Color.yellow900
+    , enableRipple = true
     },
     option2 {
       visibility = false
@@ -426,6 +409,7 @@ paymentPendingPopupConfig state =
     , background = Color.black900
     , color = Color.yellow900
     , showShimmer = state.data.paymentState.showShimmer
+    , enableRipple = true
     },
     option2 {
       visibility = false
@@ -496,6 +480,7 @@ cancelConfirmationConfig state = let
     , background = Color.white900
     , strokeColor = Color.black500
     , color = Color.black700
+    , enableRipple = state.data.cancelRideConfirmationPopUp.continueEnabled
     },
     option2 {
       text = (getString GO_BACK)
@@ -504,6 +489,7 @@ cancelConfirmationConfig state = let
     , color = Color.yellow900
     , strokeColor = Color.black900
     , background = Color.black900
+    , enableRipple = true
     },
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
@@ -627,10 +613,12 @@ silentModeConfig state = let
     , option1 {
       text =   getString GO_OFFLINE
       , width = (V 140)
+      , enableRipple = true
     }
   , option2 {
       width = (V 170)
       , text =  getString GO_SILENT
+      , enableRipple = true
     }
   }
   in popUpConfig'
@@ -702,6 +690,7 @@ mapRouteConfig srcIcon destIcon isAnim animConfig= {
   , destSpecialTagIcon : destIcon
   , vehicleSizeTagIcon : (getMerchantVehicleSize unit)
   , isAnimation : isAnim 
+  , autoZoom : true
   , polylineAnimationConfig : animConfig
 }
 
@@ -890,11 +879,19 @@ accessibilityPopUpConfig state =
         gravity = CENTER,
         margin = MarginHorizontal 24 24 ,
         buttonLayoutMargin = Margin 16 0 16 20 ,
+        onlyTopTitle = GONE,
+        topTitle {
+          text = popupData.title
+        , gravity = CENTER
+        , visibility = boolToVisibility $ popupData.title /= ""
+        },
         primaryText {
           text = popupData.primaryText
+        , visibility = boolToVisibility $ popupData.primaryText /= ""
         , margin = Margin 16 24 16 4 },
         secondaryText {
           text = popupData.secondaryText
+        , visibility = boolToVisibility $ popupData.secondaryText /= ""
         , textStyle = SubHeading2
         , margin = MarginBottom 24},
         option1 {
@@ -909,31 +906,42 @@ accessibilityPopUpConfig state =
         cornerRadius = (PTD.Corners 15.0 true true true true),
         coverImageConfig {
           imageUrl = popupData.imageUrl
-        , visibility = if popupData.videoUrl /= "" && state.data.config.purpleRideConfig.showPurpleVideos then GONE else VISIBLE
+        , visibility = if popupData.videoUrl /= "" && (state.data.config.purpleRideConfig.showPurpleVideos || (popupData.mediaType /= "Audio")) then GONE else VISIBLE
         , height = V 160
         , width = MATCH_PARENT
         , margin = Margin 16 16 16 0
         },
-        coverVideoConfig {
-          visibility = if popupData.videoUrl /= "" && state.data.config.purpleRideConfig.showPurpleVideos then VISIBLE else GONE 
-        , height = V 175
-        , width = MATCH_PARENT
-        , padding = Padding 16 16 16 0
+        coverMediaConfig {
+          visibility = if popupData.videoUrl /= "" && (state.data.config.purpleRideConfig.showPurpleVideos || (popupData.mediaType == "Audio")) then VISIBLE else GONE 
+        , width = WRAP_CONTENT
+        , padding = if popupData.mediaType == "Audio" then Padding 6 6 6 6 else Padding 16 16 16 0
         , mediaType = popupData.mediaType
         , mediaUrl = popupData.videoUrl
         , id = popupData.videoId
+        , background = if popupData.mediaType == "Audio" then Color.blue600 else Color.white900
+        , stroke = if popupData.mediaType == "Audio" then "1," <> Color.grey900 else Color.white900
+        , margin = if popupData.mediaType == "Audio" then Margin 16 0 16 12 else Margin 0 0 0 0
+        , height =  if popupData.mediaType == "Audio" then V 60 else WRAP_CONTENT
+        , cornerRadius = 4.0
+        , coverMediaText {
+            visibility = boolToVisibility $ popupData.coverMediaText /= ""
+          , text = popupData.coverMediaText
+          }
         }
       }
   in config'
 
 type ContentConfig = 
-  { primaryText :: String,
+  { title :: String,
+    coverMediaText :: String,
+    primaryText :: String,
     secondaryText :: String,
     imageUrl :: String,
     videoUrl :: String, 
     mediaType :: String,
-    videoId :: String
-    
+    videoId :: String,
+    background :: String,
+    textColor :: String
   }
 
 
@@ -964,7 +972,7 @@ genericAccessibilityPopUpConfig state = let
         coverImageConfig {
           visibility = GONE
         },
-        coverVideoConfig {
+        coverMediaConfig {
           visibility = VISIBLE
         , height = V 202
         , width = MATCH_PARENT
@@ -1004,12 +1012,15 @@ chatBlockerPopUpConfig state = let
   in popUpConfig'
 
 accessibilityConfig :: LazyCheck -> ContentConfig
-accessibilityConfig dummy = { primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", mediaType : "", videoId : ""}
+accessibilityConfig dummy = { title : "", coverMediaText : "", primaryText : getString CUSTOMER_MAY_NEED_ASSISTANCE, secondaryText : getString CUSTOMER_HAS_DISABILITY_PLEASE_ASSIST_THEM, videoUrl : "", imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", mediaType : "", videoId : "", background : Color.lightPurple, textColor : Color.purple}
 
 getAccessibilityPopupData :: ST.HomeScreenState -> Maybe ST.DisabilityType -> Boolean -> ContentConfig
 getAccessibilityPopupData state pwdtype isDriverArrived = 
   let accessibilityConfig' = accessibilityConfig Config
       city = (HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION))
+      driverLocation = DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+      language = getLanguage $ getLanguageLocale languageKey
+      videoUrl' = "https://assets.juspay.in/beckn/audios/ny_audio_safety" <> language <> ".mp3"
   in case pwdtype, isDriverArrived of 
       Just ST.BLIND_AND_LOW_VISION, true ->  accessibilityConfig' 
                                               { secondaryText = getString CUSTOMER_HAS_POOR_VISION_SOUND_HORN_AT_PICKUP ,
@@ -1053,8 +1064,17 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
                                                 mediaType = "VideoLink",
                                                 videoId = "LocomotorDisabilityCoverVideo"
                                               }
-      Just ST.OTHER_DISABILITY, true ->      accessibilityConfig'   
-      Just ST.OTHER_DISABILITY, false ->     accessibilityConfig' 
+      Just ST.SAFETY, _ ->        accessibilityConfig' 
+                                  { title = if driverLocation == "bangalore" then getString OUR_SAFETY_PARTNER else "",
+                                    primaryText = "",
+                                    secondaryText = "",
+                                    coverMediaText = getString CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE, 
+                                    imageUrl = if  driverLocation == "bangalore" then fetchImage FF_COMMON_ASSET "ny_ic_bangalure_city_police" else fetchImage FF_COMMON_ASSET "ny_ic_general_safety" ,
+                                    videoUrl = videoUrl',
+                                    mediaType = "Audio",
+                                    videoId = ""
+                                  }
+      Just ST.OTHER_DISABILITY, _ ->     accessibilityConfig' 
       _ , _-> accessibilityConfig' 
 
   where 
@@ -1074,29 +1094,37 @@ getAccessibilityPopupData state pwdtype isDriverArrived =
             Just ST.LOCOMOTOR_DISABILITY, true -> "ny_ic_locomotor_arrival"
             Just ST.LOCOMOTOR_DISABILITY, false -> "ny_ic_locomotor_pickup"
             _ , _-> "ny_ic_disability_purple"
+    getLanguage :: String -> String
+    getLanguage lang = 
+      let language = DS.toLower $ DS.take 2 lang
+      in if not (DS.null language) then "_" <> language else "_en"
 
 getAccessibilityHeaderText :: ST.HomeScreenState -> ContentConfig
-getAccessibilityHeaderText state = if state.data.activeRide.status == NEW then 
+getAccessibilityHeaderText state = 
+  let config = accessibilityConfig Config
+    in if state.data.activeRide.status == NEW then 
                         case state.data.activeRide.disabilityTag, state.data.activeRide.notifiedCustomer of   
-                          Just ST.HEAR_IMPAIRMENT, false -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "" , mediaType : "", videoId : ""}
-                          Just ST.BLIND_AND_LOW_VISION, false -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.LOCOMOTOR_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.OTHER_DISABILITY, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Nothing, false -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.HEAR_IMPAIRMENT, false -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString PLEASE_CHAT_AND_AVOID_CALLS, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
+                          Just ST.BLIND_AND_LOW_VISION, false -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString PLEASE_CALL_AND_AVOID_CHATS, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
+                          Just ST.LOCOMOTOR_DISABILITY, false -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString PLEASE_GO_TO_EXACT_PICKUP,  imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.OTHER_DISABILITY, false -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Nothing, false -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
                       -- else if state.data.activeRide.isDriverArrived then
                           -- case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT, true -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString MESSAGE_THEM_AT_PICKUP, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.BLIND_AND_LOW_VISION, true -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.LOCOMOTOR_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.OTHER_DISABILITY, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Nothing, true -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.HEAR_IMPAIRMENT, true -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString MESSAGE_THEM_AT_PICKUP, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
+                          Just ST.BLIND_AND_LOW_VISION, true -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString SOUND_HORN_ONCE_AT_PICKUP, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
+                          Just ST.LOCOMOTOR_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString HELP_WITH_THEIR_MOBILITY_AID, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.OTHER_DISABILITY, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.SAFETY, _ -> config {primaryText = getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
+                          Nothing, true -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_ASSIST_THEM_IF_NEEDED, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
                       else 
                         case state.data.activeRide.disabilityTag of   
-                          Just ST.HEAR_IMPAIRMENT -> {primaryText : getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_poor_hearing", videoUrl : "" , mediaType : "", videoId : ""}
-                          Just ST.BLIND_AND_LOW_VISION -> {primaryText : getString CUSTOMER_HAS_LOW_VISION, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ic_accessibility_vision", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.LOCOMOTOR_DISABILITY -> {primaryText : getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Just ST.OTHER_DISABILITY -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
-                          Nothing -> {primaryText : getString CUSTOMER_HAS_DISABILITY, secondaryText : getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl : fetchImage FF_ASSET "ny_ic_disability_purple", videoUrl : "", mediaType : "", videoId : ""}
+                          Just ST.HEAR_IMPAIRMENT -> config {primaryText = getString CUSTOMER_HAS_HEARING_IMPAIRMENT, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_poor_hearing"}
+                          Just ST.BLIND_AND_LOW_VISION -> config {primaryText = getString CUSTOMER_HAS_LOW_VISION, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ic_accessibility_vision"}
+                          Just ST.LOCOMOTOR_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_LOW_MOBILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.OTHER_DISABILITY -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
+                          Just ST.SAFETY -> config {primaryText =  getString CUSTOMER_SAFETY_FIRST, secondaryText = getString LETS_ENSURE_SAFE_RIDE, imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_sheild", background = Color.green100, textColor = Color.green900}
+                          Nothing -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 getRideCompletedConfig state = let 
@@ -1122,7 +1150,9 @@ getRideCompletedConfig state = let
       margin = MarginTop 0,
       textConfig {
         text = getString FARE_COLLECTED
-      }
+      },
+      enableRipple = true,
+      rippleColor = Color.rippleShade
     },
     topCard {
       title = getString COLLECT_VIA_UPI_QR_OR_CASH,
@@ -1540,6 +1570,8 @@ gotoButtonConfig state = PrimaryButton.config
   , id = "GotoClick"
   , alpha = if state.data.driverGotoState.gotoCount == 0 then 0.3 else 1.0
   , enableLoader = JB.getBtnLoader "GotoClick"
+  , enableRipple = true
+  , rippleColor = Color.rippleShade
   , lottieConfig 
     { lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader.json"
     , width = V 100

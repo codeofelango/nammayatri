@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -24,7 +25,7 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketBook
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TicketBookingService.TicketBookingService] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findAllByBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ([Domain.Types.TicketBookingService.TicketBookingService])
 findAllByBookingId (Kernel.Types.Id.Id ticketBookingId) = do
@@ -46,21 +47,21 @@ findByShortId (Kernel.Types.Id.ShortId shortId) = do
 
 updateAllStatusByBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ()
 updateAllStatusByBookingId status (Kernel.Types.Id.Id ticketBookingId) = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.status $ status,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.status status,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.Is Beam.ticketBookingId $ Se.Eq ticketBookingId
     ]
 
 updateVerificationById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ()
 updateVerificationById status verificationCount (Kernel.Types.Id.Id id) = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.status $ status,
-      Se.Set Beam.verificationCount $ verificationCount,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.status status,
+      Se.Set Beam.verificationCount verificationCount,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.Is Beam.id $ Se.Eq id
     ]
@@ -75,20 +76,20 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingService.TicketBookingService -> m ()
 updateByPrimaryKey Domain.Types.TicketBookingService.TicketBookingService {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.amount $ amount,
-      Se.Set Beam.btype $ btype,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.expiryDate $ expiryDate,
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.shortId $ (Kernel.Types.Id.getShortId shortId),
-      Se.Set Beam.status $ status,
-      Se.Set Beam.ticketBookingId $ (Kernel.Types.Id.getId ticketBookingId),
-      Se.Set Beam.ticketServiceId $ (Kernel.Types.Id.getId ticketServiceId),
-      Se.Set Beam.updatedAt $ now,
-      Se.Set Beam.verificationCount $ verificationCount,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId)
+    [ Se.Set Beam.amount amount,
+      Se.Set Beam.btype btype,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.expiryDate expiryDate,
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
+      Se.Set Beam.status status,
+      Se.Set Beam.ticketBookingId (Kernel.Types.Id.getId ticketBookingId),
+      Se.Set Beam.ticketServiceId (Kernel.Types.Id.getId ticketServiceId),
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.verificationCount verificationCount,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId)
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

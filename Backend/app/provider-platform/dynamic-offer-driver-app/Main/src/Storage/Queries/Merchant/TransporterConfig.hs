@@ -22,6 +22,7 @@ module Storage.Queries.Merchant.TransporterConfig
 where
 
 import qualified Data.Aeson as A
+import Domain.Types.Location (dummyFromLocationData, dummyToLocationData)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Kernel.Beam.Functions
@@ -139,6 +140,9 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             badDebtTimeThreshold = badDebtTimeThreshold,
             driverAutoPayExecutionTimeFallBack = secondsToNominalDiffTime driverAutoPayExecutionTimeFallBack,
             orderAndNotificationStatusCheckFallBackTime = secondsToNominalDiffTime orderAndNotificationStatusCheckFallBackTime,
+            dummyFromLocation = fromMaybe dummyFromLocationData (valueToMaybe =<< dummyFromLocation),
+            dummyToLocation = fromMaybe dummyToLocationData (valueToMaybe =<< dummyToLocation),
+            scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
             ..
           }
     where
@@ -212,6 +216,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.useOfferListCache = useOfferListCache,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
+        BeamTC.canSwitchToRental = canSwitchToRental,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.canSuvDowngradeToTaxi = canSuvDowngradeToTaxi,
         BeamTC.avgSpeedOfVehicle = toJSON <$> avgSpeedOfVehicle,
@@ -258,9 +263,13 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap,
         BeamTC.driverAutoPayExecutionTimeFallBack = nominalDiffTimeToSeconds driverAutoPayExecutionTimeFallBack,
         BeamTC.orderAndNotificationStatusCheckFallBackTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckFallBackTime,
+        BeamTC.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
+        BeamTC.considerDriversForSearch = considerDriversForSearch,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.specialDrivers = specialDrivers,
         BeamTC.specialLocationTags = specialLocationTags,
-        BeamTC.kaptureDisposition = kaptureDisposition
+        BeamTC.kaptureDisposition = kaptureDisposition,
+        BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
+        BeamTC.dummyToLocation = Just $ toJSON dummyToLocation
       }

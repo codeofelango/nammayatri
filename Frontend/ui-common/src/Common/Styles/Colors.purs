@@ -61,6 +61,9 @@ red100 = "#FEF8F8"
 white900 :: Color
 white900 = "#FFFFFF"
 
+white300 :: Color
+white300 = "#FDD56B"
+
 white200 :: Color
 white200 = "#99FFFFFF"
 
@@ -131,6 +134,15 @@ almond = "#F0DCCA"
 frenchSkyBlue :: Color 
 frenchSkyBlue = "#80B2FF"
 
+frenchSkyBlue800 :: Color
+frenchSkyBlue800 = "#99c1ff"
+
+frenchSkyBlue400 :: Color
+frenchSkyBlue400 = "#a9cbff"
+
+green700 :: Color
+green700 = "#268C6E"
+
 blackLessTrans :: Color
 blackLessTrans = "#99000000"
 
@@ -187,6 +199,9 @@ yellowOpacity10 = "#1AFCC32C"
 greenOpacity16 :: Color
 greenOpacity16 = "#2953BB6F"
 
+redOpacity20 :: Color
+redOpacity20 = "#33E55454"
+
 redOpacity16 :: Color
 redOpacity16 = "#29E55454"
 
@@ -204,6 +219,9 @@ yellow200 = "#33FCC32C"
 
 black200 :: Color
 black200 = "#1A2C2F3A"
+
+black80 :: Color
+black80 = "#142C2F3A"
 
 purple100 :: Color 
 purple100 = "#1A9747FF"
@@ -231,6 +249,7 @@ squidInkBlue = "#303440"
 
 rippleShade :: Color
 rippleShade = "#D5D5D8"
+
 green200 :: Color
 green200 = "#2053BB6F"
 
@@ -266,3 +285,18 @@ greenCoin = "#1A53BB6F"
 
 redCoin :: Color
 redCoin = "#1AE55454"
+
+blackOpacity12 :: Color
+blackOpacity12 = "#373A45"
+
+red200 :: Color
+red200 = "#FFE0E0"
+
+darkRed :: Color
+darkRed = "#DC1C4A"
+
+tealishGreen :: Color 
+tealishGreen = "#E5F5E9"
+
+darkGradientBlue :: Color
+darkGradientBlue = "#E2EAFF"

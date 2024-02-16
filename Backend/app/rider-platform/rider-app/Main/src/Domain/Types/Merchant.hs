@@ -30,6 +30,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     shortId :: ShortId Merchant,
     name :: Text,
     defaultCity :: Context.City,
+    defaultState :: Context.IndianState,
     country :: Context.Country,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,
@@ -48,17 +49,16 @@ data MerchantD (s :: UsageSafety) = Merchant
     distanceWeightage :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    timeDiffFromUtc :: Seconds,
     isAvoidToll :: Bool,
     aadhaarVerificationTryLimit :: Int,
     aadhaarKeyExpiryTime :: Seconds,
     mediaFileSizeUpperLimit :: Int,
     mediaFileUrlPattern :: Text,
-    trackingShortUrlPattern :: Text,
     editPickupDistanceThreshold :: HighPrecMeters,
     driverDistanceThresholdFromPickup :: HighPrecMeters,
     numOfAllowedEditPickupLocationAttemptsThreshold :: Int,
     publicMediaFileUrlPattern :: Text,
+    scheduleRideBufferTime :: NominalDiffTime,
     kaptureDisposition :: Text
   }
   deriving (Generic, Show)

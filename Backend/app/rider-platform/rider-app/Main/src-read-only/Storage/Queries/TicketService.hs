@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -21,7 +22,7 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.TicketServ
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.TicketService.TicketService] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> m (Maybe (Domain.Types.TicketService.TicketService))
 findById (Kernel.Types.Id.Id id) = do
@@ -45,20 +46,20 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketService.TicketService -> m ()
 updateByPrimaryKey Domain.Types.TicketService.TicketService {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowFutureBooking $ allowFutureBooking,
-      Se.Set Beam.businessHours $ (Kernel.Types.Id.getId <$> businessHours),
-      Se.Set Beam.expiry $ expiry,
-      Se.Set Beam.maxVerification $ maxVerification,
-      Se.Set Beam.operationalDays $ operationalDays,
-      Se.Set Beam.placesId $ placesId,
-      Se.Set Beam.service $ service,
-      Se.Set Beam.shortDesc $ shortDesc,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.allowFutureBooking allowFutureBooking,
+      Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
+      Se.Set Beam.expiry expiry,
+      Se.Set Beam.maxVerification maxVerification,
+      Se.Set Beam.operationalDays operationalDays,
+      Se.Set Beam.placesId placesId,
+      Se.Set Beam.service service,
+      Se.Set Beam.shortDesc shortDesc,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

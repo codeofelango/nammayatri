@@ -16,6 +16,7 @@
 module Screens.Types where
 
 import Common.Types.App as Common
+import Domain.Payments as PP
 import Components.ChatView.Controller as ChatView
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
@@ -54,7 +55,7 @@ import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
-import RemoteConfigs as RC
+import RemoteConfig as RC
 
 type EditTextInLabelState =
  {
@@ -266,7 +267,11 @@ type RegistrationScreenData = {
   config :: AppConfig,
   referralCode :: String,
   referral_code_input_data :: String,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  enteredDL :: String,
+  enteredRC :: String,
+  dlVerficationMessage :: String,
+  rcVerficationMessage :: String
 }
 
 type StepProgress = {
@@ -280,8 +285,14 @@ type RegistrationScreenProps = {
   isValidReferralCode :: Boolean,
   enterOtpFocusIndex :: Int,
   enterReferralCodeModal :: Boolean,
-  referralCodeSubmitted :: Boolean
+  referralCodeSubmitted :: Boolean,
+  contactSupportView :: Boolean,
+  contactSupportModal :: AnimType
 }
+
+data AnimType = HIDE | SHOW | ANIMATING
+derive instance genericAnimType :: Generic AnimType _
+instance eqAnimType :: Eq AnimType where eq = genericEq
 
 data RegisterationStep = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION | GRANT_PERMISSION | SUBSCRIPTION_PLAN
 derive instance genericRegisterationStep :: Generic RegisterationStep _
@@ -652,7 +663,8 @@ type ReferralScreenStateData = {
   , driverPerformance :: {
       referrals :: {
         totalActivatedCustomers :: Int,
-        totalReferredCustomers :: Int
+        totalReferredCustomers :: Int,
+        totalReferredDrivers :: Int
       }
     }
   , logField :: Object Foreign
@@ -881,7 +893,9 @@ type HomeScreenData =  {
   gender :: String,
   coinBalance :: Int,
   subsRemoteConfig :: RC.RCSubscription,
-  bannerData :: BannerCarousalData
+  bannerData :: BannerCarousalData,
+  prevLatLon :: Array Location,
+  noOfLocations :: Int
 }
 
 type BannerCarousalData = {
@@ -930,7 +944,7 @@ type PaymentState = {
   makePaymentModal :: Boolean,
   showRateCard :: Boolean,
   paymentStatusBanner :: Boolean,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   invoiceId :: String,
   bannerBG :: String,
   bannerTitle :: String,
@@ -1086,7 +1100,7 @@ instance showSubscriptionPopupType :: Show SubscriptionPopupType where show = ge
 instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where encode = defaultEnumEncode
 instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where decode = defaultEnumDecode
 
-data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY
+data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY | SAFETY
 
 derive instance genericPwdType :: Generic DisabilityType _
 instance eqPwdType :: Eq DisabilityType where eq = genericEq
@@ -1122,7 +1136,8 @@ instance decodeDriverStatus :: Decode DriverStatus where decode = defaultEnumDec
 type Location = {
   place :: String,
   lat :: Number,
-  lon :: Number
+  lon :: Number,
+  driverInsideThreshold :: Boolean
 }
 
 data LocationType = LATITUDE | LONGITUDE
@@ -1701,7 +1716,7 @@ type AcknowledgementScreenData = {
 
 type AcknowledgementScreenProps = {
   primaryButtonVisibility :: Visibility,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   illustrationType :: IllustrationType
 }
 
@@ -1965,7 +1980,7 @@ type PaymentHistoryScreenData = {
 
 type TransactionInfo = {
   notificationStatus :: Maybe AutopayPaymentStage,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   statusTime :: String,
   details :: Array TransactionListItem,
   manualSpecificDetails :: Array DueCard,
@@ -1978,7 +1993,7 @@ type TransactionInfo = {
 type PaymentListItem = {
   transactionDate :: String,
   invoiceId :: String,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   amount :: Number,
   feeType :: FeeType,
   description :: String,
@@ -2201,7 +2216,8 @@ type DriverEarningsScreenData = {
   rideHistoryItems :: Array RidesInfo,
   selectedRideHistoryItem :: IndividualRideCardState,
   weeklyEarningData :: Array WeeklyEarning,
-  anyRidesAssignedEver :: Boolean
+  anyRidesAssignedEver :: Boolean,
+  logField :: Object Foreign
 }
 
 type DriverEarningsScreenProps = {
@@ -2312,14 +2328,32 @@ type DriverReferralScreenState = {
 type DriverReferralScreenData = {
     logField :: Object Foreign
   , config :: AppConfig
-  , referredDrivers :: String
+  , totalReferredDrivers :: Int
+  , totalActivatedCustomers :: Int
+  , totalReferredCustomers :: Int
   , referralCode :: String
+  , rank :: Maybe Int
+  , totalEligibleDrivers :: Maybe Int
 }
 
 type DriverReferralScreenProps = {
   showDriverReferralQRCode :: Boolean
 , showNewDriverReferralText :: Boolean
+, driverReferralType :: DriverReferralType
+, referralInfoPopType :: ReferralInfoPopType
 }
+
+data DriverReferralType = DRIVER | CUSTOMER
+
+derive instance genericDriverReferralType :: Generic DriverReferralType _
+instance showDriverReferralType :: Show DriverReferralType where show = genericShow
+instance eqDriverReferralType :: Eq DriverReferralType where eq = genericEq
+
+data ReferralInfoPopType = REFERRED_DRIVERS_POPUP | REFERRED_CUSTOMERS_POPUP | ACTIVATED_CUSTOMERS_POPUP | NO_REFERRAL_POPUP
+
+derive instance genericReferralInfoPopType :: Generic ReferralInfoPopType _
+instance showReferralInfoPopType :: Show ReferralInfoPopType where show = genericShow
+instance eqReferralInfoPopType :: Eq ReferralInfoPopType where eq = genericEq
 
 data GoBackToScreen = Earning | Home
 

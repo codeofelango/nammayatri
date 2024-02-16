@@ -15,15 +15,18 @@
 module Beckn.ACL.OnSearch where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Transformer.OnSearch as TOnSearch
+import qualified Beckn.OnDemand.Utils.OnSearch as UOnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
-import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Search as DSearch
-import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import GHC.Float (double2Int)
 import Kernel.Prelude
-import Kernel.Types.Beckn.DecimalValue as DecimalValue
+import Kernel.Types.App
+import qualified Kernel.Types.Beckn.Context as Context
+import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
@@ -51,17 +54,15 @@ mkOnSearchMessage ::
 mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let startInfo = mkStartInfo res
   let stopInfo = mkStopInfo res
-  let (quoteEntitiesList :: [QuoteEntities]) = case (estimateList, specialQuoteList) of
-        (Just estimates, _) -> map (mkQuoteEntities startInfo stopInfo provider) estimates
-        (Nothing, Just quotes) -> map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider) quotes
-        (_, _) -> [] --this won't happen
-  let items = map (.item) quoteEntitiesList
-      fulfillments = map (.fulfillment) quoteEntitiesList
+  let pricings = (map UOnSearch.convertEstimateToPricing estimates) <> (map UOnSearch.convertQuoteToPricing quotes)
+  let (pricingEntities :: [PricingEntities]) = map (mkPricingEntities startInfo stopInfo provider) pricings
+  let items = map (.item) pricingEntities
+      fulfillments = map (.fulfillment) pricingEntities
   let providerSpec =
         OS.Provider
           { id = provider.subscriberId.getShortId,
             descriptor = OS.Descriptor {name = provider.name},
-            locations = maybe [] mkProviderLocations estimateList,
+            locations = mkProviderLocations ((map snd estimates) <> (map snd quotes)),
             items,
             fulfillments
           }
@@ -71,9 +72,25 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
         bpp_descriptor = OS.Descriptor provider.name
       }
   where
-    mkProviderLocations estimatesList =
-      foldl (<>) [] $ map mkProviderLocation estimatesList
-    mkProviderLocation DSearch.EstimateInfo {..} = toList driverLatLongs
+    mkProviderLocations nearestDriverlocations =
+      foldl (<>) [] $ map mkProviderLocation (catMaybes nearestDriverlocations)
+    mkProviderLocation DSearch.NearestDriverInfo {..} = toList driverLatLongs
+
+mkOnSearchRequest ::
+  (MonadFlow m) =>
+  DSearch.DSearchRes ->
+  Context.Action ->
+  Context.Domain ->
+  Text ->
+  Maybe Text ->
+  Text ->
+  BaseUrl ->
+  Maybe Text ->
+  Maybe BaseUrl ->
+  Context.City ->
+  Context.Country ->
+  m Spec.OnSearchReq
+mkOnSearchRequest = TOnSearch.buildOnSearchRideReq
 
 mkStartInfo :: DSearch.DSearchRes -> OS.StartInfo
 mkStartInfo dReq =
@@ -85,17 +102,20 @@ mkStartInfo dReq =
           }
     }
 
-mkStopInfo :: DSearch.DSearchRes -> OS.StopInfo
+mkStopInfo :: DSearch.DSearchRes -> Maybe OS.StopInfo
 mkStopInfo res =
-  OS.StopInfo
-    { location =
-        OS.Location
-          { gps = OS.Gps {lat = res.toLocation.lat, lon = res.toLocation.lon},
-            address = Nothing
-          }
-    }
+  ( \toLoc ->
+      OS.StopInfo
+        { location =
+            OS.Location
+              { gps = OS.Gps {lat = toLoc.lat, lon = toLoc.lon},
+                address = Nothing
+              }
+        }
+  )
+    <$> res.toLocation
 
-data QuoteEntities = QuoteEntities
+data PricingEntities = PricingEntities
   { fulfillment :: OS.FulfillmentInfo,
     item :: OS.Item
   }
@@ -103,24 +123,28 @@ data QuoteEntities = QuoteEntities
 currency' :: Text
 currency' = "INR"
 
-mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DM.Merchant -> DSearch.EstimateInfo -> QuoteEntities
-mkQuoteEntities start end provider estInfo = do
-  let estimate = estInfo.estimate
-      variant = Common.castVariant estimate.vehicleVariant
-      minPriceDecimalValue = OS.DecimalValue $ toRational estimate.minFare
-      maxPriceDecimalValue = OS.DecimalValue $ toRational estimate.maxFare
-      estimateBreakupList = buildEstimateBreakUpListTags <$> estimate.estimateBreakupList
+mkPricingEntities :: OS.StartInfo -> Maybe OS.StopInfo -> DM.Merchant -> UOnSearch.Pricing -> PricingEntities
+mkPricingEntities start end provider pricing = do
+  let variant = Common.castVariant pricing.vehicleVariant
+      minPriceDecimalValue = OS.DecimalValue $ toRational pricing.pricingMinFare
+      maxPriceDecimalValue = OS.DecimalValue $ toRational pricing.pricingMaxFare
+      fareParamsBreakups = maybe [] (mkFareParamsBreakups UOnSearch.mkPrice UOnSearch.mkFareParamsBreakupItem) pricing.fareParams
+      fareParamsBreakupsTags = buildFareParamsBreakupsTags <$> fareParamsBreakups
+
+      rateCardBreakups = maybe [] (mkFarePolicyBreakups UOnSearch.mkValue UOnSearch.mkRateCardBreakupItem pricing.estimatedDistance) pricing.farePolicy
+      rateCardTags = buildRateCardTags <$> rateCardBreakups
+
       fulfillment =
         OS.FulfillmentInfo
           { start,
             end = end,
-            id = estimate.id.getId,
-            _type = OS.RIDE,
+            id = pricing.pricingId,
+            _type = pricing.fulfillmentType,
             vehicle = OS.Vehicle {category = variant}
           }
       item =
         OS.Item
-          { id = Common.mkItemId provider.shortId.getShortId estimate.vehicleVariant,
+          { id = Common.mkItemId provider.shortId.getShortId pricing.vehicleVariant,
             fulfillment_id = fulfillment.id,
             price =
               OS.ItemPrice
@@ -133,18 +157,18 @@ mkQuoteEntities start end provider estInfo = do
             tags =
               Just $
                 OS.TG
-                  [ mkGeneralInfoTag estimate,
-                    mkFarePolicyTag estimateBreakupList,
-                    mkRateCardTag estimate
+                  [ mkGeneralInfoTag,
+                    mkFareParamsTag fareParamsBreakupsTags,
+                    mkRateCardTag rateCardTags
                   ]
           }
-  QuoteEntities
+  PricingEntities
     { fulfillment,
       item
     }
   where
-    mkGeneralInfoTag estimate =
-      let specialLocationTag = estimate.specialLocationTag
+    mkGeneralInfoTag =
+      let specialLocationTag = pricing.specialLocationTag
        in OS.TagGroup
             { display = False,
               code = "general_info",
@@ -160,144 +184,45 @@ mkQuoteEntities start end provider estInfo = do
                     { display = Just False,
                       code = Just "distance_to_nearest_driver",
                       name = Just "Distance To Nearest Driver",
-                      value = Just $ show . double2Int . realToFrac $ estInfo.distanceToNearestDriver
+                      value = (show . double2Int . realToFrac) <$> pricing.distanceToNearestDriver
                     }
                 ]
             }
-    mkFarePolicyTag estimateBreakupList =
+
+    mkFareParamsTag fareParamsBreakupsTags =
       OS.TagGroup
         { display = False,
           code = "fare_breakup",
           name = "Fare Breakup",
-          list = estimateBreakupList
+          list = fareParamsBreakupsTags
         }
-    mkRateCardTag estimate =
-      let nightShiftCharges = (estimate.nightShiftInfo <&> (.nightShiftCharge))
-          oldNightShiftCharges = (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)))
-          nightShiftStart = (estimate.nightShiftInfo <&> (.nightShiftStart))
-          waitingChargePerMin = (estimate.waitingCharges.waitingChargePerMin)
-          nightShiftEnd = (estimate.nightShiftInfo <&> (.nightShiftEnd))
-       in OS.TagGroup
-            { display = False,
-              code = "rate_card",
-              name = "Rate Card",
-              list =
-                [ OS.Tag
-                    { display = (\_ -> Just False) =<< nightShiftCharges,
-                      code = (\_ -> Just "night_shift_charge") =<< nightShiftCharges,
-                      name = (\_ -> Just "Night Shift Charges") =<< nightShiftCharges,
-                      value = (\charges -> Just $ show charges.getMoney) =<< nightShiftCharges
-                    },
-                  OS.Tag
-                    { display = (\_ -> Just False) =<< oldNightShiftCharges,
-                      code = (\_ -> Just "old_night_shift_charge") =<< oldNightShiftCharges,
-                      name = (\_ -> Just "Old Night Shift Charges") =<< oldNightShiftCharges,
-                      value = (Just . DecimalValue.valueToString) =<< oldNightShiftCharges
-                    },
-                  OS.Tag
-                    { display = (\_ -> Just False) =<< nightShiftStart,
-                      code = (\_ -> Just "night_shift_start") =<< nightShiftStart,
-                      name = (\_ -> Just "Night Shift Start Timings") =<< nightShiftStart,
-                      value = (Just . show) =<< nightShiftStart
-                    },
-                  OS.Tag
-                    { display = (\_ -> Just False) =<< waitingChargePerMin,
-                      code = (\_ -> Just "waiting_charge_per_min") =<< waitingChargePerMin,
-                      name = (\_ -> Just "Waiting Charges Per Min") =<< waitingChargePerMin,
-                      value = (\charges -> Just $ show charges.getMoney) =<< waitingChargePerMin
-                    },
-                  OS.Tag
-                    { display = (\_ -> Just False) =<< nightShiftEnd,
-                      code = (\_ -> Just "night_shift_end") =<< nightShiftEnd,
-                      name = (\_ -> Just "Night Shift End Timings") =<< nightShiftEnd,
-                      value = (Just . show) =<< nightShiftEnd
-                    }
-                ]
-            }
 
-mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DM.Merchant -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
-mkQuoteEntitiesSpecialZone start end provider it = do
-  let variant = Common.castVariant it.vehicleVariant
-      estimatedFare = OS.DecimalValue $ toRational it.estimatedFare
-      fulfillment =
-        OS.FulfillmentInfo
-          { start,
-            end = end,
-            id = it.quoteId.getId,
-            _type = OS.RIDE_OTP,
-            vehicle = OS.Vehicle {category = variant}
-          }
-      item =
-        OS.Item
-          { id = Common.mkItemId provider.shortId.getShortId it.vehicleVariant,
-            fulfillment_id = fulfillment.id,
-            price =
-              OS.ItemPrice
-                { currency = currency',
-                  value = estimatedFare,
-                  offered_value = estimatedFare,
-                  minimum_value = estimatedFare,
-                  maximum_value = estimatedFare
-                },
-            tags =
-              if isJust it.specialLocationTag
-                then Just $ OS.TG [mkSpecialLocationTag it.specialLocationTag]
-                else Nothing
-          }
-  QuoteEntities
-    { fulfillment,
-      item
-    }
-  where
-    mkSpecialLocationTag specialLocationTag =
+    mkRateCardTag rateCardTags =
       OS.TagGroup
         { display = False,
-          code = "general_info",
-          name = "General Information",
-          list =
-            [ OS.Tag
-                { display = (\_ -> Just True) =<< specialLocationTag,
-                  code = (\_ -> Just "special_location_tag") =<< specialLocationTag,
-                  name = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
-                  value = specialLocationTag
-                }
-            ]
+          code = "rate_card",
+          name = "Rate Card",
+          list = rateCardTags
         }
 
-buildEstimateBreakUpList ::
-  DEst.EstimateBreakup ->
-  BreakupItem
-buildEstimateBreakUpList DEst.EstimateBreakup {..} = do
-  BreakupItem
-    { title = title,
-      price =
-        BreakupPrice
-          { currency = price.currency,
-            value = realToFrac price.value
-          }
-    }
-
-buildEstimateBreakUpListTags ::
-  DEst.EstimateBreakup ->
+buildFareParamsBreakupsTags ::
+  UOnSearch.FareParamsBreakupItem ->
   OS.Tag
-buildEstimateBreakUpListTags DEst.EstimateBreakup {..} = do
+buildFareParamsBreakupsTags UOnSearch.FareParamsBreakupItem {..} = do
   OS.Tag
     { display = Just False,
       code = Just title,
       name = Just title,
-      value = Just $ show price.value.getMoney
+      value = Just $ show price.getMoney
     }
 
-mkPayment :: DMPM.PaymentMethodInfo -> OS.Payment
-mkPayment DMPM.PaymentMethodInfo {..} =
-  OS.Payment
-    { params =
-        OS.PaymentParams
-          { collected_by = Common.castDPaymentCollector collectedBy,
-            instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
-            currency = currency',
-            amount = Nothing
-          },
-      _type = Common.castDPaymentType paymentType,
-      uri = Nothing
+buildRateCardTags ::
+  UOnSearch.RateCardBreakupItem ->
+  OS.Tag
+buildRateCardTags UOnSearch.RateCardBreakupItem {..} = do
+  OS.Tag
+    { display = Just False,
+      code = Just title,
+      name = Just title,
+      value = Just value
     }

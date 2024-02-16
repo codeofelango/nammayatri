@@ -48,14 +48,17 @@ data BookingT f = BookingT
     estimatedFare :: B.C f HighPrecMoney,
     discount :: B.C f (Maybe HighPrecMoney),
     estimatedTotalFare :: B.C f HighPrecMoney,
+    estimatedDistance :: B.C f (Maybe HighPrecMeters),
+    estimatedDuration :: B.C f (Maybe Seconds),
     distance :: B.C f (Maybe HighPrecMeters),
     otpCode :: B.C f (Maybe Text),
     vehicleVariant :: B.C f VehVar.VehicleVariant,
     tripTermsId :: B.C f (Maybe Text),
-    rentalSlabId :: B.C f (Maybe Text),
+    stopLocationId :: B.C f (Maybe Text),
     merchantId :: B.C f Text,
     merchantOperatingCityId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
+    isScheduled :: B.C f (Maybe Bool),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

@@ -19,6 +19,7 @@ module ProviderPlatformClient.DynamicOfferDriver.Operations
 where
 
 import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
+import qualified API.Dashboard.Management.Subscription as MSubscription
 import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Coin as Coins
@@ -98,8 +99,10 @@ data DriverCommonAPIs = DriverCommonAPIs
     updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess,
     deleteRC :: Id Driver.Driver -> Driver.DeleteRCReq -> Euler.EulerClient APISuccess,
     clearOnRideStuckDrivers :: Maybe Int -> Euler.EulerClient Driver.ClearOnRideStuckDriversRes,
-    sendDummyNotificationToDriverViaDashboard :: Id Driver.Driver -> Euler.EulerClient APISuccess,
-    changeOperatingCity :: Id Driver.Driver -> Driver.ChangeOperatingCityReq -> Euler.EulerClient APISuccess
+    sendDummyRideRequestToDriverViaDashboard :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    changeOperatingCity :: Id Driver.Driver -> Driver.ChangeOperatingCityReq -> Euler.EulerClient APISuccess,
+    getOperatingCity :: Maybe Text -> Maybe Text -> Maybe (Id Ride.Ride) -> Euler.EulerClient Driver.GetOperatingCityResp,
+    setServiceChargeEligibleFlagInDriverPlan :: Id Common.Driver -> Driver.PauseOrResumeServiceChargesReq -> Euler.EulerClient APISuccess
   }
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
@@ -141,8 +144,8 @@ data MerchantAPIs = MerchantAPIs
     merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
     merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
     driverPoolConfig :: Maybe Meters -> Euler.EulerClient Merchant.DriverPoolConfigRes,
-    driverPoolConfigUpdate :: Meters -> Maybe Common.Variant -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
-    driverPoolConfigCreate :: Meters -> Maybe Common.Variant -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
+    driverPoolConfigUpdate :: Meters -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
+    driverPoolConfigCreate :: Meters -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
     driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
     driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
     onboardingDocumentConfig :: Maybe Merchant.DocumentType -> Euler.EulerClient Merchant.OnboardingDocumentConfigRes,
@@ -156,7 +159,8 @@ data MerchantAPIs = MerchantAPIs
     verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
     updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
-    updateFPPerExtraKmRate :: Id Common.FarePolicy -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
+    updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
+    updateFarePolicy :: Id Common.FarePolicy -> Merchant.UpdateFarePolicyReq -> Euler.EulerClient APISuccess,
     schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess
   }
 
@@ -196,16 +200,23 @@ data IssueAPIs = IssueAPIs
   }
 
 data SubscriptionAPIs = SubscriptionAPIs
-  { planList :: Id Driver.Driver -> Euler.EulerClient Subscription.PlanListAPIRes,
+  { planListV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Euler.EulerClient Subscription.PlanListAPIRes,
+    planSelectV2 :: Id Driver.Driver -> Id DPlan.Plan -> DPlan.ServiceNames -> Euler.EulerClient APISuccess,
+    planSuspendV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Euler.EulerClient APISuccess,
+    planSubscribeV2 :: Id Driver.Driver -> Id DPlan.Plan -> DPlan.ServiceNames -> MSubscription.PlanSubscribeReq -> Euler.EulerClient Subscription.PlanSubscribeRes,
+    currentPlanV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Euler.EulerClient Subscription.CurrentPlanRes,
+    paymentStatus :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient APayment.PaymentStatusResp,
+    getPaymentHistoryV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
+    getPaymentHistoryEntityDetailsV2 :: Id Driver.Driver -> DPlan.ServiceNames -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
+    updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.ServiceNames -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
+    sendMessageToDriverViaDashboard :: Id Driver.Driver -> Text -> DDriver.SendSmsReq -> Euler.EulerClient APISuccess,
+    planList :: Id Driver.Driver -> Euler.EulerClient Subscription.PlanListAPIRes,
     planSelect :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient APISuccess,
     planSuspend :: Id Driver.Driver -> Euler.EulerClient APISuccess,
     planSubscribe :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient Subscription.PlanSubscribeRes,
     currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes,
-    paymentStatus :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient APayment.PaymentStatusResp,
     getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
-    getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
-    updateSubscriptionDriverFeeAndInvoice :: Id Driver.Driver -> Driver.SubscriptionDriverFeesAndInvoicesToUpdate -> Euler.EulerClient Driver.SubscriptionDriverFeesAndInvoicesToUpdate,
-    sendMessageToDriverViaDashboard :: Id Driver.Driver -> Text -> DDriver.SendSmsReq -> Euler.EulerClient APISuccess
+    getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2
   }
 
 data CoinAPIs = CoinAPIs
@@ -241,12 +252,19 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> driversClient
       :<|> bookingsClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
-    planList
+    planListV2
+      :<|> planSelectV2
+      :<|> planSuspendV2
+      :<|> planSubscribeV2
+      :<|> currentPlanV2
+      :<|> planList
       :<|> planSelect
       :<|> planSuspend
       :<|> planSubscribe
       :<|> currentPlan
       :<|> paymentStatus
+      :<|> getPaymentHistoryV2
+      :<|> getPaymentHistoryEntityDetailsV2
       :<|> getPaymentHistory
       :<|> getPaymentHistoryEntityDetails
       :<|> updateSubscriptionDriverFeeAndInvoice
@@ -277,8 +295,10 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> updateDriverName
       :<|> deleteRC
       :<|> clearOnRideStuckDrivers
-      :<|> sendDummyNotificationToDriverViaDashboard
-      :<|> changeOperatingCity = driverCommonClient
+      :<|> sendDummyRideRequestToDriverViaDashboard
+      :<|> changeOperatingCity
+      :<|> getOperatingCity
+      :<|> setServiceChargeEligibleFlagInDriverPlan = driverCommonClient
 
     updateReferralLinkPassword
       :<|> linkDriverReferralCode = referralClient
@@ -328,6 +348,7 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> createFPDriverExtraFee
       :<|> updateFPDriverExtraFee
       :<|> updateFPPerExtraKmRate
+      :<|> updateFarePolicy
       :<|> schedulerTrigger = merchantClient
 
     uploadFile

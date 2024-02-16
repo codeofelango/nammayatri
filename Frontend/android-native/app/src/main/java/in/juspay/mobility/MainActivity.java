@@ -14,6 +14,7 @@ import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 
 import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -46,6 +47,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.LottieDrawable;
 import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
@@ -298,33 +300,10 @@ public class MainActivity extends AppCompatActivity {
         if (MERCHANT_TYPE.equals("DRIVER")) {
             widgetService = new Intent(this, WidgetService.class);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            Utils.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
-        } else {
-            LottieAnimationView splashLottieView = findViewById(R.id.splash_lottie);
-            try {
-                if (Settings.Global.getFloat(getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE) == 0f) {
-                    isSystemAnimEnabled = false;
-                } else {
-                    splashLottieView.addAnimatorListener(new Animator.AnimatorListener() {
-                        @Override
-                        public void onAnimationEnd(Animator animation) {
-                            if (isHideSplashEventCalled) hideSplash();
-                                else splashLottieView.playAnimation();
-                        }
-
-                        @Override
-                        public void onAnimationCancel(Animator animation) {}
-                        @Override
-                        public void onAnimationRepeat(Animator animation) {}
-                        @Override
-                        public void onAnimationStart(Animator animation) {}
-                    });
-                }
-            } catch (Settings.SettingNotFoundException e) {
-                isSystemAnimEnabled = false;
+            if (sharedPref != null) {
+                Utils.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
             }
         }
-
         MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
         MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
         mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
@@ -365,12 +344,27 @@ public class MainActivity extends AppCompatActivity {
     private void handleSplashScreen() {
         try {
             setContentView(R.layout.activity_main);
-            String city = sharedPref != null ? sharedPref.getString("DRIVER_LOCATION", "__failed") : "_failed";
-            if (!city.equals("__failed")) {
-                View splash = findViewById(R.id.splash);
-                LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
-                setSplashAnimAndStart(splashLottie,city.toLowerCase());
+            boolean skipDefaultSplash = false;
+            String city = "__failed";
+            if (sharedPref != null) {
+                city = sharedPref.getString("DRIVER_LOCATION", "__failed");
+                if (city.equals("__failed")) {
+                    city = sharedPref.getString("CUSTOMER_LOCATION", "__failed");
+                }
             }
+            View splash = findViewById(R.id.splash);
+            LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
+            if (!city.equals("__failed")) {
+                skipDefaultSplash = setSplashAnimAndStart(splashLottie,city.toLowerCase());
+            }
+            if (!skipDefaultSplash) {
+                if ((splashLottie.getTag() != null) && splashLottie.getTag().equals("autoStart")) {
+                    splashLottie.setVisibility(View.VISIBLE);
+                    splashLottie.setRepeatCount(ValueAnimator.INFINITE);
+                    splashLottie.playAnimation();
+                }
+            }
+            splash.setVisibility(View.VISIBLE);
         } catch (Exception e){
             Bundle bundle = new Bundle();
             bundle.putString("Exception",e.toString());
@@ -380,14 +374,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setSplashAnimAndStart (LottieAnimationView view ,String city) {
+    private boolean setSplashAnimAndStart (LottieAnimationView view ,String city) {
         ResourceHandler resourceHandler = new ResourceHandler(this);
-        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, false);
-        String splashScreenTemp = remoteConfigs.getString("splash_screen_" + city);
         @Nullable
         String animationFile = null;
         try {
-            JSONObject cityConfig = new JSONObject(splashScreenTemp);
+            JSONObject cityConfig = getCityConfig(city);
             String file = cityConfig.optString("file_name","");
             if  (resourceHandler.isResourcePresent("raw",file) && !cityConfig.optBoolean("force_remote",false)) {
                 animationFile = resourceHandler.getRawResource(file);
@@ -398,18 +390,41 @@ public class MainActivity extends AppCompatActivity {
             Bundle bundle = new Bundle();
             bundle.putString("Exception",e.toString());
             FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config",bundle);
+            mFirebaseAnalytics.logEvent("exception_while_reading_city_config",bundle);
         }
         resourceHandler.close();
-        if (animationFile != null) {
+        if (animationFile != null && !animationFile.equals("")) {
             if (animationFile.startsWith("http")) {
                 view.setAnimationFromUrl(animationFile);
             } else {
                 view.setAnimationFromJson(animationFile,null);
             }
             view.setVisibility(View.VISIBLE);
+            if ((view.getTag() != null) && view.getTag().equals("autoStart")) view.setRepeatCount(ValueAnimator.INFINITE);
             view.playAnimation();
+            return true;
+        } else {
+            return false;
         }
+    }
+
+    @NonNull
+    private JSONObject getCityConfig(String city) {
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, false);
+        String splashScreenConfig = remoteConfigs.getString("splash_screen_" + city);
+        JSONObject config = new JSONObject();
+        JSONObject cityConfig = new JSONObject();
+        try {
+            cityConfig = new JSONObject(splashScreenConfig);
+            String merchant = MERCHANT_TYPE.toLowerCase();
+            config = cityConfig.optJSONObject(merchant);
+        } catch (Exception e) {
+            Bundle bundle = new Bundle();
+            bundle.putString("Exception",e.toString());
+            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config",bundle);
+        }
+        return config != null ? config : cityConfig ;
     }
 
     private void registerCallBack() {
@@ -437,6 +452,8 @@ public class MainActivity extends AppCompatActivity {
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_FINISHED);
+        NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED);
+        NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED);
     }
 
     public void updateConfigURL() {
@@ -499,9 +516,7 @@ public class MainActivity extends AppCompatActivity {
                         try {
                             JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
                             innerPayload.put("action", "process");
-                            if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
-                                innerPayload.put("notificationData", getNotificationDataFromIntent());
-                            }
+                            if (getIntent() != null) setNotificationData(innerPayload, getIntent());
                             json.put(PaymentConstants.PAYLOAD, innerPayload);
                         } catch (JSONException e) {
                             Log.e(LOG_TAG, e.toString());
@@ -511,12 +526,7 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case "hide_loader":
                     case "hide_splash":
-                        String key = getResources().getString(R.string.service);
-                        if (key.equals("nammayatri") && isSystemAnimEnabled) {
-                            isHideSplashEventCalled = true;
-                        } else {
-                            hideSplash();
-                        }
+                        hideSplash();
                         break;
                     case "show_splash":
                         View v = findViewById(R.id.splash);
@@ -620,6 +630,9 @@ public class MainActivity extends AppCompatActivity {
                 if (key.equals("vp")){
                     viewParam = query_params.get(key);
                     break;
+                } else if (key.equals("referrer")) {
+                    viewParam = query;
+                    break;
                 }
             }
             Gson gson = new Gson();
@@ -685,29 +698,11 @@ public class MainActivity extends AppCompatActivity {
         processDeeplink(viewParam, deepLinkJson);
         if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
             try {
-                String data = intent.getExtras().getString("NOTIFICATION_DATA");
                 JSONObject proccessPayload = new JSONObject().put("service", getService())
                         .put("requestId", UUID.randomUUID());
-                JSONObject innerPayload = new JSONObject();
-                JSONObject jsonData = new JSONObject(data);
-                if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
-                    innerPayload = getInnerPayload("OpenChatScreen");
-                    NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                    notificationManager.cancel(NotificationUtils.chatNotificationId);
-                    innerPayload.put("notification_type", "CHAT_MESSAGE");
-                }
-                if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
-                    String id = jsonData.getString("entity_ids");
-                    String type = jsonData.getString("notification_type");
-                    if (type.equals("NEW_MESSAGE")) {
-                        innerPayload = getInnerPayload("callDriverAlert");
-                        innerPayload.put("id", id)
-                                .put("popType", type);
-                    }else if (type.equals("COINS_SUCCESS")){
-                        return;
-                    }
-                }
+                JSONObject innerPayload = new JSONObject().put("onNewIntent", true);
                 proccessPayload.put(PaymentConstants.PAYLOAD, innerPayload);
+                setNotificationData(innerPayload, intent);
                 mFirebaseAnalytics.logEvent("ny_hyper_process",null);
                 hyperServices.process(proccessPayload);
             } catch (Exception e) {
@@ -715,6 +710,36 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         super.onNewIntent(intent);
+    }
+
+    public void setNotificationData (JSONObject innerPayload, Intent intent) {
+        try {
+            String data = intent.getExtras().getString("NOTIFICATION_DATA");
+            String fullNotificationString = intent.getExtras().getString("fullNotificationBody");
+            JSONObject jsonData = new JSONObject(data);
+            if (fullNotificationString != null) {
+                JSONObject fullNotification = new JSONObject(fullNotificationString);
+                innerPayload.put("fullNotificationBody", fullNotification);
+            }
+            if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
+                innerPayload = getInnerPayload("OpenChatScreen");
+                NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                notificationManager.cancel(NotificationUtils.chatNotificationId);
+                innerPayload.put("notification_type", "CHAT_MESSAGE");
+            }
+            if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
+                String id = jsonData.getString("entity_ids");
+                String type = jsonData.getString("notification_type");
+                innerPayload.put("notification_type", type);
+                if (type.equals("NEW_MESSAGE")) {
+                    innerPayload = getInnerPayload("callDriverAlert");
+                    innerPayload.put("id", id)
+                            .put("popType", type);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -860,24 +885,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private JSONObject getNotificationDataFromIntent() throws JSONException {
-        Bundle bundle = getIntent().getExtras();
-        JSONObject data;
-        //Handling local and foreground notifications
-        if (getIntent().hasExtra("NOTIFICATION_DATA")) {
-            data = new JSONObject(bundle.getString("NOTIFICATION_DATA"));
-        }
-        //Handling background notifications
-        else if (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type")) {
-            data = new JSONObject();
-            data.put("notification_type", bundle.getString("notification_type"));
-            data.put("entity_ids", bundle.getString("entity_ids"));
-            data.put("entity_type", bundle.getString("entity_type"));
-        } else {
-            data = new JSONObject();
-        }
-        return data;
-    }
     private class GetGAIDTask extends AsyncTask<String, Integer, String> {
         @Override
         protected String doInBackground(String... strings) {

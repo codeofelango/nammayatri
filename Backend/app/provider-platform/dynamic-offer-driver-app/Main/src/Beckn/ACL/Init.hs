@@ -15,8 +15,10 @@
 module Beckn.ACL.Init where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Transformer.Init as TInit
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
+import qualified BecknV2.OnDemand.Utils.Context as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -27,6 +29,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Field
+import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Error.Throwing
 
@@ -44,9 +47,15 @@ buildInitReq subscriber req = do
   _ <- case order.items of
     [it] -> pure it
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
-  fulfillmentId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
+  fulfillmentId <- do
+    fId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
+    case order.fulfillment._type of
+      "RIDE" -> pure $ DInit.EstimateId (Id fId)
+      "RIDE_OTP" -> pure $ DInit.QuoteId (Id fId)
+      "RENTAL" -> pure $ DInit.QuoteId (Id fId)
+      "INTER_CITY" -> pure $ DInit.QuoteId (Id fId)
+      _ -> pure $ DInit.QuoteId (Id fId)
   let maxEstimatedDistance = getMaxEstimateDistance =<< order.fulfillment.tags
-  let initTypeReq = buildInitTypeReq order.fulfillment._type
   -- should we check start time and other details?
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
@@ -55,8 +64,7 @@ buildInitReq subscriber req = do
 
   pure
     DInit.InitReq
-      { estimateId = fulfillmentId,
-        bapId = subscriber.subscriber_id,
+      { bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         bapCity = context.city,
         bapCountry = context.country,
@@ -66,9 +74,6 @@ buildInitReq subscriber req = do
         ..
       }
   where
-    buildInitTypeReq = \case
-      Init.RIDE_OTP -> DInit.InitSpecialZoneReq
-      Init.RIDE -> DInit.InitNormalReq
     castVehicleVariant = \case
       Init.SEDAN -> VehVar.SEDAN
       Init.SUV -> VehVar.SUV
@@ -91,3 +96,26 @@ getMaxEstimateDistance tagGroups = do
   tagValue <- Common.getTag "estimations" "max_estimated_distance" tagGroups
   maxEstimatedDistance <- readMaybe $ T.unpack tagValue
   Just $ HighPrecMeters maxEstimatedDistance
+
+buildInitReqV2 ::
+  ( MonadThrow m,
+    (HasFlowEnv m r '["_version" ::: Text])
+  ) =>
+  Subscriber.Subscriber ->
+  Init.InitReqV2 ->
+  m DInit.InitReq
+buildInitReqV2 subscriber req = do
+  let context = req.initReqContext
+  Utils.validateContext Context.INIT context
+  bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
+  unless (subscriber.subscriber_id == bap_id) $
+    throwError (InvalidRequest "Invalid bap_id")
+  bapUri <- mapM parseBaseUrl context.contextBapUri >>= fromMaybeM (InvalidRequest "bap_uri not found")
+  unless (subscriber.subscriber_url == bapUri) $
+    throwError (InvalidRequest "Invalid bap_uri")
+  items <- req.initReqMessage.confirmReqMessageOrder.orderItems & fromMaybeM (InvalidRequest "items not found")
+  case items of
+    [_it] -> return ()
+    _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
+
+  TInit.buildDInitReq subscriber req

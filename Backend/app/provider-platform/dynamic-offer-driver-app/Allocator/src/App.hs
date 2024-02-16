@@ -64,8 +64,6 @@ allocatorHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPaymentReminderToDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . unsubscribeDriverForPaymentOverdue)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)
@@ -73,6 +71,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . notificationAndOrderStatusUpdate)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendOverlayToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . badDebtCalculation)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendManualPaymentLink)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . retryDocumentVerificationJob)
     }
 
@@ -84,7 +83,6 @@ runDriverOfferAllocator configModifier = do
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
   let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
-
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
@@ -122,4 +120,4 @@ runDriverOfferAllocator configModifier = do
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
-    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency $ allocatorHandle flowRt' handlerEnv
+    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ allocatorHandle flowRt' handlerEnv

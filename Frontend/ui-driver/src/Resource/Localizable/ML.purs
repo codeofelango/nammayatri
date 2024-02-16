@@ -1,6 +1,7 @@
 module Resources.Localizable.ML where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getML :: STR -> String
 getML stringKey =
@@ -647,7 +648,7 @@ getML stringKey =
         ZERO_COMMISION ->  "ZERO കമ്മീഷൻ"
         EARN_TODAY_PAY_TOMORROW ->  "ഇന്ന് സമ്പാദിക്കുക, നാളെ പണമടയ്ക്കുക"
         PAY_ONLY_IF_YOU_TAKE_RIDES ->  "നിങ്ങൾ സവാരി നടത്തിയാൽ മാത്രം പണം നൽകുക"
-        PLANS ->  "ചേരുക"
+        PLANS ->  "പ്ലാൻസ്"
         PLAN ->  "പ്ലാൻ ചെയ്യുക"
         DAY ->  "ദിവസം"
         MANAGE_PLAN ->  "പ്ലാൻ നിയന്ത്രിക്കുക"
@@ -1190,7 +1191,7 @@ getML stringKey =
         ONE_TWO_START_RATING -> "യാത്രയിലേക്കുള്ള 1 അല്ലെങ്കിൽ 2-നക്ഷത്ര അനുമാനം"
         BOOKING_CANCELLATION -> "ബുക്കിംഗ് റദ്ദാക്കൽ"
         PAID_BY -> "അടച്ചത്"
-        DRIVER_REFERRAL_CODE -> "ഡ്രൈവർ റഫറൽ കോഡ്"
+        DRIVER_REFERRAL_CODE -> "ഡ്രൈവർ \n റഫറൽ കോഡ്"
         APP_QR_CODE -> "ആപ്പ് QR കോഡ്"
         START_TAKING_RIDES_AND_REFER _-> "നമ്മ യാത്രി ഡ്രൈവർ ആപ്പിൽ സൈൻ അപ്പ് ചെയ്യുന്നതിന് റൈഡുകൾ എടുക്കുകയും ഡ്രൈവർമാരെ റഫർ ചെയ്യുകയും ചെയ്യുക"
         REFERRED_DRIVERS -> "റഫർ ചെയ്ത ഡ്രൈവർമാർ"
@@ -1209,5 +1210,27 @@ getML stringKey =
         MAX -> "പരമാവധി"
         COINS -> "നാണയങ്ങൾ"
         COINS_ADDED -> "നാണയങ്ങൾ ചേർക്കപ്പെട്ടു"
-
-
+        REFERRAL -> "റഫറൽ"
+        BENEFITS -> "പ്രയോജനങ്ങൾ"
+        YOUR_DAILY_RANK -> "നിങ്ങളുടെ ദിവസം റാങ്ക്"
+        CLICK_TO_EXPAND -> "വികസിപ്പിക്കാൻ\nക്ലിക്കുചെയ്യുക"
+        REFERRED -> "റഫറൽ"
+        ACTIVATED -> "സജീവമാക്കി"
+        REFER_DRIVER -> "ഡ്രൈവർ റഫറൽ"
+        REFER_CUSTOMER -> "കസ്റ്റമർ റഫറൽ"
+        REFERRED_DRIVERS_INFO _ -> "നമ്മ യാത്രിയിൽ അനുസൃത ഡ്രൈവേഴ്സുകൾ രജിസ്റ്റർ ചെയ്തവർ"
+        REFERRED_CUSTOMERS_INFO _ -> "നമ്മ യാത്രിയിൽ അനുസൃത ഗ്രാഹകർ രജിസ്റ്റർ ചെയ്തവർ"
+        ACTIVATED_CUSTOMERS_INFO -> "തങ്ങളുടെ ആദ്യ യാത്ര വിജയകരമായി പൂരീകരിച്ചവർ"
+        CUSTOMER_REFERRAL_CODE -> "കസ്റ്റമർ \n റഫറൽ കോഡ്"
+        ACCEPT_RIDE_TO_ENTER_LEADERBOARD -> "റൈഡുകൾ അംഗീകരിക്കുകയും\nഒരു ശീര്ഷ ഡ്രൈവർ ആകുക"
+        CONTACT_SUPPORT_VIA -> "പിന്തുണയുമായി ബന്ധപ്പെടുക"
+        YOU_CAN_SHARE_SCREENSHOT -> "മാനുവൽ ഓൺബോർഡിംഗിനായി നിങ്ങൾക്ക് സ്ക്രീൻഷോട്ടുകളും പ്രമാണങ്ങളും പങ്കിടാം"
+        PLACE_A_CALL -> "രേഖകൾ പരിശോധിച്ചുറപ്പിക്കുന്നതിനുള്ള ദ്രുത സഹായത്തിനായി ഒരു കോൾ ചെയ്യുക"
+        TERMS_AND_CONDITIONS_UPDATED -> "ടി&സിയും സ്വകാര്യതാ നയവും അപ്ഡേറ്റ് ചെയ്തിട്ടുണ്ട്"
+        SAFETY_IS_OUR_RESPONSIBILITY -> "സുരക്ഷ നമ്മുടെ ഉത്തരവാദിത്തമാണ്"
+        CUSTOMER_SAFETY_FIRST -> "ഉപഭോക്തൃ സുരക്ഷ ആദ്യം!"
+        LETS_ENSURE_SAFE_RIDE -> "സുരക്ഷിതവും സുരക്ഷിതവുമായ യാത്ര ഉറപ്പാക്കാം"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ഉപഭോക്തൃ സുരക്ഷ ഞങ്ങളുടെ<br>ഉത്തരവാദിത്തമാണ്. നമുക്ക് സുരക്ഷിതവും<br>സന്തോഷകരവുമായ യാത്ര ഉറപ്പാക്കാം"
+        OUR_SAFETY_PARTNER -> "ഞങ്ങളുടെ സുരക്ഷാ പങ്കാളി"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "ആശംസകൾ!\n\nജിസ്റ്റർ ചെയ്യുന്നതിന് ദയവായി എൻ്റെ റഫറൽ കോഡ് " <> code <> " ഉപയോഗിക്കുക " <> name <> ".\n\nആപ്പ് ഡൗൺലോഡ് ചെയ്യാൻ QR കോഡ് സ്കാൻ ചെയ്യുക അല്ലെങ്കിൽ താഴെയുള്ള ലിങ്കിൽ ക്ലിക്ക് ചെയ്യുക. ആവശ്യമായ രജിസ്ട്രേഷൻ ഘട്ടങ്ങൾ പൂർത്തിയാക്കി എൻ്റെ റഫറൽ കോഡ് നൽകുക. ഓൺലൈനിൽ പോയി സമ്പാദിക്കാൻ തുടങ്ങൂ!\n\n"
+        DOWNLOAD_NOW -> "(ഇപ്പോൾ ഡൗൺലോഡ് ചെയ്യുക) "

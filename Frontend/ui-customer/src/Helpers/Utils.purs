@@ -25,7 +25,7 @@ import Accessor (_deeplinkOptions, _distance_meters, _payload, _search_type, _pa
 import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
-import Control.Monad.Free (resume)
+import Control.Monad.Free (resume, runFree)
 import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
@@ -35,11 +35,11 @@ import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
 import Data.Function.Uncurried (Fn2, runFn3, Fn1, Fn3)
 import Data.Generic.Rep (class Generic)
-import Data.Int (round, toNumber, fromString)
+import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number (pi, sin, cos, sqrt, asin, abs)
-import Data.Ord (comparing)
+import Data.Ord (comparing, Ordering)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
 import Data.String (replace, split, Pattern(..), Replacement(..))
@@ -71,30 +71,36 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<))
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<), (#))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash)
-import Services.API (Prediction)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location, MetroStationsList)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
+import Services.API (Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Data.Function.Uncurried (Fn1)
+import Data.Function.Uncurried
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
 import Data.Tuple(Tuple(..) ,snd, fst)
+import Data.Ord
+import MerchantConfig.Types (CityConfig)
+import MerchantConfig.DefaultConfig (defaultCityConfig)
+import Constants (defaultDensity)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
 foreign import withinTimeRange :: String -> String -> String -> Boolean
 
+foreign import isWeekend :: String -> Boolean
+
 foreign import getNewTrackingId :: Unit -> String
 
-foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> String -> Effect Unit
 
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
@@ -178,6 +184,8 @@ foreign import getDeviceDefaultDensity ::Fn1 LazyCheck Number
 foreign import didDriverMessage :: Fn1 LazyCheck Boolean
 
 foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
+
+foreign import getMockFollowerName :: String -> String
 
 data TimeUnit
   = HOUR
@@ -337,6 +345,31 @@ addToPrevCurrLoc currLoc currLocArr =
     else currLocArr
 
  --------------------------------------------------------------------------------------------------
+fetchMetroStations :: Decode MetroStationsList => String -> Flow GlobalState (Maybe MetroStationsList)
+fetchMetroStations objName = do
+  (maybeEncodedState :: Maybe String) <- liftFlow $ fetchFromLocalStore' objName Just Nothing
+  void $ pure $ spy "fetchMetroStations: maybeEncodedState" maybeEncodedState
+  case maybeEncodedState of
+    
+    Just encodedState -> do
+      case runExcept (decodeJSON encodedState) of
+        Right obj -> pure $ Just obj
+        Left err -> do
+          _ <- liftFlow (logShow $ "fetchMetroStations: Error while decoding " <> (show err))
+          pure Nothing
+    Nothing -> pure Nothing
+
+getMetroStationsObjFromLocal :: String -> Flow GlobalState MetroStationsList
+getMetroStationsObjFromLocal _ = do
+  (metroStationsList :: Maybe MetroStationsList) <- (fetchMetroStations "METRO_STATIONS")
+  case metroStationsList of
+    Just stations -> pure stations
+    Nothing -> pure emptyMetroStationsList
+
+
+emptyMetroStationsList :: MetroStationsList
+emptyMetroStationsList = {stations : [],lastUpdatedAt : "" }
+ --------------------------------------------------------------------------------------------------
 
 checkPrediction :: LocationListItemState -> Array LocationListItemState -> Boolean
 checkPrediction prediction predictionArr = if (length (filter (\ ( item) -> (item.placeId) == (prediction.placeId))(predictionArr)) > 0) then false else true
@@ -400,8 +433,8 @@ type AffSuccess s = (s -> Effect Unit)
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
-sortPredctionByDistance :: Array Prediction -> Array Prediction
-sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
+sortPredictionByDistance :: Array Prediction -> Array Prediction
+sortPredictionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
 
 
 getDistanceString :: Int -> Int -> String
@@ -409,8 +442,21 @@ getDistanceString distanceInMeters decimalPoint
   | distanceInMeters >= 1000 = ReExport.parseFloat (toNumber distanceInMeters / 1000.0) decimalPoint <> " km"
   | otherwise = show distanceInMeters <> " m"
 
-recentDistance :: Array LocationListItemState -> Number -> Number -> Array LocationListItemState
-recentDistance arr currLat currLon = map (\item -> item{actualDistance = Just ( round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0)), distance = Just $ getDistanceString (round ( ((getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) ))*1000.0) )1}) arr
+updateLocListWithDistance :: Array LocationListItemState -> Number -> Number -> Boolean -> Number -> Array LocationListItemState 
+updateLocListWithDistance arr currLat currLon useThreshold threshold =   
+  arr
+  # map updateItemDistance
+  # filter withinThreshold
+
+  where
+    updateItemDistance item = 
+      let 
+        distance = round $ getDistanceBwCordinates currLat currLon (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) * 1000.0
+      in 
+        item { actualDistance = Just distance, distance = Just $ getDistanceString distance 1 }
+
+    withinThreshold item = 
+      maybe true (\actualDist -> (actualDist <= round (threshold * 1000.0) && useThreshold) || not useThreshold) item.actualDistance
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
@@ -561,6 +607,7 @@ fetchDefaultPickupPoint locations lati longi =
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
   let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
+      city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in 
     case variant of
       "TAXI"          ->  variantConfig.taxi.image 
@@ -568,7 +615,11 @@ getVehicleVariantImage variant =
       "SEDAN"         -> variantConfig.sedan.image
       "SUV"           -> variantConfig.suv.image
       "HATCHBACK"     -> variantConfig.hatchback.image
-      "AUTO_RICKSHAW" -> variantConfig.autoRickshaw.image
+      "AUTO_RICKSHAW" -> case city of 
+                          Kochi -> fetchImage FF_ASSET "ny_ic_black_auto_quote_list" 
+                          Chennai -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list" 
+                          Hyderabad -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list"
+                          _ -> variantConfig.autoRickshaw.image
       _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -612,6 +663,25 @@ cityCodeMap =
   , Tuple Nothing AnyCity
   ]
 
+getCityFromString :: String -> City
+getCityFromString cityString =
+  case cityString of 
+    "Bangalore" -> Bangalore
+    "Kolkata" -> Kolkata
+    "Paris" -> Paris
+    "Kochi" -> Kochi
+    "Delhi" -> Delhi
+    "Hyderabad" -> Hyderabad
+    "Mumbai" -> Mumbai
+    "Chennai" -> Chennai
+    "Coimbatore" -> Coimbatore
+    "Pondicherry" -> Pondicherry
+    "Goa" -> Goa
+    "Pune" -> Pune
+    "Mysore" -> Mysore
+    "Tumakuru" -> Tumakuru
+    _ -> AnyCity
+
 getCityNameFromCode :: Maybe String -> City
 getCityNameFromCode mbCityCode =
   let 
@@ -623,3 +693,67 @@ getCityCodeFromCity city =
     let 
       cityCodeTuple = find (\tuple -> (snd tuple) == city) cityCodeMap
     in maybe Nothing (\tuple -> fst tuple) cityCodeTuple
+
+getCard :: CardType -> String 
+getCard cardType = case cardType of 
+  HOME_TAG -> "Home"
+  WORK_TAG -> "Work"
+  _ -> ""
+
+getSavedLocationByTag :: Array LocationListItemState -> CardType -> Maybe LocationListItemState
+getSavedLocationByTag list tag = 
+  find (\item -> item.tag == getCard tag) list
+
+calculateSavedLocDist :: Array LocationListItemState -> String -> Number -> Number -> Array DistInfo
+calculateSavedLocDist savedLocs excludeTag lat lon =
+  sortBy compareByDistance $ map (\item -> getDistInfo item) $ listAfterExcludedTag excludeTag savedLocs 
+  where 
+    compareByDistance :: DistInfo -> DistInfo -> Ordering
+    compareByDistance a b = compare (a.distanceDiff) (b.distanceDiff)
+
+    getDistInfo :: LocationListItemState -> DistInfo
+    getDistInfo item = do 
+      let x = getDistanceBwCordinates (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) lat lon
+      {locationName : item.tag, distanceDiff : x} 
+
+
+isValidLocation :: Array LocationListItemState -> String -> String -> Array DistInfo
+isValidLocation savedLocations excludeTag placeId = 
+  map (\item -> {locationName : item.tag, distanceDiff : 100.0}) validList
+  where
+    validList :: Array LocationListItemState
+    validList = filter (\x -> placeIdExists x.placeId) (listAfterExcludedTag excludeTag savedLocations)
+
+    placeIdExists :: Maybe String -> Boolean
+    placeIdExists = maybe false (\item -> not (DS.null placeId) && item == placeId)
+
+
+listAfterExcludedTag :: String -> Array LocationListItemState -> Array LocationListItemState
+listAfterExcludedTag excludeTag = filter (\item -> (DS.toLower item.tag) /= (DS.toLower excludeTag))
+
+getDistInfo savedLoc excludeLocation lat lon placeId = do 
+  let distArr = calculateSavedLocDist savedLoc excludeLocation lat lon
+      rslt = isValidLocation savedLoc excludeLocation placeId
+      placeIdExists = maybe { locationName: "", distanceDiff : 1.0 } identity $ head rslt
+      minDist = maybe { locationName: "", distanceDiff : 1.0 } identity $ head distArr
+      locExistsAs = case (DS.null placeIdExists.locationName) , minDist.distanceDiff <= 0.020 of
+                      false , _ -> placeIdExists.locationName
+                      true  , true -> minDist.locationName
+                      _ , _ -> ""
+      tagExists = not (null rslt) || minDist.distanceDiff <= 0.020 
+  {tagExists, locExistsAs}
+
+getExistingTags :: Array LocationListItemState -> Array String 
+getExistingTags savedLoc = map (\item -> DS.toLower $ item.tag) savedLoc
+
+getCityConfig :: Array CityConfig -> String -> CityConfig
+getCityConfig cityConfigs cityName = do
+  fromMaybe defaultCityConfig $ find (\item -> item.cityName == cityName) cityConfigs
+  
+getDefaultPixelSize :: Int -> Int
+getDefaultPixelSize size =
+  let pixels = runFn1 getPixels FunctionCall
+      androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
+  in if os == "IOS" 
+    then size
+    else ceil $ (toNumber size / pixels) * androidDensity

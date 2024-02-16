@@ -102,7 +102,7 @@ config =
   , profileName: "#FFFFFF"
   , profileImage: "#012A72"
   , feedbackBackground: "#2C2F3A"
-  , sideBarList: [ "MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout" ]
+  , sideBarList: [ "MyRides", "Favorites", "NammaSafety", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout", "MetroTickets"]
   , rateCardColor: "#2C2F3A"
   , nyBrandingVisibility: false
   , fontType: "Assets"
@@ -135,9 +135,9 @@ config =
   , suggestedTripsAndLocationConfig : {
         geohashLimitForMap : 60,
         geohashPrecision : 7,
-        maxLocationsToBeShown : 5,
+        maxLocationsToBeShown : 10,
         minLocationsToBeShown : 2,
-        maxTripsToBeShown : 5,
+        maxTripsToBeShown : 10,
         minTripsToBeShown : 2,
         locationsToBeStored : 30,
         tripsToBeStored : 30,
@@ -146,7 +146,8 @@ config =
         repeatRideTime : 8,
         autoScrollTime : 5,
         tripWithinXDist : 0.05,
-        locationWithinXDist : 100.0
+        locationWithinXDist : 100.0,
+        destinationGeohashPrecision : 9 
       }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
@@ -172,27 +173,27 @@ config =
       , variantInfo : {
         hatchback : {
           name : "Hatchback",
-          image : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_hatchback.png"
+          image : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
           },
         taxiPlus : {
           name : "AC Taxi",
-          image : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_sedan_ac.png"
+          image : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
         },
         sedan : {
           name : "Sedan",
-          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
         },
         taxi : {
           name : "Non-AC Taxi",
-          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
         },
         suv : {
           name : "SUV",
-          image : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_suv.png"
+          image : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png"
         },
         autoRickshaw : {
           name : "Auto Rickshaw",
-          image : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_auto_quote_list.png"
+          image : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
         }
 
       }
@@ -218,8 +219,13 @@ config =
     enableSupport: true,
     enableShareApp: false,
     enableReAllocation : true,
+    enableRepeatTripBackfilling : false,
     forceLogReferrerUrl : true,
-    enableSelfServe : true
+    enableSelfServe : true,
+    enableAdditionalServices : false,
+    enableSafetyFlow : true, 
+    shareWithEmergencyContacts: true,
+    enableAutoReferral : true
   }
 
   , rideCompletedCardConfig : {
@@ -243,12 +249,20 @@ config =
               , color : "#323643"
               },
             apiTriggerRadius : 10.0,
-            pickUpToSourceThreshold : 1.0
+            pickUpToSourceThreshold : 1.0,
+            hotSpotConfig :
+              { goToNearestPointWithinRadius : 30.0
+              , showHotSpotsWithinRadius : 150.0
+              , enableHotSpot : false
+              }
           }
       , labelTextSize : 30
       , animationDuration : 500
       , vehicleMarkerSize: 90
       }
+  , metroTicketingConfig : {
+    metroStationTtl : 10080 -- in Minutes
+  }
   , purpleRideConfig : {
       genericVideoUrl : "" ,
       visualImpairmentVideo : "" ,
@@ -293,6 +307,7 @@ config =
   , loaderConfig : defaultLoaderConfig
   , otpRegex :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
   , termsLink : "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA"
+  , termsVersion : 1.0
   , privacyLink : "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F"
   , shareAppConfig : {
       title : "Share Namma Yatri!"
@@ -308,4 +323,24 @@ config =
   , textColor : "#454545"
   , stroke: "1,#E5E7EB"
   }
+  , cityConfig :
+      [ { cityCode : "std:080"
+        , cityName : "Bangalore"
+        , geoCodeConfig :
+            { radius : 50000
+            , strictBounds : true
+            }
+        }
+      ]
+  , bannerCarousel : defaultBannerCarousel
 }
+
+defaultCityConfig :: CityConfig
+defaultCityConfig =
+  { cityName : "",
+    cityCode : "",
+    geoCodeConfig :
+      { radius : 100000
+      , strictBounds : false
+      }
+  }

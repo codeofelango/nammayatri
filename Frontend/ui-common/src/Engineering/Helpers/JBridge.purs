@@ -19,11 +19,10 @@ module JBridge where
 import Prelude
 
 import Effect (Effect)
-import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),ChatComponent(..), LazyCheck(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, CarouselModal, PolylineAnimationConfig, DisplayBase64ImageConig)
+import Common.Types.App
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -42,15 +41,18 @@ import Data.Maybe (Maybe(..))
 -- import Effect.Class (liftEffect)
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
-import Engineering.Helpers.Commons (screenHeight, screenWidth, os)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, os, callbackMapper)
 import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
 import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
-import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2)
+import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2,Fn5)
 import Foreign.Class (encode)
+import Effect.Aff (makeAff, nonCanceler, Fiber,  launchAff)
+import Prelude((<<<))
+import Effect.Class (liftEffect)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -92,7 +94,6 @@ foreign import getVersionName   :: Effect String
 foreign import getAndroidVersion :: Effect Int
 -- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
 -- foreign import scanQrCode       :: forall action. String MerchantConfig.Utils-> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
--- foreign import timePicker       :: forall action. (action -> Effect Unit) -> (Int -> Int -> action) -> Effect Unit
 foreign import datePicker       :: forall action. String -> (action -> Effect Unit)  -> (String -> Int -> Int -> Int -> action) -> Effect Unit
 foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) Unit
@@ -171,7 +172,7 @@ foreign import getAAID :: String -> String
 foreign import removeAllPolylinesAndMarkers :: Fn2 (Array String) Unit Unit
 -- foreign import removeAllPolylines :: String -> Unit
 foreign import currentPosition  :: String -> Unit
-foreign import openNavigation  :: Number -> Number -> Number -> Number -> String -> Effect Unit
+foreign import openNavigation  :: Number -> Number -> Number -> Number -> String -> Unit
 foreign import stopLocationPollingAPI :: Effect Unit
 foreign import startLocationPollingAPI :: Effect Unit
 foreign import startChatListenerService :: Effect Unit
@@ -184,7 +185,9 @@ foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect U
 foreign import sendMessage :: String -> Unit
 foreign import getSuggestionsfromLocal :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
-foreign import setYoutubePlayer :: Fn3 YoutubeData String String Unit
+foreign import setYoutubePlayer :: forall action. Fn5 YoutubeData String String (action -> Effect Unit) (String -> action) Unit
+foreign import addMediaPlayer :: String -> String -> Effect Unit
+foreign import switchYoutubeVideo :: String -> Unit
 foreign import addCarouselImpl :: EffectFn2 CarouselModal String Unit
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
@@ -217,6 +220,8 @@ foreign import uploadMultiPartData :: EffectFn3 String String String Unit
 foreign import startAudioRecording :: EffectFn1 String Boolean
 foreign import stopAudioRecording :: EffectFn1 String String
 foreign import differenceBetweenTwoUTC :: Fn2 String String Int
+
+foreign import differenceBetweenTwoUTCInMinutes :: Fn2 String String Int
 
 foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean
@@ -252,6 +257,7 @@ foreign import scrollViewFocus :: String -> Int -> Boolean
 foreign import clearChatMessages :: Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
 foreign import pauseYoutubeVideo :: Unit -> Unit 
+foreign import releaseYoutubeView :: Unit -> Unit 
 foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
@@ -263,9 +269,18 @@ foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Uni
 foreign import getLocationNameV2 :: Fn2 Number Number String
 foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitude :: Number }
 foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
+foreign import askRequestedPermissions :: Array String -> Unit
+foreign import askRequestedPermissionsWithCallback :: forall action. Array String -> (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+foreign import setupCamera :: String -> Boolean -> Unit
+foreign import startRecord :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
+foreign import stopRecord :: Unit -> Effect Unit
 
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
-
+foreign import datePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int Unit
+foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit) (String -> Int -> Int -> action) Unit
+foreign import clearAudioPlayer :: String -> Unit
+foreign import pauseAudioPlayer :: String -> Unit
+foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
@@ -273,6 +288,12 @@ setMapPadding = runEffectFn4 setMapPaddingImpl
 
 getCurrentPositionWithTimeout :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Int -> Boolean -> Effect Unit
 getCurrentPositionWithTimeout = runEffectFn4 getCurrentPositionWithTimeoutImpl
+
+datePickerWithTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> Int -> action) -> Int -> Effect Unit
+datePickerWithTimeout = runEffectFn3 datePickerImpl
+
+timePickerWithoutTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> action) -> Effect Unit
+timePickerWithoutTimeout = runEffectFn2 timePickerImpl
 
 type LottieAnimationConfig = {
     rawJson :: String
@@ -446,14 +467,10 @@ type MapRouteConfig = {
   , vehicleSizeTagIcon :: Int
   , isAnimation :: Boolean
   , polylineAnimationConfig :: PolylineAnimationConfig
+  , autoZoom :: Boolean
 }
 
 type Coordinates = Array Paths
-
-type Paths = {
-    lat :: Number
-  , lng :: Number
-}
 
 type IsLocationOnPath = {
     points :: Coordinates
@@ -498,6 +515,7 @@ type UpdateRouteConfig = {
   , srcMarker :: String
   , specialLocation :: MapRouteConfig
   , zoomLevel :: Number
+  , autoZoom :: Boolean
 }
 
 updateRouteConfig :: UpdateRouteConfig
@@ -511,6 +529,7 @@ updateRouteConfig = {
       destSpecialTagIcon: "", 
       vehicleSizeTagIcon: 0, 
       isAnimation: false, 
+      autoZoom : true,
       polylineAnimationConfig: {
         color: "", 
         draw: 0, 
@@ -519,6 +538,7 @@ updateRouteConfig = {
       } 
   }
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+  , autoZoom : true
 }
 
 -- type Point = Array Number
@@ -565,3 +585,14 @@ displayBase64ImageConfig = {
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
 }
+data DatePicker = DatePicker String Int Int Int
+
+data TimePicker = TimePicker String Int Int 
+
+showDatePicker push action= do
+  datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 $> nonCanceler
+  let (DatePicker dateResp year month day) = datePicker
+  timePicker <- makeAff \cb -> timePickerWithoutTimeout (cb <<< Right) TimePicker $> nonCanceler
+  let (TimePicker timeResp hour minute) = timePicker
+  liftEffect $ push $ action dateResp year month day timeResp hour minute
+  

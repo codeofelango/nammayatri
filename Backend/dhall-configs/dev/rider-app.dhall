@@ -65,8 +65,6 @@ let InfoBIPConfig =
       , sender = "JUSPAY"
       }
 
-let WebengageConfig = { url = "https://st.in.webengage.com" }
-
 let sampleKafkaConfig
     : globalCommon.kafkaConfig
     = { topicName = "rider-app-events-updates", kafkaKey = "rider-app" }
@@ -158,13 +156,16 @@ let hccfg =
 
 let kvConfigUpdateFrequency = +10
 
-let dontEnableForDb = [] : List Text
-
-let dontEnableForKafka = [] : List Text
-
 let maxMessages
     : Text
     = "5000"
+
+let RiderJobType = < CheckPNAndSendSMS | OtherJobTypes >
+
+let jobInfoMapx =
+      [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
+      , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
+      ]
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -177,7 +178,6 @@ in  { esqDBCfg
     , cutOffNonCriticalHedisCluster = False
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
-    , webengageCfg = WebengageConfig
     , port = +8013
     , metricsPort = +9999
     , hostName = "localhost"
@@ -225,9 +225,15 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
-    , dontEnableForDb
-    , dontEnableForKafka
     , maxMessages
     , incomingAPIResponseTimeout = +15
+    , maxShards = +5
+    , jobInfoMapx
     , internalEndPointMap = common.internalEndPointMap
+    , schedulerSetName = "rider-scheduler-set"
+    , schedulerType = common.schedulerType.RedisBased
+    , isBecknSpecVersion2 = True
+    , _version = "2.0.0"
+    , hotSpotExpiry = +604800
+    , collectRouteData = True
     }

@@ -19,10 +19,10 @@ where
 
 import Control.Monad.Extra (anyM)
 import qualified Data.Map as M
+import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
-import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
@@ -54,7 +54,8 @@ sendSearchRequestToDrivers ::
     Esq.EsqDBReplicaFlow m r,
     TranslateFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DSR.SearchRequest ->
   DST.SearchTry ->
@@ -94,7 +95,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
           if needTranslation
             then fromMaybe searchReq $ M.lookup language languageDictionary
             else searchReq
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
     Notify.sendSearchRequestToDriverNotification searchReq.providerId searchReq.merchantOperatingCityId notificationData
@@ -113,7 +114,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
       UTCTime ->
       DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver batchNumber validTill dpwRes = do
+    buildSearchRequestForDriver batchNumber defaultValidTill dpwRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
@@ -126,7 +127,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 startTime = searchTry.startTime,
                 merchantId = Just searchReq.providerId,
                 merchantOperatingCityId = searchReq.merchantOperatingCityId,
-                searchRequestValidTill = validTill,
+                searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,
                 driverId = cast dpRes.driverId,
                 vehicleVariant = dpRes.variant,
                 actualDistanceToPickup = dpwRes.actualDistanceToPickup,
@@ -146,6 +147,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 driverAvailableTime = dpwRes.intelligentScores.availableTime,
                 driverSpeed = dpwRes.intelligentScores.driverSpeed,
                 keepHiddenForSeconds = dpwRes.keepHiddenForSeconds,
+                pickupZone = dpwRes.pickupZone,
                 mode = dpRes.mode,
                 goHomeRequestId = dpwRes.goHomeReqId,
                 rideFrequencyScore = dpwRes.intelligentScores.rideFrequency,
@@ -189,7 +191,7 @@ translateSearchReq ::
   m DSR.SearchRequest
 translateSearchReq DSR.SearchRequest {..} language = do
   from <- buildTranslatedSearchReqLocation fromLocation (Just language)
-  to <- buildTranslatedSearchReqLocation toLocation (Just language)
+  to <- (\loc -> buildTranslatedSearchReqLocation loc (Just language)) `mapM` toLocation
   pure
     DSR.SearchRequest
       { fromLocation = from,

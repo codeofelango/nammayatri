@@ -98,6 +98,10 @@ let exophoneKafkaConfig
       , kafkaKey = "dynamic-offer-driver-exophone-events"
       }
 
+let sdkKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "SDKData", kafkaKey = "dynamic-offer-driver-sdk-events" }
+
 let sampleLogConfig
     : Text
     = "log-stream"
@@ -123,7 +127,18 @@ let eventStreamMappings =
             globalCommon.streamConfig.KafkaStream exophoneKafkaConfig
         , eventTypes = [ globalCommon.eventType.ExophoneData ]
         }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig = globalCommon.streamConfig.KafkaStream sdkKafkaConfig
+        , eventTypes = [ globalCommon.eventType.SDKData ]
+        }
       , { streamName = globalCommon.eventStreamNameType.LOG_STREAM
+        , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
+        , eventTypes =
+          [ globalCommon.eventType.RideEnded
+          , globalCommon.eventType.RideCancelled
+          ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
         , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
         , eventTypes =
           [ globalCommon.eventType.RideEnded
@@ -157,10 +172,6 @@ let kafkaProducerCfg =
 
 let kvConfigUpdateFrequency = +10
 
-let dontEnableForDb = [] : List Text
-
-let dontEnableForKafka = [] : List Text
-
 let appBackendBapInternal =
       { name = "APP_BACKEND"
       , url = "http://localhost:8013/"
@@ -180,8 +191,6 @@ let registryMap =
 
 let AllocatorJobType =
       < SendSearchRequestToDriver
-      | SendPaymentReminderToDriver
-      | UnsubscribeDriverForPaymentOverdue
       | UnblockDriver
       | SendPDNNotificationToDriver
       | MandateExecution
@@ -190,16 +199,11 @@ let AllocatorJobType =
       | SendOverlay
       | BadDebtCalculation
       | RetryDocumentVerification
+      | SendManualPaymentLink
       >
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
-      , { mapKey = AllocatorJobType.SendPaymentReminderToDriver
-        , mapValue = False
-        }
-      , { mapKey = AllocatorJobType.UnsubscribeDriverForPaymentOverdue
-        , mapValue = True
-        }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
         , mapValue = True
@@ -214,6 +218,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.RetryDocumentVerification
         , mapValue = False
         }
+      , { mapKey = AllocatorJobType.SendManualPaymentLink, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
@@ -251,7 +256,8 @@ in  { esqDBCfg
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
     , migrationPath =
-      [   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
+      [ "dev/migrations-read-only/dynamic-offer-driver-app"
+      ,   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
         ? "dev/migrations/dynamic-offer-driver-app"
       ]
     , autoMigrate = True
@@ -289,9 +295,10 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , snapToRoadSnippetThreshold = +300
     , droppedPointsThreshold = +2000
-    , snapToRoadPostCheckThreshold = +500
+    , osrmMatchThreshold = +1500
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
+    , maxNotificationShards = +128
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , enableAPILatencyLogging = True
@@ -302,10 +309,10 @@ in  { esqDBCfg
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
-    , dontEnableForDb
-    , dontEnableForKafka
     , maxMessages
     , modelNamesMap
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap
+    , isBecknSpecVersion2 = True
+    , _version = "2.0.0"
     }

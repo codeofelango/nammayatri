@@ -1,6 +1,7 @@
 module Resources.Localizable.EN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
@@ -651,7 +652,7 @@ getEN stringKey =
         CANCEL_AUTOPAY_STR -> "Cancel Autopay"
         WE_MIGHT_BE_LOST -> "Uh oh! We might be lost"
         EXEPERIENCING_ERROR -> "Experiencing error"
-        ENJOY_THESE_BENEFITS -> "Enjoy these benefits "
+        ENJOY_THESE_BENEFITS -> "Your joining benefits!"
         CHOOSE_YOUR_PLAN _ -> "Choose a Plan Now!"
         SKIP_FOR_NOW -> "Skip For Now"
         SEVEN_DAY_FREE_TRIAL_ACTIVATED -> "7-Day FREE TRIAL Activated!"
@@ -1190,7 +1191,7 @@ getEN stringKey =
         ONE_TWO_START_RATING -> "1 or 2 Star Rating for the Trip" 
         BOOKING_CANCELLATION -> "Booking Cancellation"
         PAID_BY -> "Paid by"
-        DRIVER_REFERRAL_CODE -> "Driver Referral Code"
+        DRIVER_REFERRAL_CODE -> "Driver \n Referral Code"
         APP_QR_CODE -> "App QR Code"
         START_TAKING_RIDES_AND_REFER _ -> "Start taking rides and referring drivers to sign up on Namma Yatri Driver App"
         REFERRED_DRIVERS -> "Referred Drivers"
@@ -1209,3 +1210,27 @@ getEN stringKey =
         COINS -> "Coins"
         COINS_ADDED -> "Coins Added"
         CANT_FIND_OPTION -> "Can't find option"
+        REFERRAL -> "Referral"
+        BENEFITS -> "Benefits"
+        YOUR_DAILY_RANK -> "Your Daily Rank"
+        CLICK_TO_EXPAND -> "Click to expand"
+        REFERRED -> "Referred"
+        ACTIVATED -> "Activated"
+        REFER_DRIVER -> "Refer Driver"
+        REFER_CUSTOMER -> "Refer Customer"
+        REFERRED_DRIVERS_INFO _ -> "Referred Drivers who have registered on Namma Yatri" 
+        REFERRED_CUSTOMERS_INFO _ -> "Referred Customers who have registered on Namma Yatri"
+        ACTIVATED_CUSTOMERS_INFO -> "Referred Customers who have successfully completed their first ride"
+        CUSTOMER_REFERRAL_CODE -> "Customer \n Referral Code"
+        ACCEPT_RIDE_TO_ENTER_LEADERBOARD -> "Accept rides and\nbecome a top driver"
+        CONTACT_SUPPORT_VIA -> "Contact Support via"
+        YOU_CAN_SHARE_SCREENSHOT -> "You can share screenshots and documents  for manual onboarding"
+        PLACE_A_CALL -> "Place a call for quick help in getting documents verified"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C's and Privacy policy have been updated"
+        SAFETY_IS_OUR_RESPONSIBILITY -> "Safety is our responsibility"
+        CUSTOMER_SAFETY_FIRST -> "Customer safety First!"
+        LETS_ENSURE_SAFE_RIDE -> "Let’s ensure a safe and secure ride"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "Customer safety is our<br>responsibility. Let’s ensure a safe<br>and happy ride"
+        OUR_SAFETY_PARTNER -> "Our Safety Partner"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "Greetings!\n\nPlease use my Referral Code " <> code <> " to register on " <> name <> ".\n\nScan the QR code or click on the link below to download the app. Complete required registration steps and input my referral code. Go online and start earning!\n\n"
+        DOWNLOAD_NOW -> "Download Now "

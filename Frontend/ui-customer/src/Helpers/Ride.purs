@@ -42,7 +42,8 @@ import Helpers.Utils (getCurrentDate, getCityNameFromCode)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
-
+import Screens.HomeScreen.ScreenData as HomeScreenData
+import Common.Types.App as Common
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -75,6 +76,7 @@ checkRideStatus rideAssigned = do
                     , zoneType = getSpecialTag resp.specialLocationTag
                   }
                 }
+        setValueToLocalStore IS_SOS_ACTIVE $ show $ Just Common.Pending == resp.sosStatus
         if rideStatus == HomeScreen then
           updateLocalStage HomeScreen
         else do
@@ -114,6 +116,7 @@ checkRideStatus rideAssigned = do
                                 Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                 Nothing        -> "")
                 currentDate =  getCurrentDate ""
+            setValueToLocalStore IS_SOS_ACTIVE $ show false
             if(lastRideDate /= currentDate) then do
               setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
               setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"
@@ -179,9 +182,13 @@ checkRideStatus rideAssigned = do
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do
-  void $ lift $ lift $ liftFlow $ stopChatListenerService
-  setValueToLocalNativeStore READ_MESSAGES "0"
-  pure unit
+  let state = HomeScreenData.initData.data
+  _ <- lift $ lift $ liftFlow $ stopChatListenerService
+  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> 
+    homeScreen{
+      props{sendMessageActive = false, chatcallbackInitiated = false, unReadMessages = false, openChatScreen = false, showChatNotification = false, canSendSuggestion = true, isChatNotificationDismissed = false, isNotificationExpanded = false, removeNotification = true, enableChatWidget = false},
+      data{messages = [], messagesSize = "-1", chatSuggestionsList = [], messageToBeSent = "", lastMessage = state.lastMessage, waitTimeInfo = false, lastSentMessage = state.lastSentMessage, lastReceivedMessage = state.lastReceivedMessage}})
 
 getFlowStatusData :: String -> Maybe FlowStatusData
 getFlowStatusData dummy =

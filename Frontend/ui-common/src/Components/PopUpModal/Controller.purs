@@ -36,6 +36,7 @@ data Action = OnButton1Click
             | DismissPopup
             | OptionWithHtmlClick
             | OnSecondaryTextClick
+            | YoutubeVideoStatus String
 
 type Config = {
     primaryText :: TextConfig,
@@ -73,11 +74,12 @@ type Config = {
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
     listViewArray :: Array String,
-    coverVideoConfig :: CoverVideoConfig,
-    timerId :: String
+    coverMediaConfig :: CoverMediaConfig,
+    timerId :: String,
+    onlyTopTitle :: Visibility
 }
 
-type CoverVideoConfig = {
+type CoverMediaConfig = {
   visibility :: Visibility,
   height :: Length ,
   width :: Length ,
@@ -85,7 +87,11 @@ type CoverVideoConfig = {
   padding :: Padding ,
   mediaUrl :: String ,
   mediaType :: String ,
-  id :: String
+  id :: String,
+  background :: String,
+  stroke :: String,
+  cornerRadius :: Number,
+  coverMediaText :: TextConfig
 }
 
 type ContactViewConfig = {
@@ -123,7 +129,9 @@ type ButtonConfig = {
   height :: Length,
   image :: ImageConfig,
   showShimmer :: Boolean,
-  gravity :: Gravity
+  gravity :: Gravity,
+  enableRipple :: Boolean,
+  rippleColor :: String
 }
 
 type DismissPopupConfig =
@@ -258,6 +266,8 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
   } 
   , option1 : {
       background : Color.white900
@@ -284,6 +294,8 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , option2 : {
       background : Color.black900
@@ -310,6 +322,8 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , optionWithHtml : {
       background : Color.black900,
@@ -403,7 +417,7 @@ config = {
     , fareEstimateText : ""
     , tipSelectedText : ""
     , listViewArray : []
-    , coverVideoConfig : {
+    , coverMediaConfig : {
         visibility : GONE ,
         height : V 400 ,
         width : WRAP_CONTENT ,
@@ -411,8 +425,30 @@ config = {
         padding : (Padding 0 0 0 0) ,
         mediaType : "",
         mediaUrl : "",
-        id : ""
+        id : "",
+        background : Color.transparent,
+        stroke : "1," <> Color.transparent,
+        cornerRadius : 16.0
+      , coverMediaText : {
+          text : "",
+          color : Color.textSecondary,
+          gravity : CENTER,
+          padding : PaddingHorizontal 16 16,
+          margin : MarginVertical 20 20,
+          visibility : GONE,
+          textStyle : SubHeading2,
+          accessibilityHint : "", 
+          suffixImage : {
+            visibility : GONE
+            , imageUrl : ""
+            , height : V 0
+            , width : V 0
+            , margin : Margin 0 0 0 0
+            , padding : Padding 0 0 0 0
+          }
+      }
     },
+    onlyTopTitle : VISIBLE,
     timerId : ""
 }
 

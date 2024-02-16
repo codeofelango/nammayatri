@@ -17,6 +17,7 @@
 module Domain.Types.SearchRequestForDriver where
 
 import qualified Domain.Types.BapMetadata as DSM
+import Domain.Types.Common as DTC
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Location as DLoc
@@ -74,6 +75,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverMaxExtraFee :: Maybe Money,
     rideRequestPopupDelayDuration :: Seconds,
     isPartOfIntelligentPool :: Bool,
+    pickupZone :: Bool,
     cancellationRatio :: Maybe Double,
     acceptanceRatio :: Maybe Double,
     driverAvailableTime :: Maybe Double,
@@ -99,13 +101,17 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
     fromLocation :: DSSL.SearchReqLocation,
-    toLocation :: DSSL.SearchReqLocation,
+    toLocation :: Maybe DSSL.SearchReqLocation,
     newFromLocation :: DLoc.Location,
-    newToLocation :: DLoc.Location, -- we need to show all requests or last one ?
-    distance :: Meters,
+    newToLocation :: Maybe DLoc.Location, -- we need to show all requests or last one ?
+    distance :: Maybe Meters,
+    duration :: Maybe Seconds,
+    tripCategory :: DTC.TripCategory,
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
+    specialZoneExtraTip :: Maybe Money,
+    pickupZone :: Bool,
     rideRequestPopupDelayDuration :: Seconds,
     specialLocationTag :: Maybe Text,
     disabilityTag :: Maybe Text,
@@ -117,8 +123,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> Bool -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant isTranslated =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe Money -> Seconds -> Variant.Variant -> Bool -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleVariant isTranslated =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
@@ -131,7 +137,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       baseFare = searchTry.baseFare,
       customerExtraFee = searchTry.customerExtraFee,
       fromLocation = convertDomainType searchRequest.fromLocation,
-      toLocation = convertDomainType searchRequest.toLocation,
+      toLocation = convertDomainType <$> searchRequest.toLocation,
       newFromLocation = searchRequest.fromLocation,
       newToLocation = searchRequest.toLocation,
       distance = searchRequest.estimatedDistance,
@@ -148,6 +154,10 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       keepHiddenForSeconds = keepHiddenForSeconds,
       goHomeRequestId = nearbyReq.goHomeRequestId,
       customerCancellationDues = nearbyReq.customerCancellationDues,
+      tripCategory = searchTry.tripCategory,
+      duration = searchRequest.estimatedDuration,
+      pickupZone = nearbyReq.pickupZone,
+      specialZoneExtraTip = min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation,
       ..
     }
 

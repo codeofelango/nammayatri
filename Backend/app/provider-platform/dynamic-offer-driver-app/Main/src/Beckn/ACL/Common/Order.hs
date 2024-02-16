@@ -15,9 +15,11 @@
 module Beckn.ACL.Common.Order
   ( mkFulfillment,
     buildDistanceTagGroup,
+    mkOdometerTagGroup,
     mkArrivalTimeTagGroup,
     buildRideCompletedQuote,
     mkRideCompletedPayment,
+    mkLocationTagGroup,
   )
 where
 
@@ -33,6 +35,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
+import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.Common
@@ -48,10 +51,12 @@ mkFulfillment ::
   Maybe SVeh.Vehicle ->
   Maybe Text ->
   Maybe Tags.TagGroups ->
+  Maybe Tags.TagGroups ->
   Bool ->
   Bool ->
   m RideFulfillment.FulfillmentInfo
-mkFulfillment mbDriver ride booking mbVehicle mbImage tags isDriverBirthDay isFreeRide = do
+mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBirthDay isFreeRide = do
+  let rideOtp = fromMaybe ride.otp ride.endOtp
   agent <-
     forM mbDriver $ \driver -> do
       let agentTags =
@@ -88,17 +93,18 @@ mkFulfillment mbDriver ride booking mbVehicle mbImage tags isDriverBirthDay isFr
   let authorization =
         RideFulfillment.Authorization
           { _type = "OTP",
-            token = ride.otp
+            token = rideOtp
+          }
+  let person =
+        RideFulfillment.Person
+          { tags = personTags
           }
   pure $
     RideFulfillment.FulfillmentInfo
       { id = ride.id.getId,
         start =
           RideFulfillment.StartInfo
-            { authorization =
-                case booking.bookingType of
-                  DRB.SpecialZoneBooking -> Just authorization
-                  DRB.NormalBooking -> Just authorization, -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
+            { authorization = Just authorization, -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
               location =
                 RideFulfillment.Location
                   { gps = RideFulfillment.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
@@ -106,15 +112,18 @@ mkFulfillment mbDriver ride booking mbVehicle mbImage tags isDriverBirthDay isFr
               time = ride.tripStartTime <&> \tripStartTime -> RideFulfillment.TimeTimestamp {timestamp = tripStartTime}
             },
         end =
-          RideFulfillment.EndInfo
-            { location =
-                RideFulfillment.Location
-                  { gps = RideFulfillment.Gps {lat = booking.toLocation.lat, lon = booking.toLocation.lon} -- assuming locations will always be in correct order in list
-                  },
-              time = ride.tripEndTime <&> \tripEndTime -> RideFulfillment.TimeTimestamp {timestamp = tripEndTime}
-            },
+          ( \toLocation ->
+              RideFulfillment.EndInfo
+                { location =
+                    RideFulfillment.Location
+                      { gps = RideFulfillment.Gps {lat = toLocation.lat, lon = toLocation.lon} -- assuming locations will always be in correct order in list
+                      },
+                  time = ride.tripEndTime <&> \tripEndTime -> RideFulfillment.TimeTimestamp {timestamp = tripEndTime}
+                }
+          )
+            <$> booking.toLocation,
         agent,
-        _type = if booking.bookingType == DRB.NormalBooking then RideFulfillment.RIDE else RideFulfillment.RIDE_OTP,
+        _type = Common.mkFulfillmentType booking.tripCategory,
         vehicle = veh,
         ..
       }
@@ -125,6 +134,7 @@ buildDistanceTagGroup ride = do
     realToFrac <$> ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
   let traveledDistance :: HighPrecMeters = ride.traveledDistance
+      endOdometerValue = (.value) <$> ride.endOdometerReading
   pure
     [ Tags.TagGroup
         { display = False,
@@ -134,8 +144,32 @@ buildDistanceTagGroup ride = do
             [ Tags.Tag (Just False) (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
               Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
             ]
+              <> [Tags.Tag (Just False) (Just "end_odometer_reading") (Just "End Odometer Reading") (show <$> endOdometerValue) | isJust endOdometerValue]
         }
     ]
+
+mkOdometerTagGroup :: Maybe Centesimal -> [Tags.TagGroup]
+mkOdometerTagGroup startOdometerReading =
+  [ Tags.TagGroup
+      { display = False,
+        code = "ride_odometer_details",
+        name = "Ride Odometer Details",
+        list = [Tags.Tag (Just False) (Just "start_odometer_reading") (Just "Start Odometer Reading") (show <$> startOdometerReading) | isJust startOdometerReading]
+      }
+  ]
+
+mkLocationTagGroup :: Maybe Maps.LatLong -> [Tags.TagGroup]
+mkLocationTagGroup location =
+  [ Tags.TagGroup
+      { display = False,
+        code = "current_location",
+        name = "Current Location",
+        list =
+          [ Tags.Tag (Just False) (Just "current_location_lat") (Just "Current Location Lat") ((\loc -> Just $ show loc.lat) =<< location),
+            Tags.Tag (Just False) (Just "current_location_lon") (Just "Current Location Lon") ((\loc -> Just $ show loc.lon) =<< location)
+          ]
+      }
+  ]
 
 mkArrivalTimeTagGroup :: Maybe UTCTime -> [Tags.TagGroup]
 mkArrivalTimeTagGroup arrivalTime =
@@ -160,7 +194,7 @@ buildRideCompletedQuote ride fareParams = do
             computed_value = fare
           }
       breakup =
-        Fare.mkBreakupList (Breakup.BreakupItemPrice currency . fromIntegral) Breakup.BreakupItem fareParams
+        Fare.mkFareParamsBreakups (Breakup.BreakupItemPrice currency . fromIntegral) Breakup.BreakupItem fareParams
           & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType fareParams) -- TODO: Remove after roll out
   pure
     Quote.RideCompletedQuote

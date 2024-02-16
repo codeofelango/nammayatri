@@ -20,11 +20,11 @@ import Language.Strings
 import Prelude
 import PrestoDOM
 import Animation.Config as AnimConfig
-import Animation.Config as AnimConfig
-import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
 import Components.MessagingView as MessagingView
+import Components.BannerCarousel as BannerCarousel
+import Components.ChatView as ChatView
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
@@ -39,7 +39,7 @@ import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SearchLocationModel as SearchLocationModel
-import Components.SearchLocationModel as SearchLocationModel
+import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
@@ -57,7 +57,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -65,7 +65,7 @@ import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..))
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
@@ -82,6 +82,7 @@ import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
 import Locale.Utils
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -142,6 +143,7 @@ cancelAppConfig state = let
       , strokeColor = Color.transparent
       , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
+      , enableRipple = true
       },
       option2 {
         text = getString CANCEL_RIDE
@@ -184,10 +186,16 @@ skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
     config = PrimaryButton.config
+    buttonText =
+      if state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow 
+      then
+        REPORT_ISSUE_
+      else
+        DONE
     primaryButtonConfig' =
       config
         { textConfig
-          { text = getString DONE
+          { text = getString buttonText
           , accessibilityHint = "Done : Button"
           , color = state.data.config.primaryTextColor
           }
@@ -198,6 +206,8 @@ skipButtonConfig state =
         , visibility = boolToVisibility $ doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
         , isClickable = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
         , alpha = if issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
+        , enableRipple = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        , rippleColor = Color.rippleShade
         }
   in
     primaryButtonConfig'
@@ -296,6 +306,8 @@ primaryButtonRequestRideConfig state =
         , margin = (Margin 0 32 0 0)
         , id = "RequestRideButton"
         , background = state.data.config.primaryBackground
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
         }
   in
     primaryButtonConfig'
@@ -315,6 +327,8 @@ primaryButtonConfirmPickupConfig state =
         , margin = (MarginTop 8)
         , id = "ConfirmLocationButton"
         , background = state.data.config.primaryBackground
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
         }
   in
     primaryButtonConfig'
@@ -358,10 +372,10 @@ cancelRidePopUpConfig state =
         , config = state.data.config
         }
 
-genderBannerConfig :: ST.HomeScreenState -> Banner.Config
-genderBannerConfig state =
+genderBannerConfig :: forall action. ST.HomeScreenState -> action -> BannerCarousel.Config action
+genderBannerConfig state action =
   let
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config
       {
         backgroundColor = Color.lightMintGreen
@@ -369,15 +383,35 @@ genderBannerConfig state =
       , titleColor = Color.elfGreen
       , actionText = (getString UPDATE_NOW)
       , actionTextColor = Color.elfGreen
-      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_banner_gender_feat"
-      , isBanner = state.props.isBanner
+      , imageUrl = "ny_ic_banner_gender_feat"
+      , type = BannerCarousel.Gender
       }
   in config'
 
-disabilityBannerConfig :: ST.HomeScreenState -> Banner.Config
-disabilityBannerConfig state =
+rentalBannerConfig :: ST.HomeScreenState -> Banner.Config
+rentalBannerConfig state =
   let
     config = Banner.config
+    config' = config
+      {
+        backgroundColor = Color.blue600
+      , stroke = "1," <> Color.grey900
+      , imageHeight = V 43
+      , imageWidth = V 66
+      , imagePadding = PaddingVertical 0 0
+      , title = "Rental booking at " <> (maybe "" (_.rentalsScheduledAt) state.data.rentalsInfo)
+      , titleColor = Color.blue800
+      , actionTextVisibility = false
+      , cornerRadius = 8.0
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_rental_booking"
+      , imageMargin = MarginRight 0
+      }
+  in config'
+
+disabilityBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
+disabilityBannerConfig state action =
+  let
+    config = BannerCarousel.config action
     config' = config
       {
         backgroundColor = Color.paleLavender
@@ -385,15 +419,64 @@ disabilityBannerConfig state =
       , titleColor = Color.purple
       , actionText = (getString UPDATE_PROFILE)
       , actionTextColor = Color.purple
-      , imageUrl = fetchImage FF_ASSET "ny_ic_accessibility_banner_img"
-      , stroke = "1,"<> Color.fadedPurple
+      , imageUrl = "ny_ic_accessibility_banner_img"
+      , type = BannerCarousel.Disability
+      }
+  in config'
+  
+sosSetupBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
+sosSetupBannerConfig state action =
+  let
+    config = BannerCarousel.config action
+
+    bannerConfig =
+      case state.props.sosBannerType of
+        Just ST.SETUP_BANNER -> {title: getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE, actionText: getString SETUP_NOW, image : "ny_ic_banner_sos"}
+        Just ST.MOCK_DRILL_BANNER -> {title: getString COMPLETE_YOUR_TEST_DRILL, actionText: getString TEST_DRILL, image : "ny_ic_mock_drill_banner"}
+        Nothing -> {title: "", actionText: "", image : ""}
+
+    config' =
+      config
+        { backgroundColor = Color.lightMintGreen
+        , title = bannerConfig.title
+        , titleColor = Color.elfGreen
+        , actionText = bannerConfig.actionText
+        , actionTextColor = Color.elfGreen
+        , imageUrl = fetchImage FF_ASSET bannerConfig.image
+        , type = BannerCarousel.Safety
+        }
+  in
+    config'
+
+
+
+metroBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
+metroBannerConfig state action =
+  let
+    config = BannerCarousel.config action
+    config' = config
+      {
+        backgroundColor = Color.blue600'
+      , title = getString BOOK_METRO_WITH_NY_NOW
+      , titleColor = Color.blue800
+      , actionText = getString BOOK_NOW
+      , actionTextColor = Color.blue700
+      -- , actionTextBackgroundColour = Color.blue800
+      , actionTextCornerRadius = "12.0"
+      , imageUrl = fetchImage FF_ASSET "ny_ic_metro_banner"
+      , margin = MarginTop 0
+      , imageHeight = V 100
+      , imageWidth = V 120
+      , padding = Padding 0 2 5 5
+      , imagePadding = PaddingLeft 24
+      , type = BannerCarousel.MetroTicket
       }
   in config'
 
-ticketBannerConfig :: ST.HomeScreenState -> Banner.Config
-ticketBannerConfig state =
+ticketBannerConfig :: forall action. ST.HomeScreenState -> action -> BannerCarousel.Config action
+ticketBannerConfig state action =
   let
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config
       {
         backgroundColor = "#FFF6DE"
@@ -402,14 +485,35 @@ ticketBannerConfig state =
       , actionText = "Book Now"
       , actionTextColor = Color.black900
       , imageUrl = fetchImage FF_ASSET "ny_ic_zoo_banner"
-      , stroke = "1,"<> "#FFDE88"
       , margin = MarginTop 0
       , imageHeight = V 75
       , imageWidth = V 60
       , padding = Padding 0 5 5 5
+      , type = BannerCarousel.ZooTicket
       }
   in config'
 
+metroTicketBannerConfig :: ST.HomeScreenState -> Banner.Config
+metroTicketBannerConfig state = 
+  let
+    config = Banner.config
+    config' = config
+      {
+        backgroundColor = Color.blue600'
+      , title = "Book metro tickets with \nNamma Yatri Now!"
+      , titleColor = Color.blue800
+      , actionText = "Book Now"
+      , actionTextColor = Color.white900
+      , actionTextBackgroundColor = Color.blue800
+      , actionTextCornerRadius = 12.0
+      , imageUrl = fetchImage FF_ASSET "ny_ic_metro_banner"
+      , margin = MarginTop 0
+      , imageHeight = V 100
+      , imageWidth = V 120
+      , padding = Padding 0 2 5 5
+      , imagePadding = PaddingLeft 24
+      }
+  in config'
 reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =
   let
@@ -460,12 +564,14 @@ logOutPopUpModelConfig state =
               , strokeColor = state.data.config.primaryBackground
               , color = state.data.config.primaryBackground
               , text = (getString GO_BACK_)
+              , enableRipple = true
               }
             , option2 {
                 color = state.data.config.primaryTextColor
               , strokeColor = state.data.config.primaryBackground
               , background = state.data.config.primaryBackground
               , text = (getString LOGOUT_)
+              , enableRipple = true
               }
             }
       in
@@ -537,6 +643,7 @@ logOutPopUpModelConfig state =
             , strokeColor = state.data.config.primaryBackground
             , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
+            , enableRipple = true
             }
             , option2 {
                text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
@@ -577,6 +684,7 @@ distanceOusideLimitsConfig state =
           , color = state.data.config.primaryTextColor
           , text = (getString CHANGE_DROP_LOCATION)
           , margin = (Margin 16 0 16 EHC.safeMarginBottom)
+          , enableRipple = true
           }
         }
   in
@@ -633,12 +741,14 @@ shortDistanceConfig state =
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
           , text = (getString GO_BACK_)
+          , enableRipple = true
           }
         , option2 {
             color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , background = state.data.config.primaryBackground
           , text = (getString BOOK_RIDE_)
+          , enableRipple = true
           }
         }
   in
@@ -729,10 +839,14 @@ rateCardConfig state =
     config' = RateCard.config
     bangaloreCode = HU.getCityCodeFromCity Bangalore
     fareInfoText =  mkFareInfoText state.props.city
+    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+    nightShiftMultiplier = if city == Delhi then "1.25" else "1.5"
+    freeWaitingTime = " 3 "
+    waitingChargesPerMin = cityBasedWaitingCharge city
     rateCardConfig' =
       config'
         { nightCharges = state.data.rateCard.nightCharges
-        , nightShiftMultiplier = HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)
+        , nightShiftMultiplier = nightShiftMultiplier --HU.toStringJSON (state.data.rateCard.nightShiftMultiplier) -- Change when we have the actual value
         , currentRateCardType = state.data.rateCard.currentRateCardType
         , onFirstPage = state.data.rateCard.onFirstPage
         , showDetails = state.data.config.searchLocationConfig.showRateCardDetails
@@ -741,20 +855,31 @@ rateCardConfig state =
         , buttonText = Just if state.data.rateCard.currentRateCardType == DefaultRateCard then (getString GOT_IT) else (getString GO_BACK_)
         , driverAdditionsImage = fetchImage FF_ASSET $ if (state.data.config.autoVariantEnabled && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW") then "ny_ic_driver_addition_table2"  else "ny_ic_driver_additions_yatri" 
         , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
-                                 else (getString DAY_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+                                 else (getString DAY_TIMES_OF) <> (nightShiftMultiplier) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
         , title = case MU.getMerchant FunctionCall of
-                      MU.NAMMAYATRI -> getString RATE_CARD
+                      MU.NAMMAYATRI ->  case city of
+                                        Delhi -> getString RATE_CARD
+                                        Kochi -> getVehicleTitle state.data.rateCard.vehicleVariant
+                                        Hyderabad -> getString RATE_CARD
+                                        Chennai -> getVehicleTitle state.data.rateCard.vehicleVariant
+                                        Pondicherry -> getString RATE_CARD
+                                        Bangalore -> getString RATE_CARD
+                                        _ -> getString RATE_CARD
                       MU.YATRI -> getVehicleTitle state.data.rateCard.vehicleVariant
                       _ -> ""
         , fareList = case MU.getMerchant FunctionCall of
-                      MU.NAMMAYATRI -> if state.props.city == Delhi then nyRateCardListForDelhi state else nyRateCardList state
+                      MU.NAMMAYATRI -> case city of
+                                        Delhi -> nyRateCardListForDelhi state
+                                        Kochi -> yatriRateCardList state.data.rateCard.vehicleVariant state
+                                        Hyderabad -> hydRateCardList state
+                                        Chennai -> chennaiRateCardList state.data.rateCard.vehicleVariant state
+                                        Pondicherry -> pondicherryRateCardList state
+                                        Bangalore -> nyRateCardList state
+                                        _ -> nyRateCardList state
                       MU.YATRI -> yatriRateCardList state.data.rateCard.vehicleVariant state
                       _ -> []
 
-        , otherOptions  = [
-          {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
-          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
-          {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }]
+        , otherOptions  = cityBasedOtherOptions city
         , fareInfoText = fareInfoText
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
@@ -765,10 +890,10 @@ rateCardConfig state =
           {key : "DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE", val : (getString DRIVER_MAY_NOT_CHARGE_THIS_ADDITIONAL_FARE)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
           {key : "WAITING_CHARGE", val : (getString WAITING_CHARGE)<> "°"},
-          {key : "WAITING_CHARGE_RATECARD_DESCRIPTION", val : (getString WAITING_CHARGE_RATECARD_DESCRIPTION)},
+          {key : "WAITING_CHARGE_RATECARD_DESCRIPTION", val : (getString $ WAITING_CHARGE_RATECARD_DESCRIPTION waitingChargesPerMin freeWaitingTime)},
           {key : "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS", val : (getString YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS)},
           {key : "REASON_CHANGE_IN_ROUTE", val : ("<span style=\"color:black;\">" <> (getString REASON_CHANGE_IN_ROUTE_A) <> "</span>" <> (getString REASON_CHANGE_IN_ROUTE_B))},
-          {key : "WAITING_CHARGES_APPLICABLE", val : ("<span style=\"color:black;\">" <> "2." <> (getString WAITING_CHARGE) <> "</span>" <> " " <> getString FARE_POLICY_WAITING_CHARGES )}]
+          {key : "WAITING_CHARGES_APPLICABLE", val : ("<span style=\"color:black;\">" <> "2." <> (getString WAITING_CHARGE) <> "</span>" <> " "  <> (getString $ WAITING_CHARGE_INFO waitingChargesPerMin freeWaitingTime) )}]
           <> if state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" && state.data.config.searchLocationConfig.showChargeDesc then [{key : "CHARGE_DESCRIPTION", val : (getString ERNAKULAM_LIMIT_CHARGE)}] else []
         }
   in
@@ -780,7 +905,46 @@ rateCardConfig state =
       if DA.any ( _ == city) [ Bangalore, Tumakuru , Mysore]
         then (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT") 
         else ""
+    
+    cityBasedOtherOptions :: City -> Array FareList
+    cityBasedOtherOptions city = case city of 
+                                    Delhi -> [
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    Kochi -> [
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    Hyderabad -> [
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    Chennai -> [
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    Pondicherry -> []
+                                    Bangalore -> [
+                                                  {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
+                                                  {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                                  {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                                 ]
+                                    _ -> [
+                                          {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
+                                          {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
+                                          {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }
+                                          ]
 
+    cityBasedWaitingCharge :: City -> String
+    cityBasedWaitingCharge city = case city of
+                                      Delhi -> "₹0.75"
+                                      Kochi -> "₹1.50"
+                                      Hyderabad -> "₹2.00"
+                                      Chennai -> "₹1.00"
+                                      Pondicherry -> ""
+                                      Bangalore -> "₹1.50"
+                                      _ -> "₹1.50"
 
 
 yatriRateCardList :: String -> ST.HomeScreenState -> Array FareList
@@ -815,6 +979,56 @@ yatriRateCardList vehicleVariant state = do
 
     _ -> []
 
+chennaiRateCardList :: String -> ST.HomeScreenState -> Array FareList
+chennaiRateCardList vehicleVariant state = do
+  let lang = getLanguageLocale languageKey
+  case vehicleVariant of
+    "HATCHBACK" -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , val : "₹110"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 4 km" else "4 " <> (getString MORE_THAN), val : "₹24 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+                   ]
+    "SEDAN"     -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO), val : "₹130"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 4 km" else "4 " <> (getString MORE_THAN) ,val : "₹27 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+                   ]
+
+    "SUV"       -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 4 km" else "4 km " <> (getString MIN_FARE_UPTO) , val : "₹200"}
+                   , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 4 km" else "4 " <> (getString MORE_THAN) , val :"₹36 / km"}
+                   , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+                   ]
+
+    "AUTO_RICKSHAW"  -> [ { key : if lang == "EN_US" then (getString MIN_FARE_UPTO) <> " 2.0 km" else "2.0 km " <> (getString MIN_FARE_UPTO) , val : "₹40"}
+                        , { key : "2 km - 13 km" , val : "₹16 / km"}
+                        , { key : if lang == "EN_US" then (getString MORE_THAN) <> " 13 km" else "13 " <> (getString MORE_THAN), val : "₹13 / km"}               
+                        , { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+                        ]
+    _ -> []
+
+
+hydRateCardList :: ST.HomeScreenState -> Array FareList
+hydRateCardList state = do
+  let isPeakTime = JB.withinTimeRange "17:00:00" "19:30:00" $ EHC.convertUTCtoISC (state.data.rateCard.createdTime) "HH:mm:ss"
+      isDayWeekend = isWeekend state.data.rateCard.createdTime
+  if (isPeakTime && (not isDayWeekend)) then 
+    [{key : ((getString MIN_FARE_UPTO) <> " 2.0 km"), val : ("₹40")},
+    { key : "2.0 km - 12 km" , val : "₹16 / km"},
+    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 12 km" else "12 " <> (getString MORE_THAN) ,val : "₹15 / km"},
+    { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+    ]
+  else
+    [{key : ((getString MIN_FARE_UPTO) <> " 2.0 km"), val : ("₹30")},
+      { key : "2.0 km - 12 km" , val : "₹14 / km"},
+      { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 12 km" else "12 " <> (getString MORE_THAN) ,val : "₹13 / km"},
+      { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+      ]
+
+pondicherryRateCardList :: ST.HomeScreenState -> Array FareList
+pondicherryRateCardList state = do
+  [{key : ((getString MIN_FARE_UPTO) <> " 2.0 km"), val : ("₹35")},
+    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 2km" else "2 " <> (getString MORE_THAN) ,val : "₹18 / km"},
+    { key : (getString PICKUP_CHARGE), val : "₹ 10" }
+    ]
+
 getVehicleTitle :: String -> String
 getVehicleTitle vehicle =
   (case vehicle of
@@ -826,7 +1040,7 @@ getVehicleTitle vehicle =
 
 nyRateCardList :: ST.HomeScreenState -> Array FareList
 nyRateCardList state =
-  ([{key : ((getString MIN_FARE_UPTO) <> "2 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
+  ([{key : ((getString MIN_FARE_UPTO) <> " 2.0 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
     {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.extraFare) <> "/ km")},
     {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
@@ -834,9 +1048,9 @@ nyRateCardList state =
 
 nyRateCardListForDelhi :: ST.HomeScreenState -> Array FareList
 nyRateCardListForDelhi state = 
-  ([{key : ((getString MIN_FARE_UPTO) <> "1.5 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹30")},
+  ([{key : ((getString MIN_FARE_UPTO) <> " 1.5 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹30")},
     { key : "1.5 km - 5 km" , val : "₹15 / km"},
-    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹11 / km"},
+    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹10 / km"},
     {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
     [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
@@ -876,6 +1090,7 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , merchantCity : state.props.city
+                                  , showBanner : state.props.currentStage == RideStarted
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -918,10 +1133,10 @@ getDefaultPeekHeight state = do
                   false -> if isQuotes then 334 else 283
   height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
-metersToKm :: Int -> ST.HomeScreenState -> String
-metersToKm distance state =
+metersToKm :: Int -> Boolean -> String
+metersToKm distance towardsDrop =
   if (distance <= 10) then
-    (if (state.props.currentStage == ST.RideStarted) then (getString AT_DROP) else (getString AT_PICKUP))
+    (if towardsDrop then (getString AT_DROP) else (getString AT_PICKUP))
   else if (distance < 1000) then (HU.toStringJSON distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
 
 
@@ -962,7 +1177,9 @@ driverInfoTransformer state =
     , config : state.data.config
     , vehicleVariant : cardState.vehicleVariant
     , defaultPeekHeight : getDefaultPeekHeight state
-    , bottomSheetState : state.props.bottomSheetState
+    , bottomSheetState : state.props.currentSheetState
+    , bannerData : state.data.bannerData
+    , bannerArray : getDriverInfoCardBanners state DriverInfoCard.BannerCarousel
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -993,6 +1210,8 @@ ratingCardViewState state = {
     alpha = if not (state.data.ratingViewState.selectedRating< 1) then 1.0 else 0.4
     , id = "RateYourDriverButton"
     , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
+    , enableRipple = true
+    , rippleColor = Color.rippleShade
   }
   , showProfileImg : true
   , title : getRateYourRideString ( getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
@@ -1107,6 +1326,7 @@ callSupportConfig state = let
     , background = state.data.config.popupBackground
     , strokeColor = state.data.config.primaryBackground
     , color = state.data.config.primaryBackground
+    , enableRipple = true
     }
   , option2 {
       text =  getString CALL_SUPPORT
@@ -1114,6 +1334,7 @@ callSupportConfig state = let
     , strokeColor = state.data.config.primaryBackground
     , background = state.data.config.primaryBackground
     , margin = (MarginLeft 12)
+    , enableRipple = true
     }
   }
   in popUpConfig'
@@ -1129,6 +1350,8 @@ confirmAndBookButtonConfig state =
     , id = "ConfirmAndBookButton"
     , background = Color.black900
     , margin = MarginTop 16
+    , enableRipple = true
+    , rippleColor = Color.rippleShade
     }
   where
     getBtnTextWithTimer state = 
@@ -1224,6 +1447,7 @@ specialLocationConfig srcIcon destIcon isAnim animConfig = {
   , destSpecialTagIcon : destIcon
   , vehicleSizeTagIcon : (HU.getVehicleSize unit)
   , isAnimation : isAnim
+  , autoZoom : true
   , polylineAnimationConfig : animConfig
 }
 
@@ -1541,7 +1765,7 @@ getCarouselData :: ST.HomeScreenState -> Array CarouselData
 getCarouselData state =
   map (\item -> 
     { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0 },
-      youtubeConfig : (EHC.getYoutubeData item.videoLink "PORTRAIT_VIDEO" item.videoHeight),
+      youtubeConfig : EHC.getYoutubeData{ videoId = item.videoLink , videoType = "PORTRAIT_VIDEO",  videoHeight = item.videoHeight},
       contentType : if item.videoLink == "" then "IMAGE" else "VIDEO" ,
       gravity : item.gravity ,
       backgroundColor : item.carouselBgColor,
@@ -1603,7 +1827,7 @@ getChatSuggestions state = do
       canShowSuggestions = case lastMessage of 
                             Just value -> (value.sentBy /= "Customer") || not didDriverMessage
                             Nothing -> true
-      isAtPickup = (metersToKm state.data.driverInfoCardState.distance state) == getString AT_PICKUP
+      isAtPickup = (metersToKm state.data.driverInfoCardState.distance (state.props.currentStage == RideStarted)) == getString AT_PICKUP
   if (DA.null state.data.chatSuggestionsList) && canShowSuggestions && state.props.canSendSuggestion then
     if didDriverMessage && (not $ DA.null state.data.messages) then
       if isAtPickup then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP"
@@ -1614,3 +1838,163 @@ getChatSuggestions state = do
         else if hideInitial then getSuggestionsfromKey "customerInitialBP" --"customerInitialBP2" --TODO Revert during suggestions update
         else getSuggestionsfromKey "customerInitialBP" --"customerInitialBP1" --TODO Revert during suggestions update
   else state.data.chatSuggestionsList
+
+locationTagBarConfig :: ST.HomeScreenState -> LocationTagBar.LocationTagBarConfig
+locationTagBarConfig state  = let 
+  locTagList =
+      map 
+        (\item -> 
+          { imageConfig : 
+              { height : V 16
+              , width : V 16
+              , imageWithFallback : item.image
+              } ,
+            textConfig : 
+              { text : item.text
+              , fontStyle : FontStyle.Body1
+              , fontSize : FontSize.a_14
+              , color : Color.black800
+              },
+            stroke : "0," <> Color.blue600 ,
+            cornerRadius : Corners 19.0 true true true true ,
+            background : Color.blue600 ,
+            height : WRAP_CONTENT ,
+            width : WRAP_CONTENT,
+            padding : Padding 8 8 8 8 ,
+            id : item.id
+          })
+        [ { image : "ny_ic_intercity", text : "Intercity", id : "INTER_CITY" },
+          { image : "ny_ic_rental" , text : "Rentals", id : "RENTALS" },
+          { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
+  in 
+    { tagList : locTagList }
+  
+safetyAlertConfig :: ST.HomeScreenState -> PopUpModal.Config
+safetyAlertConfig state =
+  let
+    config' = PopUpModal.config
+
+    alertData = getSafetyAlertData $ getValueToLocalStore SAFETY_ALERT_TYPE
+
+    popUpConfig' =
+      config'
+        { dismissPopup = true
+        , optionButtonOrientation = "VERTICAL"
+        , buttonLayoutMargin = Margin 24 0 24 20
+        , gravity = CENTER
+        , margin = MarginHorizontal 20 20
+        , primaryText
+          { text = getString EVERYTHING_OKAY_Q
+          , margin = Margin 16 0 16 10
+          }
+        , secondaryText
+          { text = alertData.text
+          , margin = MarginHorizontal 16 16
+          }
+        , option1
+          { text = getString I_FEEL_SAFE
+          , color = Color.yellow900
+          , background = Color.black900
+          , strokeColor = Color.transparent
+          , width = MATCH_PARENT
+          , margin = MarginVertical 20 10
+          }
+        , option2
+          { text = getString I_NEED_HELP
+          , color = Color.black700
+          , background = Color.white900
+          , width = MATCH_PARENT
+          , margin = MarginBottom 10
+          }
+        , cornerRadius = Corners 15.0 true true true true
+        , coverImageConfig
+          { imageUrl = HU.fetchImage HU.FF_ASSET alertData.image
+          , visibility = VISIBLE
+          , margin = Margin 16 16 16 16
+          , width = MATCH_PARENT
+          , height = V 225
+          }
+        }
+  in
+    popUpConfig'
+
+getSafetyAlertData :: String -> { text :: String, image :: String }
+getSafetyAlertData reason
+  | reason == "deviation" = { text: getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE, image: "ny_ic_safety_alert_deroute" }
+  | otherwise = { text: getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED, image: "ny_ic_safety_alert_stationary" }
+
+shareRideButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+shareRideButtonConfig state =
+  PrimaryButton.config
+    { textConfig
+      { text = getString $ SHARE_RIDE_WITH_CONTACT $ show numberOfSelectedContacts
+      , accessibilityHint = "Share Ride Button"
+      }
+    , id = "ShareRideButton"
+    , enableLoader = (JB.getBtnLoader "ShareRideButton")
+    , margin = MarginTop 20
+    , isClickable = numberOfSelectedContacts /= 0
+    , alpha = if numberOfSelectedContacts /= 0 then 1.0 else 0.5
+    }
+  where
+  numberOfSelectedContacts = DA.length $ DA.filter (\contact -> contact.isSelected) state.data.contactList
+    
+referralPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config 
+referralPopUpConfig state = 
+  let status = state.props.referral.referralStatus
+      config' = PopUpModal.config 
+      primaryButtonText = case status of
+                            REFERRAL_INVALID -> getString EDIT
+                            _ -> getString OKAY
+      secondaryButtonText = getString TRY_LATER
+      secondaryButtonVisibility = status == REFERRAL_INVALID
+      primaryText = case status of
+                      REFERRAL_APPLIED -> getString REFERRAL_CODE_IS_APPLIED
+                                            <> maybe "" (\code -> "- " <> code) state.props.referral.referralCode
+                      REFERRAL_INVALID -> getString INVALID_REFERRAL_CODE
+                      _ -> getString YOU_HAVE_ALREADY_USED_DIFFERENT_REFERRAL_CODE
+      image = case status of
+                REFERRAL_INVALID -> "ny_ic_referral_invalid"
+                REFERRAL_ALREADY_APPLIED -> "ny_ic_referral_already_applied"
+                _ -> "ny_ic_referral"
+      popUpConfig' = config'{
+        backgroundClickable = false,
+        gravity = CENTER,
+        buttonLayoutMargin = Margin 0 0 0 0,
+        cornerRadius = Corners 16.0 true true true true, 
+        padding = Padding 16 24 16 16,
+        optionButtonOrientation = "VERTICAL",
+        margin = MarginHorizontal 24 24, 
+        primaryText {
+          text = primaryText, 
+          margin = MarginVertical 16 16
+        },
+        secondaryText { visibility = GONE },
+        option1 {
+          background = Color.black900,
+          text = primaryButtonText,
+          color = Color.yellow900,
+          textStyle = FontStyle.SubHeading1,
+          height = WRAP_CONTENT,
+          width = MATCH_PARENT,
+          padding = Padding 16 10 16 10
+        } , 
+        option2 {
+          background = Color.white900, 
+          text = secondaryButtonText,
+          width = MATCH_PARENT,
+          height = if secondaryButtonVisibility then WRAP_CONTENT else V 1,
+          color =  Color.black650,
+          strokeColor = Color.white900, 
+          padding = Padding 16 10 16 10, 
+          margin = Margin 0 8 0 0,
+          textStyle = FontStyle.SubHeading1
+        }, 
+        coverImageConfig {
+          visibility = VISIBLE,
+          imageUrl = fetchImage FF_ASSET image,
+          height = V 182,
+          width = V 280
+        }
+      }
+  in popUpConfig'

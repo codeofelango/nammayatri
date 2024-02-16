@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
@@ -29,7 +30,6 @@ import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
-import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
 import qualified API.UI.Frontend as Frontend
@@ -51,8 +51,6 @@ import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
-import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
-import qualified API.UI.Webengage.Webengage as Webengage
 import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import EulerHS.Prelude
@@ -77,13 +75,10 @@ type API =
            :<|> Serviceability.API
            :<|> Rating.API
            :<|> FeedbackForm.API
-           :<|> CustomerSupport.API
            :<|> MapsProxy.API
            :<|> GoogleTranslateProxy.API
            :<|> CancellationReason.API
            :<|> SavedReqLocation.API
-           :<|> Webengage.API
-           :<|> InfoBIPWebhook.API
            :<|> Frontend.API
            :<|> Whatsapp.API
            :<|> Sos.API
@@ -97,6 +92,7 @@ type API =
            :<|> TicketService.API
            :<|> FollowRide.API
            :<|> SosApi.API
+           :<|> FRFSTicketService.API
        )
 
 handler :: FlowServer API
@@ -118,13 +114,10 @@ handler =
     :<|> Serviceability.handler
     :<|> Rating.handler
     :<|> FeedbackForm.handler
-    :<|> CustomerSupport.handler
     :<|> MapsProxy.handler
     :<|> GoogleTranslateProxy.handler
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
-    :<|> Webengage.handler
-    :<|> InfoBIPWebhook.handler
     :<|> Frontend.handler
     :<|> Whatsapp.handler
     :<|> Sos.handler
@@ -138,3 +131,4 @@ handler =
     :<|> TicketService.handler
     :<|> FollowRide.handler
     :<|> SosApi.handler
+    :<|> FRFSTicketService.handler

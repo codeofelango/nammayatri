@@ -49,14 +49,13 @@ import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
 import qualified "rider-app" Storage.Beam.Quote as Quote
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
-import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
+import qualified "rider-app" Storage.Beam.RentalDetails as RentalDetails
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
-import qualified "rider-app" Storage.Beam.Webengage as Webengage
 import Utils.Parse
 
 data DeleteModel
@@ -95,14 +94,13 @@ data DeleteModel
   | PersonFlowStatusDelete
   | QuoteDelete
   | RegistrationTokenDelete
-  | RentalSlabDelete
+  | RentalDetailsDelete
   | RideDelete
   | SavedReqLocationDelete
   | SearchRequestDelete
   | SosDelete
   | SpecialZoneQuoteDelete
   | TripTermsDelete
-  | WebengageDelete
   | FeedbackFormDelete
   | HotSpotConfigDelete
   | BecknRequestDelete
@@ -147,20 +145,19 @@ getTagDelete PersonDefaultEmergencyNumberDelete = "PersonDefaultEmergencyNumberO
 getTagDelete PersonFlowStatusDelete = "PersonFlowStatusOptions"
 getTagDelete QuoteDelete = "QuoteOptions"
 getTagDelete RegistrationTokenDelete = "RegistrationTokenOptions"
-getTagDelete RentalSlabDelete = "RentalSlabOptions"
+getTagDelete RentalDetailsDelete = "RentalDetailsOptions"
 getTagDelete RideDelete = "RideOptions"
 getTagDelete SavedReqLocationDelete = "SavedReqLocationOptions"
 getTagDelete SearchRequestDelete = "SearchRequestOptions"
 getTagDelete SosDelete = "SosOptions"
 getTagDelete SpecialZoneQuoteDelete = "SpecialZoneQuoteOptions"
 getTagDelete TripTermsDelete = "TripTermsOptions"
-getTagDelete WebengageDelete = "WebengageOptions"
 getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
 getTagDelete LocationDelete = "LocationOptions"
 getTagDelete LocationMappingDelete = "LocationMappingOptions"
-getTagDelete NextBillionDataDelete = "NextBillionDataDelete"
+getTagDelete NextBillionDataDelete = "NextBillionDataOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
@@ -198,14 +195,13 @@ parseTagDelete "PersonDefaultEmergencyNumberOptions" = return PersonDefaultEmerg
 parseTagDelete "PersonFlowStatusOptions" = return PersonFlowStatusDelete
 parseTagDelete "QuoteOptions" = return QuoteDelete
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
-parseTagDelete "RentalSlabOptions" = return RentalSlabDelete
+parseTagDelete "RentalDetailsOptions" = return RentalDetailsDelete
 parseTagDelete "RideOptions" = return RideDelete
 parseTagDelete "SavedReqLocationOptions" = return SavedReqLocationDelete
 parseTagDelete "SearchRequestOptions" = return SearchRequestDelete
 parseTagDelete "SosOptions" = return SosDelete
 parseTagDelete "SpecialZoneQuoteOptions" = return SpecialZoneQuoteDelete
 parseTagDelete "TripTermsOptions" = return TripTermsDelete
-parseTagDelete "WebengageOptions" = return WebengageDelete
 parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
@@ -250,14 +246,13 @@ data DBDeleteObject
   | PersonFlowStatusDeleteOptions DeleteModel (Where Postgres PersonFlowStatus.PersonFlowStatusT)
   | QuoteDeleteOptions DeleteModel (Where Postgres Quote.QuoteT)
   | RegistrationTokenDeleteOptions DeleteModel (Where Postgres RegistrationToken.RegistrationTokenT)
-  | RentalSlabDeleteOptions DeleteModel (Where Postgres RentalSlab.RentalSlabT)
+  | RentalDetailsDeleteOptions DeleteModel (Where Postgres RentalDetails.RentalDetailsT)
   | RideDeleteOptions DeleteModel (Where Postgres Ride.RideT)
   | SavedReqLocationDeleteOptions DeleteModel (Where Postgres SavedReqLocation.SavedReqLocationT)
   | SearchRequestDeleteOptions DeleteModel (Where Postgres SearchRequest.SearchRequestT)
   | SosDeleteOptions DeleteModel (Where Postgres Sos.SosT)
   | SpecialZoneQuoteDeleteOptions DeleteModel (Where Postgres SpecialZoneQuote.SpecialZoneQuoteT)
   | TripTermsDeleteOptions DeleteModel (Where Postgres TripTerms.TripTermsT)
-  | WebengageDeleteOptions DeleteModel (Where Postgres Webengage.WebengageT)
   | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigDeleteOptions DeleteModel (Where Postgres HotSpotConfig.HotSpotConfigT)
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
@@ -378,9 +373,9 @@ instance FromJSON DBDeleteObject where
       RegistrationTokenDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ RegistrationTokenDeleteOptions deleteModel whereClause
-      RentalSlabDelete -> do
+      RentalDetailsDelete -> do
         whereClause <- parseDeleteCommandValues contents
-        return $ RentalSlabDeleteOptions deleteModel whereClause
+        return $ RentalDetailsDeleteOptions deleteModel whereClause
       RideDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ RideDeleteOptions deleteModel whereClause
@@ -399,9 +394,6 @@ instance FromJSON DBDeleteObject where
       TripTermsDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ TripTermsDeleteOptions deleteModel whereClause
-      WebengageDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ WebengageDeleteOptions deleteModel whereClause
       FeedbackFormDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ FeedbackFormDeleteOptions deleteModel whereClause

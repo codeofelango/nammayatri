@@ -1,76 +1,21 @@
-module RemoteConfigs where
+{-
 
-import Prelude
-import DecodeUtil (decodeForeignObject, parseJSON)
-import Foreign (Foreign)
-import Foreign.Index (readProp)
-import RemoteConfig.Utils (fetchRemoteConfigString)
-import Data.Maybe (Maybe(..))
-import Foreign.Class (class Decode, class Encode, decode, encode)
-import Data.Generic.Rep (class Generic)
-import Data.Newtype (class Newtype)
-import Presto.Core.Utils.Encoding (defaultDecode)
-import Control.Monad.Except (runExcept)
+  Copyright 2022-23, Juspay India Pvt Ltd
 
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
 
-foreign import getSubsRemoteConfig :: String -> Foreign
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
 
-type RemoteConfig a = {
-    bangalore :: a,
-    kolkata :: a
-}
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
-newtype RCCarousel = RCCarousel {
-    text_color:: String,
-    text:: String,
-    cta_text:: String,
-    cta_action:: Maybe String,
-    cta_link:: String,
-    cta_icon:: String,
-    banner_color:: String,
-    banner_image:: String,
-    cta_background_color:: String,
-    cta_text_color:: String,
-    cta_corner_radius:: String,
-    cta_image_url:: String
-}
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
 
-derive instance genericCarouselConfigItem :: Generic RCCarousel _
-instance decodeCarouselConfigItem :: Decode RCCarousel where decode = defaultDecode
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
 
-type RCSubscription = {
-    max_dues_limit :: Number,
-    low_dues_warning_limit :: Number,
-    high_due_warning_limit :: Number
-}
+module RemoteConfig (module Reexport) where
 
-defaultRemoteConfig :: RemoteConfig (Array RCCarousel)
-defaultRemoteConfig ={
-    bangalore : [],
-    kolkata : []
-}
+import RemoteConfig.Types as Reexport
+import RemoteConfig.Utils as Reexport
+import Common.RemoteConfig as Reexport
 
-subscriptionRemoteConfig :: RCSubscription
-subscriptionRemoteConfig = {
-    max_dues_limit : 100.0,
-    low_dues_warning_limit : 25.0,
-    high_due_warning_limit : 75.0
-}
-
-subscriptionConfig :: String -> RCSubscription
-subscriptionConfig key = do
-    let conf = getSubsRemoteConfig $ fetchRemoteConfigString key
-    decodeForeignObject conf subscriptionRemoteConfig
-
-carouselConfigData :: String -> String -> Array RCCarousel
-carouselConfigData city language = do
-    let config = fetchRemoteConfigString ("driver_carousel_banner" <> language)
-        value = decodeForeignObject (parseJSON config) defaultRemoteConfig
-    getConfig value city
-
-getConfig :: RemoteConfig (Array RCCarousel) -> String -> Array RCCarousel
-getConfig config city = 
-    case city of
-        "bangalore" -> config.bangalore
-        "kolkata" -> config.kolkata
-        _ -> []

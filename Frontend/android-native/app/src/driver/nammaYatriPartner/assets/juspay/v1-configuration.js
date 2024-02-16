@@ -6,7 +6,7 @@ if (typeof __VERSION__ !== "undefined") {
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN|PY",
+    "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN|PY|UP|HR",
     "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
     "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
@@ -83,8 +83,8 @@ window.getMerchantConfig = function () {
       "WHAT_IS_NAMMA_YATRI_BONUS" : "நம்ம யாத்ரி போனஸ் என்றால் என்ன?",
       "EARNED_ON_APP" : "NY இல் பெறப்பட்ட விலை",
       "TRAVELLED_ON_APP" : "நம்ம யாத்ரியில் நடந்த தூரம்",
-      "GUARANTEED_FIXED_PRICE" : "2025 ஆம் ஆண்டு ஏப்ரல் 1 வரை உறுதியான விலை",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி திட்டங்களுக்கு தயாராக இருங்கள்!"
+      "GUARANTEED_FIXED_PRICE" : "ஏப்ரல் 1, 2025 வரை உத்தரவாதமான நிலையான விலை",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி திட்டங்களுக்கு தயாராகுங்கள்!"
     },
     "teluguStrings": {
       "WELCOME_TEXT": "నమ్మ యాత్రి డ్రైవర్‌కు స్వాగతం",
@@ -152,7 +152,11 @@ window.getMerchantConfig = function () {
     , "bottomNavConfig" : {
       "subscription" : 
             { "isVisible" : true
-            }
+            },
+      "referral" : 
+      { 
+        "showNew" : true
+      }
     }
     , "purpleRideConfig" : {
       "showPurpleVideos" : false,
@@ -163,6 +167,7 @@ window.getMerchantConfig = function () {
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "termsLink" : "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc"
+    , "termsVersion" : 2.0
     , "privacyLink" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
     , "feature" : {
       "enableBonus" : true
@@ -187,8 +192,15 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : true
+        "enableYatriCoins" : true,
+        "registration" : {
+            "supportWAN" : "918618963188",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "appName" : "ನಮ್ಮ ಯಾತ್ರಿ"
       },
       {
         "cityName" : "Hyderabad",
@@ -200,8 +212,15 @@ window.getMerchantConfig = function () {
         "supportNumber" : "+918069724900",
         "languageKey" : "TE_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+            "supportWAN" : "919392636637",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "appName" : "నమ్మ యాత్రి"
       },
       {
         "cityName" : "Mysore",
@@ -212,9 +231,17 @@ window.getMerchantConfig = function () {
         "cityLong" : 76.639381,
         "supportNumber" : "",
         "languageKey" : "KN_IN",
-        "showDriverReferral" : true,
+        "showDriverReferral" : false,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : true,
+        "registration" : {
+            "supportWAN" : "918618963188",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "enableYatriCoins" : false,
+        "appName" : "ನಮ್ಮ ಯಾತ್ರಿ"
       },
       {
         "cityName" : "Delhi",
@@ -226,8 +253,15 @@ window.getMerchantConfig = function () {
         "supportNumber" : "+918069724848",
         "languageKey" : "HI_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+            "supportWAN" : "919625724848",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "appName" : "नम्मा यात्री"
       },
       {
         "cityName" : "Chennai",
@@ -239,8 +273,15 @@ window.getMerchantConfig = function () {
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : false,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+            "supportWAN" : "917483117936",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        },
+        "appName" : "நம்ம யாத்ரி"
       },
       {
         "cityName" : "Coimbatore",
@@ -252,8 +293,15 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+            "supportWAN" : "",
+            "callSupport" : true,
+            "whatsappSupport" : false
+        },
+        "appName" : "நம்ம யாத்ரி"
       },
       {
         "cityName" : "Puducherry",
@@ -265,8 +313,15 @@ window.getMerchantConfig = function () {
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "917483117936",
+          "callSupport" : true,
+          "whatsappSupport" : true
+      },
+        "appName" : "நம்ம யாத்ரி"
       },
       {
         "cityName" : "Tumakuru",
@@ -278,8 +333,55 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : true,
+        "registration" : {
+          "supportWAN" : "918618963188",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "appName" : "ನಮ್ಮ ಯಾತ್ರಿ"
+      },
+      {
+        "cityName" : "Gurugram",
+        "mapImage" : "ny_ic_gurugram_map",
+        "cityCode" : "std:0124",
+        "showSubscriptions" : false,
+        "cityLat" : 28.457523,
+        "cityLong" : 77.026344,
+        "supportNumber" : "+918069724848",
+        "languageKey" : "HI_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "919625724848",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "appName" : "नम्मा यात्री"
+      },
+      {
+        "cityName" : "Noida",
+        "mapImage" : "ny_ic_noida_map",
+        "cityCode" : "std:01189",
+        "showSubscriptions" : false,
+        "cityLat" : 28.535517,
+        "cityLong" : 77.391029,
+        "supportNumber" : "+918069724848",
+        "languageKey" : "HI_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "919625724848",
+          "callSupport" : true,
+          "whatsappSupport" : true
+        },
+        "appName" : "नम्मा यात्री"
       }
   ]
   , "dashboard" : {
@@ -291,9 +393,14 @@ window.getMerchantConfig = function () {
   }
   , "waitTimeConfig" : {
     "thresholdDist" : 0.03,
+    "routeDistance" : 30,
+    "diffBtwTwoHeartBeats" : 10
   }
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true
   }
+   , "vehicle" : {
+      "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR"
+    }
   })
 }

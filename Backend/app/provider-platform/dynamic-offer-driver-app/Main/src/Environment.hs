@@ -16,7 +16,6 @@
 module Environment where
 
 import AWS.S3
-import qualified Data.HashMap as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -35,7 +34,7 @@ import Kernel.Types.Cache
 import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
-import Kernel.Types.Id (Id (..))
+import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (lookupDeploymentVersion)
@@ -52,8 +51,10 @@ import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
+import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
+import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
@@ -108,9 +109,10 @@ data AppCfg = AppCfg
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     droppedPointsThreshold :: HighPrecMeters,
-    snapToRoadPostCheckThreshold :: HighPrecMeters,
+    osrmMatchThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int,
+    maxNotificationShards :: Int,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     enableAPILatencyLogging :: Bool,
@@ -122,12 +124,12 @@ data AppCfg = AppCfg
     schedulerType :: SchedulerType,
     jobInfoMapx :: M.Map AllocatorJobType Bool,
     ltsCfg :: LocationTrackingeServiceConfig,
-    dontEnableForDb :: [Text],
-    dontEnableForKafka :: [Text],
     modelNamesMap :: M.Map Text Text,
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -187,9 +189,10 @@ data AppEnv = AppEnv
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     droppedPointsThreshold :: HighPrecMeters,
-    snapToRoadPostCheckThreshold :: HighPrecMeters,
+    osrmMatchThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int,
+    maxNotificationShards :: Int,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -201,12 +204,12 @@ data AppEnv = AppEnv
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     ltsCfg :: LocationTrackingeServiceConfig,
-    dontEnableForDb :: [Text],
-    dontEnableForKafka :: [Text],
     maxMessages :: Text,
-    modelNamesHashMap :: HM.Map Text Text,
+    modelNamesHashMap :: HMS.HashMap Text Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl
+    internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text
   }
   deriving (Generic)
 
@@ -246,7 +249,7 @@ buildAppEnv cfg@AppCfg {..} = do
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
-  return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, ..}
+  return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
@@ -267,7 +270,14 @@ instance Registry Flow where
   registryLookup =
     Registry.withSubscriberCache $ \sub ->
       fetchFromDB sub.subscriber_id sub.unique_key_id sub.merchant_id
-        >>>= \registryUrl -> Registry.registryLookup registryUrl sub
+        >>>= \registryUrl -> do
+          subId <- Registry.registryLookup registryUrl sub
+          totalSubIds <- QWhiteList.countTotalSubscribers
+          if totalSubIds == 0
+            then do
+              Registry.checkBlacklisted isBlackListed subId
+            else do
+              Registry.checkWhitelisted isNotWhiteListed subId
     where
       fetchFromDB subscriberId uniqueId merchantId = do
         mbRegistryMapFallback <- CRM.findBySubscriberIdAndUniqueId subscriberId uniqueId
@@ -277,6 +287,8 @@ instance Registry Flow where
             do
               mbMerchant <- CM.findById (Id merchantId)
               pure ((\merchant -> Just merchant.registryUrl) =<< mbMerchant)
+      isBlackListed subscriberId domain = QBlackList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isJust
+      isNotWhiteListed subscriberId domain = QWhiteList.findBySubscriberIdAndDomain (ShortId subscriberId) domain <&> isNothing
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

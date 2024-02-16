@@ -20,8 +20,10 @@ import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Common as DCT
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -74,7 +76,7 @@ makeLocation DLoc.Location {..} =
         Just
           Search.Address
             { area_code = address.areaCode,
-              locality = address.area,
+              locality = Nothing,
               ward = address.area,
               state = address.state,
               country = address.country,
@@ -138,3 +140,41 @@ filterRequiredBreakups fParamsType breakup = do
                  "EXTRA_TIME_FARE",
                  "CUSTOMER_CANCELLATION_DUES"
                ]
+    DFParams.Rental ->
+      title
+        `elem` [ "BASE_FARE",
+                 "SERVICE_CHARGE",
+                 "DEAD_KILOMETER_FARE",
+                 "DIST_BASED_FARE",
+                 "TIME_BASED_FARE",
+                 "NIGHT_SHIFT_CHARGE",
+                 "DRIVER_SELECTED_FARE",
+                 "CUSTOMER_SELECTED_FARE",
+                 "TOTAL_FARE",
+                 "WAITING_OR_PICKUP_CHARGES",
+                 "EXTRA_TIME_FARE",
+                 "CUSTOMER_CANCELLATION_DUES"
+               ]
+
+-- Fix these tage properly
+mkFulfillmentType :: DCT.TripCategory -> Text
+mkFulfillmentType = \case
+  DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
+  DCT.RoundTrip DCT.RideOtp -> "RIDE_OTP"
+  DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
+  DCT.Rental _ -> "RENTAL"
+  DCT.InterCity _ -> "INTER_CITY"
+  _ -> "RIDE"
+
+getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
+getTagV2 tagGroupCode tagCode tagGroups = do
+  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just tagGroupCode) tagGroups
+  case tagGroup.tagGroupList of
+    Nothing -> Nothing
+    Just tagGroupList -> do
+      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
+      tag.tagValue
+  where
+    descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
+    descriptorCode (Just desc) = desc.descriptorCode
+    descriptorCode Nothing = Nothing

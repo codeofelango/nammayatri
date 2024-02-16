@@ -9,7 +9,7 @@ import Screens.Types (TicketBookingScreenState, TicketBookingScreenStage(..), Ti
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
-import Screens.Types (TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, TicketServiceData, PeopleCategoriesRespData, TicketPeopleCategoriesOptionData, PeopleCategoriesRespData, BusinessHoursData, TicketCategoriesData, TicketCategoriesData, TicketCategoriesOptionData, SlotsAndTimeIntervalData(..), SlotInterval(..))
+import Screens.Types (TimeInterval, TicketBookingScreenState, TicketBookingItem(..), HomeScreenState, SlotInterval(..))
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Effect.Uncurried(runEffectFn4)
@@ -21,7 +21,7 @@ import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUT
 import Resources.Constants
 import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), BusinessHoursResp(..), TicketServiceResp(..), PeopleCategoriesResp(..), BookingStatus(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), PlaceType(..))
 import Data.Int (ceil)
-import Common.Types.App as Common
+import Domain.Payments as PP
 import Screens.TicketBookingFlow.TicketList.ScreenData as TicketBookingScreenData
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
@@ -29,7 +29,8 @@ import JBridge as JB
 import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Screens.TicketBookingFlow.TicketList.Transformer (transformRespToStateData, getValidBHid, getValidTimeIntervals)
+import Screens.TicketBookingFlow.TicketList.Transformer (transformRespToStateDatav2)
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -73,7 +74,7 @@ eval (UpdatePlacesData placeData Nothing) state = do
 
 eval (UpdatePlacesData placeData (Just (TicketServicesResponse serviceData))) state = do
   let selectedOpDay = convertUTCtoISC (getCurrentUTC "") "dddFull"
-      servicesInfo = mapWithIndex (\i it -> transformRespToStateData (i==0) it state selectedOpDay) serviceData
+      servicesInfo = mapWithIndex (\i it -> transformRespToStateDatav2 (i==0) it state selectedOpDay) serviceData
   continue state { data { placeInfo = placeData, servicesInfo = servicesInfo}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
 
 eval BackPressed state = do
@@ -92,8 +93,8 @@ eval (GetBookingInfo bookingShortId bookingStatus) state = do
 
 eval (PaymentStatusAction status) state =
   case status of 
-    "Booked" -> continue state{props{paymentStatus = Common.Success}}
-    "Failed" -> continue state{props{paymentStatus = Common.Failed}}
+    "Booked" -> continue state{props{paymentStatus = PP.Success}}
+    "Failed" -> continue state{props{paymentStatus = PP.Failed}}
     _ -> continue state
 
 eval (OpenGoogleMap lat long) state = do

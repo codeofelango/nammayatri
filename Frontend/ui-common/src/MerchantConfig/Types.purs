@@ -28,9 +28,11 @@ type CommonAppConfig = (
   , appData :: AppDatas
   , otpRegex :: String
   , termsLink :: String
+  , termsVersion :: Number
   , privacyLink :: String
   , dashboard :: DashboardConfig
   , logFunctionCalls :: Boolean
+  , bannerCarousel :: BannerCarousalConfig 
   , defaultLanguage :: String)
   
 type Colors = {
@@ -93,11 +95,25 @@ type CityConfig = {
   supportNumber :: String,
   languageKey :: String,
   showDriverReferral :: Boolean,
+  showCustomerReferral :: Boolean,
   uploadRCandDL :: Boolean,
-  enableYatriCoins :: Boolean
+  enableYatriCoins :: Boolean,
+  registration :: RegistrationConfig,
+  appName :: String
 }
 
 type DashboardConfig = {
     url :: String
   , enable :: Boolean
+}
+
+type RegistrationConfig = {
+  supportWAN :: String,
+  callSupport :: Boolean,
+  whatsappSupport :: Boolean
+}
+
+type BannerCarousalConfig = {
+  autoScrollDelay :: Number
+, enableAutoScroll :: Boolean
 }

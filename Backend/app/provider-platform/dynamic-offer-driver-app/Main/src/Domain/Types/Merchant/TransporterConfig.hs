@@ -16,6 +16,7 @@ module Domain.Types.Merchant.TransporterConfig where
 
 import Data.Time (NominalDiffTime, UTCTime)
 import Domain.Types.Common
+import Domain.Types.Location (DummyLocationInfo)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import EulerHS.Prelude hiding (id)
@@ -110,6 +111,7 @@ data TransporterConfigD u = TransporterConfig
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSuvDowngradeToTaxi :: Bool,
+    canSwitchToRental :: Bool,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
     languagesToBeTranslated :: [Language],
@@ -159,7 +161,11 @@ data TransporterConfigD u = TransporterConfig
     notificationRetryTimeGap :: NominalDiffTime,
     driverAutoPayExecutionTimeFallBack :: NominalDiffTime,
     orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime,
-    kaptureDisposition :: Text
+    kaptureDisposition :: Text,
+    dummyFromLocation :: DummyLocationInfo,
+    dummyToLocation :: DummyLocationInfo,
+    scheduleRideBufferTime :: NominalDiffTime,
+    considerDriversForSearch :: Bool
   }
   deriving (Generic, Show)
 

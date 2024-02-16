@@ -21,7 +21,8 @@ import Screens.SubscriptionScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (APIPaymentStatus(..), LazyCheck(..), PaymentStatus(..))
+import Common.Types.App (LazyCheck(..))
+import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..))
 import Components.Banner as Banner
 import Components.BottomNavBar (navData)
 import Components.BottomNavBar as BottomNavBar
@@ -1832,9 +1833,9 @@ lottieJsonAccordingToLang isOnFreeTrial isIntroductory =
     "KN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_kannada_02.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_kannada_01.json" 
                else "lottie/ny_ic_subscription_info_kannada_02.json"
-    "TA_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_tamil_02.json"
+    "TA_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_tamil_03.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_tamil_01.json" 
-               else "lottie/ny_ic_subscription_info_tamil_02.json"
+               else "lottie/ny_ic_subscription_info_tamil_03.json"
     "BN_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_bengali_02.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_bengali_01.json" 
                else "lottie/ny_ic_subscription_info_bengali_02.json"

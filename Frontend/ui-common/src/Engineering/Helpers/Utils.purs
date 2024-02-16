@@ -15,12 +15,12 @@
 module Engineering.Helpers.Utils where
 
 import Prelude
-import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..))
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, GlobalPayload(..), MobileNumberValidatorResp(..), ModifiedCalendarObject, Payload(..), LazyCheck)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.String (length, trim, toLower)
 import Data.Maybe (Maybe(..))
 import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
@@ -47,8 +47,15 @@ import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, dela
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Data.Array (find)
+import Data.Array (elem)
+import Data.Array as DA
 import Data.Tuple (Tuple(..), fst, snd)
+import ConfigProvider
+import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
+import Data.Number (fromString)
+import JBridge (toast, setKeyInSharedPref)
+import Language.Strings (getString)
+import Language.Types
 
 -- Common Utils
 foreign import reboot :: Effect Unit
@@ -71,20 +78,21 @@ toggleLoader =
     _ <- liftFlow $ launchAff $ flowRunner state UI.loaderScreen
     pure unit
   else do
-    doAff $ liftEffect $ terminateUI $ Just "LoaderOverlay"
+    doAff $ liftEffect $ terminateLoader ""
+
+terminateLoader :: String -> Effect Unit
+terminateLoader _ = terminateUI $ Just "LoaderOverlay"
 
 loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = void $ modifyState (\(GlobalState state) -> GlobalState state { loaderOverlay { data { title = mainTxt, subTitle = subTxt } } })
 
-showAndHideLoader :: Number -> String -> String -> GlobalState -> Effect Unit
-showAndHideLoader delayInMs title description state = do
-  _ <-
+showAndHideLoader :: Boolean -> String -> String -> GlobalState -> Effect Unit
+showAndHideLoader showLoader title description state = do
+  void $
     launchAff $ flowRunner state
       $ do
-          _ <- loaderText title description
-          _ <- toggleLoader true
-          _ <- delay $ Milliseconds delayInMs
-          _ <- toggleLoader false
+          void $ loaderText title description
+          void $ toggleLoader showLoader
           pure unit
   pure unit
 
@@ -306,18 +314,20 @@ cityCodeMap =
   , Tuple "std:020" "pune"
   , Tuple "std:0821" "mysore"
   , Tuple "std:0816" "tumakuru"
+  , Tuple "std:01189" "noida"
+  , Tuple "std:0124" "gurugram"
   ]
 
 getCityFromCode :: String -> String
 getCityFromCode code = 
   let 
-    cityCodeTuple = find (\ tuple -> (fst tuple) == code) cityCodeMap
+    cityCodeTuple = DA.find (\ tuple -> (fst tuple) == code) cityCodeMap
   in maybe "" (\tuple -> snd tuple) cityCodeTuple
 
 getCodeFromCity :: String -> String
 getCodeFromCity city = 
   let 
-    cityCodeTuple = find (\tuple -> (snd tuple) == (toLower city)) cityCodeMap
+    cityCodeTuple = DA.find (\tuple -> (snd tuple) == (toLower city)) cityCodeMap
   in maybe "" (\tuple -> fst tuple) cityCodeTuple
   
 capitalizeFirstChar :: String -> String
@@ -332,4 +342,37 @@ fetchLanguage currLang = case currLang of
                   "KN_IN" -> "kn"
                   "TA_IN" -> "ta"
                   _       -> "en"
+
+handleUpdatedTerms :: String -> Effect Unit
+handleUpdatedTerms message = do
+  appConfig <- runEffectFn1 getAppConfigEff appConfig
+  let termsVersion = getValueToLocalStore T_AND_C_VERSION
+  if (termsVersion `elem` ["__failed", "(null)"]) then void $ pure $ runFn2 setKeyInSharedPref "T_AND_C_VERSION" "1.0" else pure unit
+  let isTermsUpdated = (fromMaybe 0.0 (fromString $ getValueToLocalStore T_AND_C_VERSION)) < appConfig.termsVersion
+  if isTermsUpdated then do
+      void $ pure $ runFn2 setKeyInSharedPref "T_AND_C_VERSION" (show appConfig.termsVersion)
+      void $ pure $ toast $ message
+  else pure unit        
+        
                   
+getReferralCode :: String -> Maybe String
+getReferralCode referralData =
+  let tuples = parseKeyValues referralData "&" "="
+  in findValueFromTuples tuples "utm_campaign"
+
+parseKeyValues :: String -> String -> String -> Array (Tuple String String)
+parseKeyValues string queryPattern keyValuePattern = DA.catMaybes $ map (\query -> parseKeyValueWithPattern query keyValuePattern) (split (Pattern queryPattern) string)
+
+parseKeyValueWithPattern :: String -> String -> Maybe (Tuple String String)
+parseKeyValueWithPattern string pattern = 
+  let afterSplit = split (Pattern pattern) string 
+  in  if DA.length afterSplit == 2 then
+        Just (Tuple (fromMaybe "" (afterSplit DA.!! 0)) (fromMaybe "" (afterSplit DA.!! 1)))
+      else Nothing
+      
+findValueFromTuples :: Array (Tuple String String) -> String -> Maybe String
+findValueFromTuples tuples key = 
+  let tuple = DA.find (\(Tuple a _) -> a == key) tuples
+  in case tuple of
+        Just (Tuple _ b) -> Just b
+        Nothing          -> Nothing

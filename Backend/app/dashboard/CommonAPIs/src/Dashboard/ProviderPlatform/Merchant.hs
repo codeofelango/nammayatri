@@ -25,6 +25,7 @@ import Dashboard.Common.Merchant as Reexport
 import Data.Aeson
 import Data.OpenApi hiding (description, name, password, url)
 import Data.Text as T
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
@@ -263,6 +264,7 @@ type DriverPoolConfigUpdateAPI =
     :> "update"
     :> MandatoryQueryParam "tripDistance" Meters
     :> QueryParam "vehicleVariant" Variant
+    :> QueryParam "tripCategory" Text
     :> ReqBody '[JSON] DriverPoolConfigUpdateReq
     :> Post '[JSON] APISuccess
 
@@ -314,6 +316,7 @@ type DriverPoolConfigCreateAPI =
     :> "create"
     :> MandatoryQueryParam "tripDistance" Meters
     :> QueryParam "vehiclevariant" Variant
+    :> QueryParam "tripCategory" Text
     :> ReqBody '[JSON] DriverPoolConfigCreateReq
     :> Post '[JSON] APISuccess
 
@@ -526,7 +529,8 @@ data VehicleClassVariantMap = VehicleClassVariantMap
   { vehicleClass :: Text,
     vehicleCapacity :: Maybe Int,
     vehicleVariant :: Variant,
-    manufacturer :: Maybe Text
+    manufacturer :: Maybe Text,
+    bodyType :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -633,6 +637,7 @@ type UpdateFPPerExtraKmRate =
   "config"
     :> "farePolicy"
     :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> Capture "startDistance" Meters
     :> "perExtraKmRate"
     :> "update"
     :> ReqBody '[JSON] UpdateFPPerExtraKmRateReq
@@ -646,6 +651,64 @@ newtype UpdateFPPerExtraKmRateReq = UpdateFPPerExtraKmRateReq
 
 instance HideSecrets UpdateFPPerExtraKmRateReq where
   hideSecrets = identity
+
+type UpdateFarePolicy =
+  "config"
+    :> "farePolicy"
+    :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> "update"
+    :> ReqBody '[JSON] UpdateFarePolicyReq
+    :> Post '[JSON] APISuccess
+
+data UpdateFarePolicyReq = UpdateFarePolicyReq
+  { serviceCharge :: Maybe Money,
+    nightShiftBounds :: Maybe NightShiftBounds,
+    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    govtCharges :: Maybe Double,
+    perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
+    description :: Maybe Text,
+    baseDistance :: Maybe Meters,
+    baseFare :: Maybe Money,
+    deadKmFare :: Maybe Money,
+    waitingCharge :: Maybe WaitingCharge,
+    waitingChargeInfo :: Maybe WaitingChargeInfo,
+    freeWaitingTime :: Maybe Minutes,
+    nightShiftCharge :: Maybe NightShiftCharge
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateFarePolicyReq where
+  hideSecrets = identity
+
+data WaitingChargeInfo = WaitingChargeInfo
+  { freeWaitingTime :: Minutes,
+    waitingCharge :: WaitingCharge
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
+
+data WaitingCharge = PerMinuteWaitingCharge HighPrecMoney | ConstantWaitingCharge Money
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data NightShiftCharge = ProgressiveNightShiftCharge Float | ConstantNightShiftCharge Money
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data NightShiftBounds = NightShiftBounds
+  { nightShiftStart :: TimeOfDay,
+    nightShiftEnd :: TimeOfDay
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+data AllowedTripDistanceBounds = AllowedTripDistanceBounds
+  { maxAllowedTripDistance :: Meters,
+    minAllowedTripDistance :: Meters
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForJSON ''NightShiftCharge)
+$(mkBeamInstancesForJSON ''WaitingCharge)
 
 ---- generic trigger for schedulers ----
 
@@ -663,7 +726,7 @@ data SchedulerTriggerReq = SchedulerTriggerReq
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JobName = BadDebtCalculationTrigger | DriverFeeCalculationTrigger
+data JobName = BadDebtCalculationTrigger | DriverFeeCalculationTrigger | SendManualPaymentLinkTrigger
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -122,6 +122,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OptionWithHtmlClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "options_with_html"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "youtube_video_status"
     ValidateDocumentModalAction act -> case act of
       ValidateDocumentModal.BackPressed  -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "backpressed"
       ValidateDocumentModal.AfterRender ->  trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "afterrender"
@@ -135,6 +136,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnSecondaryTextClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "secondary_text"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "image"
       PopUpModal.OptionWithHtmlClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "options_with_html"      
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
     RenderProfileImage image id -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "renderImage" "afterrender"
@@ -258,7 +260,9 @@ eval (CallBackImageUpload base_64 imageName imagePath) state = do
   _ <- pure $ printLog "imageName" imageName
   if base_64 /= "" then do
     let newState = state { props = state.props { validateProfilePicturePopUp = true, imageCaptureLayoutView = false, rcAvailable = true, rc_name = imageName, isValidState = (checkRegNum (state.data.vehicle_registration_number))}, data = state.data { rc_base64 = base_64 }}
-    continue newState
+    continueWithCmd newState [ do
+      void $ runEffectFn4 renderBase64ImageFile base_64 (getNewIDWithTag "ValidateProfileImage") false "CENTER_CROP"
+      pure $ ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionController (PrimaryButtonController.OnClick))]
     else continue state{props{isValidState = false}}
 eval (UploadFile) state = continueWithCmd (state {props {validateProfilePicturePopUp = false, imageCaptureLayoutView = true}}) [do
      _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")

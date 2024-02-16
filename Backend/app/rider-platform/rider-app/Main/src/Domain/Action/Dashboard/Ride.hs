@@ -15,6 +15,7 @@
 
 module Domain.Action.Dashboard.Ride
   ( shareRideInfo,
+    shareRideInfoByShortId,
     rideList,
     rideInfo,
     multipleRideCancel,
@@ -40,6 +41,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Sos as DSos
+import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -55,6 +58,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.Person as QP
@@ -105,9 +109,22 @@ shareRideInfo ::
   Flow Common.ShareRideInfoRes
 shareRideInfo merchantId rideId = do
   ride <- B.runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  buildShareRideInfo merchantId ride
+
+shareRideInfoByShortId :: ShortId DM.Merchant -> ShortId Common.Ride -> Flow Common.ShareRideInfoRes
+shareRideInfoByShortId merchantId rideId = do
+  let rideShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) rideId
+  ride <- QRide.findRideByRideShortId rideShortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
+  buildShareRideInfo merchantId ride
+
+buildShareRideInfo ::
+  ShortId DM.Merchant ->
+  DRide.Ride ->
+  Flow Common.ShareRideInfoRes
+buildShareRideInfo merchantId ride = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   merchant <- findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+  unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist ride.id.getId)
   case ride.status of
     DRide.COMPLETED -> throwError $ RideInvalidStatus "This ride is completed"
     DRide.CANCELLED -> throwError $ RideInvalidStatus "This ride is cancelled"
@@ -121,7 +138,9 @@ shareRideInfo merchantId rideId = do
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
+        DB.InterCityDetails details -> Just details.distance
         _ -> Nothing
+  sosDetails <- CQSos.findByRideId ride.id
   return $
     Common.ShareRideInfoRes
       { id = cast ride.id,
@@ -139,8 +158,33 @@ shareRideInfo merchantId rideId = do
         userFirstName = person.firstName,
         userLastName = person.lastName,
         fromLocation = mkCommonBookingLocation booking.fromLocation,
-        toLocation = mbtoLocation
+        toLocation = mbtoLocation,
+        sosStatus = castSosStatus . (.status) <$> sosDetails,
+        vehicleVariant = castVehicleVariant ride.vehicleVariant,
+        nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
+        rideScheduledAt = booking.startTime,
+        fareProductType = mkFareProductType booking.bookingDetails
       }
+
+getStopFromBookingDetails :: DTB.BookingDetails -> Maybe Common.Location
+getStopFromBookingDetails bookingDetails = case bookingDetails of
+  DB.RentalDetails rentalDetails -> mkCommonBookingLocation <$> rentalDetails.stopLocation
+  _ -> Nothing
+
+castSosStatus :: DSos.SosStatus -> Common.SosStatus
+castSosStatus = \case
+  DSos.Pending -> Common.Pending
+  DSos.Resolved -> Common.Resolved
+  DSos.NotResolved -> Common.NotResolved
+
+castVehicleVariant :: VehVar.VehicleVariant -> Common.Variant
+castVehicleVariant = \case
+  VehVar.SEDAN -> Common.SEDAN
+  VehVar.HATCHBACK -> Common.HATCHBACK
+  VehVar.SUV -> Common.SUV
+  VehVar.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
+  VehVar.TAXI -> Common.TAXI
+  VehVar.TAXI_PLUS -> Common.TAXI_PLUS
 
 ---------------------------------------------------------------------
 
@@ -173,7 +217,7 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
     maxLimit = 20
     defaultLimit = 10
 
-buildRideListItem :: EncFlow m r => QRide.RideItem -> m Common.RideListItem
+buildRideListItem :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- mapM decrypt person.mobileNumber
   pure
@@ -186,7 +230,10 @@ buildRideListItem QRide.RideItem {..} = do
         driverName = ride.driverName,
         driverPhoneNo = ride.driverMobileNumber,
         vehicleNo = ride.vehicleNumber,
-        bookingStatus
+        endOtp = ride.endOtp,
+        nextStopLocation = getStopFromBookingDetails bookingDetails,
+        fareProductType = mkFareProductType bookingDetails,
+        ..
       }
 
 ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
@@ -246,7 +293,11 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           dropLocationArea = (.address.area) =<< detail.customerDropLocation,
           fare = detail.actualFare,
           personId = cast personId,
-          classification = Ticket.CUSTOMER
+          classification = Ticket.CUSTOMER,
+          nextStopLocation = detail.nextStopLocation,
+          rideScheduledAt = detail.rideScheduledAt,
+          fareProductType = detail.fareProductType,
+          endOtp = ride.endOtp
         }
 
 rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
@@ -283,6 +334,7 @@ rideInfo merchantId reqRideId = do
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
+        DB.InterCityDetails details -> Just details.distance
         _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
   pure
@@ -312,8 +364,20 @@ rideInfo merchantId reqRideId = do
         estimatedRideDuration = estimatedDuration,
         rideDuration = timeDiffInSeconds <$> ride.rideEndTime <*> ride.rideStartTime,
         cancelledTime = cancelledTime,
-        cancelledBy = cancelledBy
+        cancelledBy = cancelledBy,
+        nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
+        rideScheduledAt = booking.startTime,
+        fareProductType = mkFareProductType booking.bookingDetails,
+        endOtp = ride.endOtp
       }
+
+mkFareProductType :: DTB.BookingDetails -> Common.FareProductType
+mkFareProductType bookingDetails = case bookingDetails of
+  DTB.OneWayDetails _ -> Common.ONE_WAY
+  DTB.RentalDetails _ -> Common.RENTAL
+  DTB.DriverOfferDetails _ -> Common.DRIVER_OFFER
+  DTB.OneWaySpecialZoneDetails _ -> Common.ONE_WAY_SPECIAL_ZONE
+  DTB.InterCityDetails _ -> Common.INTER_CITY
 
 timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
 timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1
@@ -386,6 +450,12 @@ rideSync merchant reqRideId = do
     Nothing -> pure merchant.defaultCity
     Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let dStatusReq = DStatusReq {booking, merchant, city}
-  becknStatusReq <- buildStatusReq dStatusReq
-  void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
+  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  if isBecknSpecVersion2
+    then do
+      becknStatusReq <- buildStatusReqV2 dStatusReq
+      void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq
+    else do
+      becknStatusReq <- buildStatusReq dStatusReq
+      void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
   pure Success

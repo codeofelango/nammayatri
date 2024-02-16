@@ -1,6 +1,7 @@
 module Resources.Localizable.BN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getBN :: STR -> String
 getBN stringKey =
@@ -1190,7 +1191,7 @@ getBN stringKey =
         ONE_TWO_START_RATING -> "ভ্রমণের জন্য 1 বা 2 স্টার রেটিং"
         BOOKING_CANCELLATION -> "বুকিং বাতিলকরণ"
         PAID_BY -> "দ্বারা পরিশোধিত"
-        DRIVER_REFERRAL_CODE -> "ড্রাইভার রেফারেল কোড"
+        DRIVER_REFERRAL_CODE -> "ড্রাইভার \n রেফারেল কোড"
         APP_QR_CODE -> "অ্যাপ কিউআর কোড"
         START_TAKING_RIDES_AND_REFER _-> "নম্মা যাত্রী ড্রাইভার অ্যাপে সাইন আপ করতে রাইড করা এবং ড্রাইভারদের রেফার করা শুরু করুন"
         REFERRED_DRIVERS -> "উল্লেখিত ড্রাইভার"
@@ -1209,3 +1210,27 @@ getBN stringKey =
         COINS -> "কয়েন"
         COINS_ADDED -> "কয়েন যোগ করা হয়েছে"
         CANT_FIND_OPTION -> "বিকল্প খুঁজে পাচ্ছি না"
+        REFERRAL -> "রেফারেল"
+        BENEFITS -> "সুবিধা"
+        YOUR_DAILY_RANK -> "আপনার দৈনিক র্যাঙ্ক"
+        CLICK_TO_EXPAND -> "বিস্তারিত দেখতে ক্লিক করুন"
+        REFERRED -> "উল্লেখিত"
+        ACTIVATED -> "সক্রিয়"
+        REFER_DRIVER -> "ড্রাইভার উল্লেখ করুন"
+        REFER_CUSTOMER -> "গ্রাহক উল্লেখ করুন"
+        REFERRED_DRIVERS_INFO _ -> "নাম্মা ইয়াত্রীতে নিবেশন করেছেন যাদেরকে সূচনা দেওয়া হয়েছে"
+        REFERRED_CUSTOMERS_INFO _ -> "নাম্মা ইয়াত্রীতে নিবেশন করেছেন সুপারিশিত গ্রাহকরা"
+        ACTIVATED_CUSTOMERS_INFO -> "যাদের প্রথম রাইড সফলভাবে সম্পন্ন হয়েছে এবং যাদেরকে সূচনা দেওয়া হয়েছে"
+        CUSTOMER_REFERRAL_CODE -> "গ্রাহক \n রেফারেল কোড"
+        ACCEPT_RIDE_TO_ENTER_LEADERBOARD -> "রাইড গ্রহণ করুন\nএবং একটি শীর্ষ ড্রাইভার হন"
+        CONTACT_SUPPORT_VIA -> "এর মাধ্যমে সহায়তার সাথে যোগাযোগ করুন"
+        YOU_CAN_SHARE_SCREENSHOT -> "আপনি ম্যানুয়াল অনবোর্ডিংয়ের জন্য স্ক্রিনশট এবং নথি শেয়ার করতে পারেন"
+        PLACE_A_CALL -> "দস্তাবেজ যাচাই করার জন্য দ্রুত সাহায্যের জন্য একটি কল করুন"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C এবং গোপনীয়তা নীতি আপডেট করা হয়েছে"
+        SAFETY_IS_OUR_RESPONSIBILITY -> "নিরাপত্তা আমাদের দায়িত্ব"
+        CUSTOMER_SAFETY_FIRST -> "গ্রাহকের নিরাপত্তা প্রথমে!"
+        LETS_ENSURE_SAFE_RIDE -> "আসুন একটি নিরাপদ এবং নিরাপদ রাইড নিশ্চিত করি"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "গ্রাহকের নিরাপত্তা আমাদের<br>দায়িত্ব। আসুন একটি নিরাপদ এবং<br>সুখী যাত্রা নিশ্চিত করি"
+        OUR_SAFETY_PARTNER -> "আমাদের নিরাপত্তা অংশীদার"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "শুভেচ্ছা!\n\nঅনুগ্রহ করে রেজিস্টার করতে আমার রেফারেল কোড " <> code <> " ব্যবহার করুন " <> name <> ".\n\nঅ্যাপটি ডাউনলোড করতে QR কোড স্ক্যান করুন বা নিচের লিঙ্কে ক্লিক করুন। প্রয়োজনীয় রেজিস্ট্রেশন ধাপগুলি সম্পূর্ণ করুন এবং আমার রেফারেল কোড ইনপুট করুন। অনলাইন যান এবং উপার্জন শুরু করুন!\n\n"
+        DOWNLOAD_NOW -> "(এখনই ডাউনলোড করুন) "

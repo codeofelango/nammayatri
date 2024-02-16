@@ -49,11 +49,18 @@ modifyScreenState st =
     AboutUsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {aboutUsScreen = a state.aboutUsScreen})
     AppUpdatePopUpScreenType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appUpdatePopUpScreen = a state.appUpdatePopUpScreen })
     TicketInfoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {ticketInfoScreen = a state.ticketInfoScreen})
+    FollowRideScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {followRideScreen = a state.followRideScreen})
     AppConfigType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appConfig = a state.appConfig })
     RideScheduledScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideScheduledScreen = a state.rideScheduledScreen})
-
+    SearchLocationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {searchLocationScreen = a state.searchLocationScreen})
+    GlobalPropsType a -> modifyState (\(GlobalState state) -> GlobalState $ state {globalProps = a state.globalProps})
+    NammaSafetyScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {nammaSafetyScreen = a state.nammaSafetyScreen})
     RideSelectionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSelectionScreen = a state.rideSelectionScreen})
     ReportIssueChatScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {reportIssueChatScreen = a state.reportIssueChatScreen})
+    MetroTicketDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketDetailsScreen = a state.metroTicketDetailsScreen})
+    MetroMyTicketsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroMyTicketsScreen = a state.metroMyTicketsScreen})
+    MetroTicketBookingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketBookingScreen = a state.metroTicketBookingScreen})
+    MetroTicketStatusScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketStatusScreen = a state.metroTicketStatusScreen})
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit
 updateRideDetails state = do 
@@ -70,6 +77,7 @@ updateRideDetails state = do
     , settingSideBar {
         gender = globalState.homeScreen.data.settingSideBar.gender 
       , email = globalState.homeScreen.data.settingSideBar.email
+      , hasCompletedSafetySetup = globalState.homeScreen.data.settingSideBar.hasCompletedSafetySetup
     }
     }
     , props{
@@ -82,9 +90,11 @@ updateRideDetails state = do
     , rideRequestFlow = true
     , isSpecialZone = state.data.selectedItem.isSpecialZone
     , isBanner = globalState.homeScreen.props.isBanner
+    , sosBannerType = globalState.homeScreen.props.sosBannerType 
+    , followsRide = globalState.homeScreen.props.followsRide
     }
     })
-
+    
 updateRepeatRideDetails :: Trip -> FlowBT String Unit
 updateRepeatRideDetails state = do 
   (GlobalState globalState) <- getState
@@ -100,6 +110,7 @@ updateRepeatRideDetails state = do
     , settingSideBar {
         gender = globalState.homeScreen.data.settingSideBar.gender 
       , email = globalState.homeScreen.data.settingSideBar.email
+      , hasCompletedSafetySetup = globalState.homeScreen.data.settingSideBar.hasCompletedSafetySetup
     }
     }
     , props{
@@ -112,5 +123,7 @@ updateRepeatRideDetails state = do
     , rideRequestFlow = true
     , isSpecialZone = state.isSpecialZone
     , isBanner = globalState.homeScreen.props.isBanner
+    , sosBannerType = globalState.homeScreen.props.sosBannerType 
+    , followsRide = globalState.homeScreen.props.followsRide
     }
     })

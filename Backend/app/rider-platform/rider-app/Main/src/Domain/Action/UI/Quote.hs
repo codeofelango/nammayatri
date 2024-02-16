@@ -22,7 +22,6 @@ where
 
 import Data.Char (toLower)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
-import qualified Domain.Types.Booking as DRB
 import Domain.Types.Estimate (EstimateAPIEntity)
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Location as DL
@@ -46,7 +45,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.Quote as QRentalQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 
@@ -59,8 +57,10 @@ data GetQuotesRes = GetQuotesRes
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+-- TODO: Needs to be fixed as quotes could be of both rentals and one way
 data OfferRes
   = OnDemandCab QuoteAPIEntity
+  | OnRentalCab QuoteAPIEntity
   | Metro MetroOffer
   | PublicTransport PublicTransportQuote
   deriving (Show, Generic)
@@ -77,7 +77,7 @@ instance ToSchema OfferRes where
 getQuotes :: (CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-  activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatus searchRequest.riderId DRB.activeBookingStatus
+  activeBooking <- runInReplica $ QBooking.findLatestByRiderId searchRequest.riderId
   whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
   logDebug $ "search Request is : " <> show searchRequest
   offers <- getOffers searchRequest
@@ -104,8 +104,8 @@ getOffers searchRequest = do
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
     Nothing -> do
-      quoteList <- runInReplica $ QRentalQuote.findAllBySRId searchRequest.id
-      let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
+      quoteList <- runInReplica $ QQuote.findAllBySRId searchRequest.id
+      let quotes = OnRentalCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
       return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
@@ -117,9 +117,11 @@ getOffers searchRequest = do
         SQuote.RentalDetails _ -> Nothing
         SQuote.DriverOfferDetails details -> Just details.distanceToPickup
         SQuote.OneWaySpecialZoneDetails _ -> Just $ metersToHighPrecMeters $ Meters 0
+        SQuote.InterCityDetails _ -> Just $ metersToHighPrecMeters $ Meters 0
     creationTime :: OfferRes -> UTCTime
     creationTime (OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
+    creationTime (OnRentalCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
 getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]

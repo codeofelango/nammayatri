@@ -22,7 +22,6 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
@@ -33,6 +32,9 @@ import Tools.Beam.UtilsTH
 
 activeBookingStatus :: [BookingStatus]
 activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
+
+activeScheduledBookingStatus :: [BookingStatus]
+activeScheduledBookingStatus = [AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
 
 data BookingStatus
   = NEW
@@ -70,8 +72,11 @@ data Booking = Booking
     riderId :: Id DPerson.Person,
     fromLocation :: DLoc.Location,
     estimatedFare :: Money,
+    estimatedDistance :: Maybe HighPrecMeters,
+    estimatedDuration :: Maybe Seconds,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
+    isScheduled :: Bool,
     vehicleVariant :: VehicleVariant,
     bookingDetails :: BookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,
@@ -85,9 +90,15 @@ data Booking = Booking
 
 data BookingDetails
   = OneWayDetails OneWayBookingDetails
-  | RentalDetails DRentalSlab.RentalSlab
+  | RentalDetails RentalBookingDetails
   | DriverOfferDetails OneWayBookingDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails
+  | InterCityDetails InterCityBookingDetails
+  deriving (Show)
+
+data RentalBookingDetails = RentalBookingDetails
+  { stopLocation :: Maybe DLoc.Location
+  }
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails
@@ -100,5 +111,11 @@ data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
   { toLocation :: DLoc.Location,
     distance :: HighPrecMeters,
     otpCode :: Maybe Text
+  }
+  deriving (Show)
+
+data InterCityBookingDetails = InterCityBookingDetails
+  { toLocation :: DLoc.Location,
+    distance :: HighPrecMeters
   }
   deriving (Show)

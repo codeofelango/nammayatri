@@ -25,6 +25,7 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
+import Screens.Types (BottomNavBarIcon(..))
 import Screens.HomeScreen.Transformer(getTripDetailsState)
 import Presto.Core.Types.Language.Flow (getLogFields)
 
@@ -49,9 +50,6 @@ homeScreen = do
     ChangeLanguage updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure CHANGE_LANGUAGE)
-    GoToEmergencyContacts updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure GO_TO_EMERGENCY_CONTACTS)
     GoToMyTickets updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_MY_TICKETS)
@@ -74,8 +72,11 @@ homeScreen = do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ GET_QUOTES updatedState)
     GoToTicketBookingFlow updatedState -> do 
-          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState{props{focussedBottomIcon = MOBILITY}})
           App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_TICKETING updatedState)
+    GoToMetroTicketBookingFlow updatedState -> do 
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_BOOKING updatedState)
     LogoutUser -> App.BackT $ App.NoBack <$> (pure $ LOGOUT)
     SelectEstimate updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
@@ -182,3 +183,29 @@ homeScreen = do
     ReAllocateRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REALLOCATE_RIDE updatedState)
+    GoToRentalsFlow -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RENTALS_FLOW)
+    GoToScheduledRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_SCHEDULED_RIDES)
+    Add_Stop updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ ADD_STOP updatedState)
+    GoToNammaSafety updatedState triggerSos showTestDrill -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAMMASAFETY updatedState triggerSos showTestDrill)
+    SafetySupport updatedState isSafe -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SAFETY_SUPPORT updatedState isSafe)
+    GoToShareRide updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_SHARE_RIDE updatedState)
+    GoToNotifyRideShare updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_NOTIFY_RIDE_SHARE updatedState)
+    ExitToFollowRide updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure EXIT_TO_FOLLOW_RIDE)
+    GoToReportSafetyIssue updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_REPORT_SAFETY_ISSUE updatedState)
+    GoToMyMetroTickets updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKETS)

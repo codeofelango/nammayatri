@@ -28,7 +28,7 @@ import Data.Number (ceil)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, os)
+import Engineering.Helpers.Commons (flowRunner, os, parseFloat)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -104,11 +104,11 @@ ratingAndExpiryTime state push =
 
 driverImageView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
 driverImageView state =
- linearLayout
- [ width WRAP_CONTENT
- , height WRAP_CONTENT
- , orientation VERTICAL
- ][ frameLayout
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ frameLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , gravity CENTER
@@ -127,11 +127,19 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback $ fetchImage FF_ASSET $ if state.city == Hyderabad then "ny_ic_black_yellow_auto_quote_list" else "ny_ic_auto_quote_list"
+        , imageWithFallback $ fetchImage FF_ASSET $ getAutoImage state.city
         , weight 1.0
         ]
       ]
- ]
+  ]
+  where 
+    getAutoImage :: City -> String
+    getAutoImage city = case city of
+      Hyderabad -> "ny_ic_black_yellow_auto_quote_list"
+      Chennai -> "ny_ic_black_yellow_auto_quote_list"
+      Kochi -> "ny_ic_black_auto_quote_list"
+      _ -> "ny_ic_auto_quote_list"
+
 
 driverRatingView :: forall w . QuoteListItemState -> PrestoDOM (Effect Unit) w
 driverRatingView state  =
@@ -151,7 +159,7 @@ driverRatingView state  =
       , textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ if ceil state.driverRating == 0.0 then (getString NEW_) else show $ ceil state.driverRating
+        , text $ if state.driverRating == 0.0 then (getString NEW_) else parseFloat state.driverRating 2
         ] <> FontStyle.tags LanguageStyle)
     ]
 

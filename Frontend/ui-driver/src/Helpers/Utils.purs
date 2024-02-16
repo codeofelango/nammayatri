@@ -19,7 +19,7 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, DisabilityType(..))
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find) as DA
@@ -27,7 +27,8 @@ import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
+import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (CityConfig(..))
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)
@@ -88,6 +89,7 @@ import ConfigProvider
 import Screens.Types as ST
 import MerchantConfig.Types as MCT
 import Locale.Utils
+import Language.Types (STR(..))
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -113,7 +115,6 @@ foreign import getcurrentdate :: String -> String
 foreign import getDatebyCount :: Int -> String
 foreign import launchAppSettings :: Unit -> Effect Unit
 foreign import getTimeStampString :: String -> String
-foreign import addMediaPlayer :: String -> String -> Effect Unit
 foreign import parseNumber :: Int -> String
 foreign import getPixels :: Fn1 String Number
 foreign import setValueToLocalStore :: Fn2 String String Unit
@@ -324,19 +325,19 @@ getRideLabelData maybeLabel = fromMaybe dummyLabelConfig (getRequiredTag maybeLa
 getRequiredTag :: Maybe String -> Maybe LabelConfig
 getRequiredTag maybeLabel  =
   case maybeLabel of
-    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO"] then
-                    DA.head (DA.filter (\item -> item.label == label) rideLabelConfig)
+    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO", "Safety"] then
+                    DA.head (DA.filter (\item -> item.label == label) (rideLabelConfig FunctionCall))
                   else do
                     let arr = DS.split (DS.Pattern "_") label
                     let pickup = fromMaybe "" (arr DA.!! 0)
                     let drop = fromMaybe "" (arr DA.!! 1)
                     let priority = fromMaybe "" (arr DA.!! 2)
-                    DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) rideLabelConfig)
+                    DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) (rideLabelConfig FunctionCall))
 
     Nothing    -> Nothing
 
-rideLabelConfig :: Array LabelConfig
-rideLabelConfig = [
+rideLabelConfig :: LazyCheck -> Array LabelConfig
+rideLabelConfig _ = [
     { label: "SureMetro_Pickup",
       backgroundColor : "#2194FF",
       text : "Metro Pickup",
@@ -360,6 +361,14 @@ rideLabelConfig = [
       imageUrl : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
       cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
       cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+    },
+    { label : "Safety",
+      backgroundColor : Color.green900,
+      text : getString SAFETY_IS_OUR_RESPONSIBILITY,
+      secondaryText : getString LEARN_MORE,
+      imageUrl : fetchImage FF_ASSET  "ny_ic_user_safety_shield",
+      cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
+      cancelConfirmImage : fetchImage FF_ASSET  "ic_cancel_prevention"
     },
     { label : "GOTO",
       backgroundColor : "#2C2F3A",
@@ -461,6 +470,7 @@ getCurrentLocation currentLat currentLon defaultLat defaultLon timeOut specialLo
           Just lat, Just lon -> pure (LatLon lat lon lastKnownTs)
           _,_ -> pure (LatLon "0.0" "0.0" currentUtc)
         else pure (LatLon (show defaultLat) (show defaultLon) currentUtc)
+
 
 translateString :: String -> Int -> FlowBT String String 
 translateString toTranslate timeOut = do
@@ -600,7 +610,14 @@ getCityConfig cityConfig cityName = do
                           languageKey : "",
                           enableYatriCoins : false,
                           showDriverReferral : false,
-                          uploadRCandDL : true
+                          showCustomerReferral : false,
+                          uploadRCandDL : true,
+                          registration : { 
+                            callSupport : false,
+                            supportWAN : "", 
+                            whatsappSupport : false
+                          },
+                          appName : ""
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   
@@ -626,3 +643,16 @@ splitBasedOnLanguage str =
                 "ML_IN" | len > 4 -> 4
                 "TA_IN" | len > 5 -> 5
                 _ -> 0
+
+generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String -> String
+generateReferralLink source medium term content campaign driverReferralType domain =
+  let config = getAppConfig appConfig 
+      path = if driverReferralType == DRIVER then "/driverRefer" else "/refer"
+      packageId = if driverReferralType == DRIVER then config.referral.driverAppId else config.referral.customerAppId
+  in domain <> path <> "?referrer=" 
+      <> "utm_source%3D" <> source 
+      <> "%26utm_medium%3D" <> medium 
+      <> "%26utm_term%3D" <> term 
+      <> "%26utm_content%3D" <> content 
+      <> "%26utm_campaign%3D" <> campaign 
+      <> "%26anid%3Dadmob&id=" <> packageId

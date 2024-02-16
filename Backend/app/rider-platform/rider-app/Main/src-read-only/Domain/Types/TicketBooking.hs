@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.TicketBooking where
 
@@ -13,7 +14,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data TicketBooking = TicketBooking
   { amount :: Kernel.Types.Common.HighPrecMoney,
@@ -33,6 +34,6 @@ data TicketBooking = TicketBooking
 data BookingStatus = Pending | Failed | Booked
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(mkBeamInstancesForEnum ''BookingStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 
 $(mkHttpInstancesForEnum ''BookingStatus)

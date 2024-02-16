@@ -1,6 +1,7 @@
 module Resources.Localizable.KN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getKN :: STR -> String
 getKN stringKey =
@@ -616,7 +617,7 @@ getKN stringKey =
         CANCEL_AUTOPAY_STR ->  "ಸ್ವಯಂ ಪಾವತಿ ರದ್ದುಮಾಡಿ"
         WE_MIGHT_BE_LOST ->  "ಉಹ್ ಓಹ್! ನಾವು ಕಳೆದುಹೋಗಬಹುದು"
         EXEPERIENCING_ERROR ->  "ದೋಷವನ್ನು ಅನುಭವಿಸುತ್ತಿದೆ"
-        ENJOY_THESE_BENEFITS ->  "ಈ ಪ್ರಯೋಜನಗಳನ್ನು ಆನಂದಿಸಿ"
+        ENJOY_THESE_BENEFITS ->  "ನಿಮ್ಮ ಸೇರ್ಪಡೆ ಪ್ರಯೋಜನಗಳು!"
         CHOOSE_YOUR_PLAN _ ->  "ಈಗ ಯೋಜನೆಯನ್ನು ಆರಿಸಿ!"
         SKIP_FOR_NOW ->  "ಇದೀಗ ಬಿಟ್ಟುಬಿಡಿ"
         SEVEN_DAY_FREE_TRIAL_ACTIVATED ->  "7-ದಿನದ ಉಚಿತ ಪ್ರಯೋಗವನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ!"
@@ -1190,7 +1191,7 @@ getKN stringKey =
         ONE_TWO_START_RATING -> "ಪ್ರಯಾಣಕ್ಕಾಗಿ 1 ಅಥವಾ 2 ನಕ್ಷತ್ರ ರೇಟಿಂಗ್"
         BOOKING_CANCELLATION -> "ಬುಕಿಂಗ್ ರದ್ದತಿ"
         PAID_BY -> "ಪಾವತಿಸಲಾಗಿದೆ"
-        DRIVER_REFERRAL_CODE -> "ಚಾಲಕ ರೆಫರಲ್ ಕೋಡ್"
+        DRIVER_REFERRAL_CODE -> "ಚಾಲಕ \n ರೆಫರಲ್ ಕೋಡ್"
         APP_QR_CODE -> "ಅಪ್ಲಿಕೇಶನ್ QR ಕೋಡ್"
         START_TAKING_RIDES_AND_REFER _ -> "ನಮ್ಮ ಯಾತ್ರಿ ಡ್ರೈವರ್ ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಸೈನ್ ಅಪ್ ಮಾಡಲು ಸವಾರಿಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ಮತ್ತು ಚಾಲಕರನ್ನು ಉಲ್ಲೇಖಿಸಲು ಪ್ರಾರಂಭಿಸಿ"
         REFERRED_DRIVERS -> "ಉಲ್ಲೇಖಿಸಿದ ಚಾಲಕರು"
@@ -1209,3 +1210,27 @@ getKN stringKey =
         MAX -> "ಗರಿಷ್ಠ"
         COINS -> "ನಾಣ್ಯಗಳು"
         COINS_ADDED -> "ನಾಣ್ಯಗಳನ್ನು ಸೇರಿಸಲಾಗಿದೆ"
+        REFERRAL -> "ರೆಫರಲ್"
+        BENEFITS -> "ಲಾಭ"
+        YOUR_DAILY_RANK -> "ನಿಮ್ಮ ದೈನಂದಿನ ಶ್ರೇಣಿ"
+        CLICK_TO_EXPAND -> "ವಿಸ್ತರಿಸಲು ಕ್ಲಿಕ್ ಮಾಡಿ"
+        REFERRED -> "ಉಲ್ಲೇಖಿಸಿದ"
+        ACTIVATED -> "ಸಕ್ರಿಯಗೊಂಡಿದೆ"
+        REFER_DRIVER -> "ಚಾಲಕರನ್ನು ಉಲ್ಲೇಖಿಸಿ"
+        REFER_CUSTOMER -> "ಗ್ರಾಹಕರನ್ನು ಉಲ್ಲೇಖಿಸಿ"
+        REFERRED_DRIVERS_INFO _ -> "ನಮ್ಮ ಯಾತ್ರಿಗೆ ನೋಂದಾಯಿಸಿದ ಸೂಚಿತ ಚಾಲಕರು"
+        REFERRED_CUSTOMERS_INFO _ -> "ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸೂಚನೆ ಮಾಡಿದ ಗ್ರಾಹಕರು"
+        ACTIVATED_CUSTOMERS_INFO -> "ತಮ್ಮ ಮೊದಲ ಸಫಲ ಸವಾರಿಯನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ ಸೂಚಿತ ಗ್ರಾಹಕರು"
+        CUSTOMER_REFERRAL_CODE -> "ಗ್ರಾಹಕರ \n ರೆಫರಲ್ ಕೋಡ್"
+        ACCEPT_RIDE_TO_ENTER_LEADERBOARD -> "ಸವಾರಿಗಳನ್ನು ಸ್ವೀಕರಿಸಿ\nಮತ್ತು ಉನ್ನತ ಚಾಲಕರಾಗಿ"
+        CONTACT_SUPPORT_VIA -> "ಮೂಲಕ ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ"
+        YOU_CAN_SHARE_SCREENSHOT -> "ಹಸ್ತಚಾಲಿತ ಆನ್‌ಬೋರ್ಡಿಂಗ್‌ಗಾಗಿ ನೀವು ಸ್ಕ್ರೀನ್‌ಶಾಟ್‌ಗಳು ಮತ್ತು ಡಾಕ್ಯುಮೆಂಟ್‌ಗಳನ್ನು ಹಂಚಿಕೊಳ್ಳಬಹುದು"
+        PLACE_A_CALL -> "ಡಾಕ್ಯುಮೆಂಟ್‌ಗಳನ್ನು ಪರಿಶೀಲಿಸಲು ತ್ವರಿತ ಸಹಾಯಕ್ಕಾಗಿ ಕರೆ ಮಾಡಿ"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&Cಗಳು ಮತ್ತು ಗೌಪ್ಯತೆ ನೀತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"
+        CUSTOMER_SAFETY_FIRST -> "ಗ್ರಾಹಕರ ಸುರಕ್ಷತೆ ಮೊದಲು!"
+        LETS_ENSURE_SAFE_RIDE -> "ರೈಡ್ ಸುರಕ್ಷಿತವಾಗಿದೆ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ಗ್ರಾಹಕರ ಸುರಕ್ಷತೆ ನಮ್ಮ<br>ಜವಾಬ್ದಾರಿಯಾಗಿದೆ. ಸವಾರಿ ಸುರಕ್ಷಿತ<br>ಮತ್ತು ಸಂತೋಷವಾಗಿದೆ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ"
+        OUR_SAFETY_PARTNER -> "ನಮ್ಮ ಸುರಕ್ಷತಾ ಪಾಲುದಾರ"
+        SAFETY_IS_OUR_RESPONSIBILITY -> "ಸುರಕ್ಷೆ ನಮ್ಮ ಜವಾಬ್ದಾರಿ"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "ಶುಭಾಶಯಗಳು!\n\nಶುಭಾಶಯಗಳು, ನೋಂದಾಯಿಸಲು ದಯವಿಟ್ಟು ನನ್ನ ರೆಫರಲ್ ಕೋಡ್ " <> code <> "ಅನ್ನು ಬಳಸಿ " <> name <> ".\n\nಅಪ್ಲಿಕೇಶನ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು QR ಕೋಡ್ ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ಅಥವಾ ಕೆಳಗಿನ ಲಿಂಕ್ ಅನ್ನು ಕ್ಲಿಕ್ ಮಾಡಿ. ಅಗತ್ಯವಿರುವ ನೋಂದಣಿ ಹಂತಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ ಮತ್ತು ನನ್ನ ರೆಫರಲ್ ಕೋಡ್ ಅನ್ನು ನಮೂದಿಸಿ. ಆನ್‌ಲೈನ್‌ಗೆ ಹೋಗಿ ಮತ್ತು ಗಳಿಸಲು ಪ್ರಾರಂಭಿಸಿ!\n\n"
+        DOWNLOAD_NOW -> "(ಈಗ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ) "

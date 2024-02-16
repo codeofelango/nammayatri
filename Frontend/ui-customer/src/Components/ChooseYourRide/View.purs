@@ -414,7 +414,7 @@ getQuoteListViewHeight :: Config -> Length
 getQuoteListViewHeight config =
     let len = length config.quoteList
         quoteHeight = getHeightOfEstimateItem config
-        height = if quoteHeight == 0 then 87 else quoteHeight - 7
+        height = if quoteHeight == 0 then 87 else quoteHeight + 7
     in V $ (if len >= 4 then 3 * height else len * height) + 5
 
 getHeightOfEstimateItem :: Config -> Int
@@ -430,5 +430,7 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
   , id = "ConfirmAndBookButton"
   , background = Color.black900
   , margin = Margin 0 16 0 15
+  , enableRipple = true
+  , rippleColor = Color.rippleShade
   }
 

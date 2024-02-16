@@ -34,18 +34,19 @@ import Storage.CachedQueries.Maps.LocationMapCache
 
 frequencyUpdator ::
   ( CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Merchant ->
   LatLong ->
   Maybe LA.LocationAddress ->
   TypeOfMovement ->
   m ()
-frequencyUpdator merchantId latLong _address movement = do
+frequencyUpdator merchantId latLong _ movement = do
   hotSpotConfig <- QHotSpotConfig.findConfigByMerchantId merchantId
   case hotSpotConfig of
     Just HotSpotConfig {..} -> when shouldTakeHotSpot do
-      mbHotSpot <- convertToHotSpot latLong _address merchantId
+      mbHotSpot <- convertToHotSpot latLong Nothing merchantId
       now <- getCurrentTime
       case mbHotSpot of
         Just HotSpot {..} -> do
@@ -65,11 +66,11 @@ frequencyUpdator merchantId latLong _address movement = do
                           hotSpots
                   filterAndUpdateHotSpotWithExpiry (Dt.take precisionToGetGeohash _geoHash) updatedHotSpot hotSpotExpiry
                 else do
-                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  expTime <- getSeconds <$> asks (.hotSpotExpiry)
                   let createdGeoHash = createGeoHash HotSpot {..} now
                   hSetExp makeHotSpotKey (Dt.take precisionToGetGeohash _geoHash) (hotSpots ++ [createdGeoHash]) expTime
             Nothing -> do
-              expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+              expTime <- getSeconds <$> asks (.hotSpotExpiry)
               let createdGeoHash = createGeoHash HotSpot {..} now
               hSetExp makeHotSpotKey (Dt.take precisionToGetGeohash _geoHash) [createdGeoHash] expTime
         Nothing -> return ()
@@ -81,19 +82,20 @@ frequencyUpdator merchantId latLong _address movement = do
         & geoHash .~ _geoHash
         & centroidLatLong .~ _centroidLatLong
         & movementLens movement %~ (+ 1)
-        & address .~ _address
+        & address .~ Nothing
         & updatedAt ?~ now
 
 filterAndUpdateHotSpotWithExpiry ::
   ( CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Text ->
   [HotSpot] ->
   Int ->
   m ()
 filterAndUpdateHotSpotWithExpiry geohash hotSpots hotSpotExpiry = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  expTime <- getSeconds <$> asks (.hotSpotExpiry)
   filterWithExpiry <-
     filterM
       ( \hotSpot -> case hotSpot._updatedAt of
@@ -105,7 +107,8 @@ filterAndUpdateHotSpotWithExpiry geohash hotSpots hotSpotExpiry = do
 
 removeExpiredHotSpots ::
   ( CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Merchant ->
   m APISuccess

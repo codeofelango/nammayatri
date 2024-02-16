@@ -19,7 +19,8 @@ import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
-import qualified Domain.Action.UI.Search.Common as DSearchCommon
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as Variant
@@ -63,7 +64,7 @@ castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
 
-mkLocation :: DSearchCommon.SearchReqLocation -> Search.Location
+mkLocation :: DSearch.SearchReqLocation -> Search.Location
 mkLocation info =
   Search.Location
     { gps =
@@ -111,3 +112,16 @@ castCancellationSource = \case
   Common.ByMerchant -> SBCR.ByMerchant
   Common.ByAllocator -> SBCR.ByAllocator
   Common.ByApplication -> SBCR.ByApplication
+
+getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
+getTagV2 tagGroupCode tagCode tagGroups = do
+  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just tagGroupCode) tagGroups
+  case tagGroup.tagGroupList of
+    Nothing -> Nothing
+    Just tagGroupList -> do
+      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
+      tag.tagValue
+  where
+    descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
+    descriptorCode (Just desc) = desc.descriptorCode
+    descriptorCode Nothing = Nothing

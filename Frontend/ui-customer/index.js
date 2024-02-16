@@ -70,13 +70,15 @@ const eventObject = {
   , data : ""
 }
 
+function makeEvent(_type, _data) {
+  return { type : _type, data : _data };
+}
 
 window.isObject = function (object) {
   return (typeof object == "object");
 }
-window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "onKeyboardClose", "onKeyboardOpen"];
-window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED"];
-
+window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "onKeyboardClose", "onKeyboardOpen", "RestartAutoScroll"];
+window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED", "REALLOCATE_PRODUCT", "FOLLOW_RIDE", "SOS_TRIGGERED", "SOS_RESOLVED", "SOS_MOCK_DRILL", "SHARE_RIDE"];
 // setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
 const isUndefined = function (val) {
@@ -144,9 +146,10 @@ function callInitiateResult () {
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
-window.onMerchantEvent = function (_event, GlobalPayload) {
-  console.log(GlobalPayload);
-  const clientPaylod = JSON.parse(GlobalPayload).payload;
+window.onMerchantEvent = function (_event, globalPayload) {
+  console.log(globalPayload);
+  window.__payload = JSON.parse(globalPayload);
+  const clientPaylod = window.__payload.payload;
   if (_event == "initiate") {
     let clientId = clientPaylod.clientId;
     if (clientId.includes("_ios"))
@@ -170,9 +173,7 @@ window.onMerchantEvent = function (_event, GlobalPayload) {
     window.__payload.sdkVersion = "2.0.1"
     if (clientPaylod.action == "notification") {
       if (clientPaylod.notification_content && clientPaylod.notification_content.type) {
-        if (window.whitelistedNotification.includes(clientPaylod.notification_content.type)){
-          window.callNotificationCallBack(clientPaylod.notification_content.type);
-        }
+        window.callNotificationCallBack(clientPaylod.notification_content.type);
       }
     } else if (clientPaylod.action == "OpenChatScreen") { 
       if (window.openChatScreen) {
@@ -180,14 +181,18 @@ window.onMerchantEvent = function (_event, GlobalPayload) {
       }
     }
     else {
-      eventObject["type"] = "";
-      eventObject["data"] = "";
-      if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
-        eventObject["type"] = "CHAT_MESSAGE";
+      console.log("client Payload: ", clientPaylod);
+      if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
+        purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
+      }else if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
+        purescript.main(makeEvent("CHAT_MESSAGE", ""))(true)();
+      }else if (clientPaylod.viewParamNewIntent && clientPaylod.viewParamNewIntent.slice(0, 8) == "referrer") {
+        purescript.onNewIntent(makeEvent("REFERRAL", clientPaylod.viewParamNewIntent.slice(9)))();
+      }else if (clientPaylod.viewParam && clientPaylod.viewParam.slice(0, 8) == "referrer") {
+        purescript.onNewIntent(makeEvent("REFERRAL_NEW_INTENT", clientPaylod.viewParam.slice(9)))();
+      }else {
+        purescript.main(makeEvent("", ""))(true)();
       }
-      window.__payload = JSON.parse(GlobalPayload);
-      console.log("window Payload: ", window.__payload);
-      purescript.main(eventObject)();
     }
   }
 }

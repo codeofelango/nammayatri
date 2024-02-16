@@ -101,7 +101,7 @@ foreign import updateIdMap :: EffectFn1 String CarouselHolderData
 foreign import updatePushInIdMap :: Fn2 String Boolean Unit
 foreign import getValueFromIdMap :: EffectFn1 String CarouselHolderData
 
-
+foreign import isTrue :: forall a. a -> Boolean
 os :: String
 os = getOs unit
 
@@ -200,6 +200,16 @@ modifyEpassRef f ref = do
 safeMarginTop :: Int
 safeMarginTop = safeMarginTopImpl unit
 
+safeMarginTopWithDefault :: Int -> Int
+safeMarginTopWithDefault def = 
+  let safeMargin = safeMarginTop
+  in if safeMargin == 0 then def else safeMargin
+
+safeMarginBottomWithDefault :: Int -> Int
+safeMarginBottomWithDefault def = 
+  let safeMargin = safeMarginBottom
+  in if safeMargin == 0 then def else safeMargin
+
 safeMarginBottom :: Int
 safeMarginBottom = safeMarginBottomImpl unit
 
@@ -281,16 +291,19 @@ getMapsLanguageFormat key =
     "TE_IN" -> "TELUGU"
     _       -> "ENGLISH"
 
-getYoutubeData :: String -> String -> Int -> YoutubeData
-getYoutubeData videoId videoType videoHeight = {
+
+getYoutubeData :: YoutubeData
+getYoutubeData  = {
   videoTitle : "title",
   setVideoTitle : false,
   showMenuButton : false,
   showDuration : true,
   showSeekBar : true,
-  videoId : videoId,
-  videoType : videoType,
-  videoHeight : videoHeight
+  videoId : "videoId",
+  videoType : "PORTRAIT_VIDEO",
+  videoHeight : 0,
+  showFullScreen : false,
+  hideFullScreenButton : false
 }
 
 isInvalidUrl :: String -> Boolean

@@ -29,6 +29,10 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getPlan,
     getDriverFeeBillNumberKey,
     mkDriverFeeBillNumberKey,
+    mkDriverFee,
+    setDriverFeeBillNumberKey,
+    getDriverFeeCalcJobCache,
+    setDriverFeeCalcJobCache,
   )
 where
 
@@ -38,6 +42,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationCharges as DCC
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -66,12 +71,14 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
 import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
@@ -80,7 +87,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
-import Storage.Queries.DriverPlan (findByDriverId)
+import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFare
@@ -125,9 +132,12 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   QDriverStats.updateIdleTime driverId
   QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
 
+  clearCachedFarePolicyByEstOrQuoteId booking.quoteId
+
   when (thresholdConfig.subscription) $ do
     maxShards <- asks (.maxShards)
-    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare newFareParams maxShards driverInfo booking
+    let serviceName = YATRI_SUBSCRIPTION
+    createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare newFareParams maxShards driverInfo booking serviceName
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -330,9 +340,8 @@ createDriverFee ::
     EsqDBFlow m r,
     EncFlow m r,
     MonadFlow m,
-    HasField "schedulerSetName" r Text,
-    HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType
   ) =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -342,8 +351,9 @@ createDriverFee ::
   Int ->
   DI.DriverInformation ->
   SRB.Booking ->
+  ServiceNames ->
   m ()
-createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo booking = do
+createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo booking serviceName = do
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft
@@ -351,10 +361,11 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
   let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
         DFare.ProgressiveDetails _ -> (0, 0, 0)
         DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
+        DFare.RentalDetails _ -> (0, 0, 0)
   let totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-  lastDriverFee <- QDF.findLatestFeeByDriverId driverId
-  driverFee <- mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig booking
+  lastDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName
+  driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig (Just booking)
   let toUpdateOrCreateDriverfee = totalDriverFee > 0 || (totalDriverFee <= 0 && transporterConfig.isPlanMandatory && isJust mbDriverPlan)
   when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig freeTrialDaysLeft) $ do
     numRides <- case lastDriverFee of
@@ -369,70 +380,48 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
       Nothing -> do
         QDF.create driverFee
         return 1
-    plan <- getPlan mbDriverPlan merchantId
-    fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides
+    plan <- getPlan mbDriverPlan serviceName merchantOpCityId
+    fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
     scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
   where
-    isEligibleForCharge transporterConfig freeTrialDaysLeft = case booking.bookingType of
-      SRB.SpecialZoneBooking -> transporterConfig.considerSpecialZoneRideChargesInFreeTrial || freeTrialDaysLeft <= 0
-      _ -> freeTrialDaysLeft <= 0
+    isEligibleForCharge transporterConfig freeTrialDaysLeft =
+      if DTC.isRideOtpBooking booking.tripCategory
+        then transporterConfig.considerSpecialZoneRideChargesInFreeTrial || freeTrialDaysLeft <= 0
+        else freeTrialDaysLeft <= 0
+
     getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Int -> m (Maybe DriverPlan)
     getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft' = do
-      mbDriverPlan' <- findByDriverId (cast driverId)
+      mbDriverPlan' <- findByDriverIdWithServiceName (cast driverId) serviceName
       let planMandatory = transporterConfig.isPlanMandatory
           chargeSPZRides = transporterConfig.considerSpecialZoneRideChargesInFreeTrial
           isEligibleForDefaultPlanAfterFreeTrial = freeTrialDaysLeft' <= 0 && planMandatory && transporterConfig.allowDefaultPlanAllocation
           isEligibleForDefaultPlanBeforeFreeTrial = freeTrialDaysLeft' > 0 && chargeSPZRides && planMandatory
       if isNothing mbDriverPlan'
         then do
-          case (booking.bookingType, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
-            (SRB.SpecialZoneBooking, True, _) -> assignDefaultPlan
+          case (DTC.isRideOtpBooking booking.tripCategory, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
+            (True, True, _) -> assignDefaultPlan
             (_, _, True) -> assignDefaultPlan
             _ -> return mbDriverPlan'
         else return mbDriverPlan'
     assignDefaultPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m (Maybe DriverPlan)
     assignDefaultPlan = do
-      plans <- CQP.findByMerchantIdAndType merchantId DEFAULT
+      plans <- CQP.findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId DEFAULT serviceName
       case plans of
         (plan' : _) -> do
-          newDriverPlan <- Plan.mkDriverPlan plan' driverId
+          newDriverPlan <- Plan.mkDriverPlan plan' (driverId, merchantId, merchantOpCityId)
           QDPlan.create newDriverPlan
-          QDI.updateAutoPayStatusAndPayerVpa (Just DI.PENDING) Nothing (cast driverId)
+          Plan.updateSubscriptionStatus serviceName (driverId, merchantId, merchantOpCityId) (Just DI.PENDING) Nothing
+          QDI.updatPayerVpa Nothing (cast driverId)
           return $ Just newDriverPlan
         _ -> return Nothing
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> Int -> UTCTime -> m ()
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> Int -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now = do
   void $
     case transporterConfig.driverFeeCalculationTime of
-      Nothing -> do
-        isPendingPaymentJobScheduled <- getPendingPaymentCache driverFee.endTime
-        let pendingPaymentJobTs = diffUTCTime driverFee.endTime now
-        case isPendingPaymentJobScheduled of
-          Nothing -> do
-            createJobIn @_ @'SendPaymentReminderToDriver pendingPaymentJobTs maxShards $
-              SendPaymentReminderToDriverJobData
-                { startTime = driverFee.startTime,
-                  endTime = driverFee.endTime,
-                  timeDiff = transporterConfig.timeDiffFromUtc,
-                  merchantId = Just merchantId
-                }
-            setPendingPaymentCache driverFee.endTime pendingPaymentJobTs
-          _ -> pure ()
-        let overduePaymentJobTs = diffUTCTime driverFee.payBy now
-        isOverduePaymentJobScheduled <- getOverduePaymentCache driverFee.endTime
-        case isOverduePaymentJobScheduled of
-          Nothing -> do
-            createJobIn @_ @'UnsubscribeDriverForPaymentOverdue overduePaymentJobTs maxShards $
-              UnsubscribeDriverForPaymentOverdueJobData
-                { startTime = driverFee.startTime,
-                  timeDiff = transporterConfig.timeDiffFromUtc,
-                  merchantId = Just merchantId
-                }
-            setOverduePaymentCache driverFee.endTime overduePaymentJobTs
-          _ -> pure ()
+      Nothing -> pure ()
       Just dfCalcTime -> do
-        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantId
+        isDfCaclculationJobScheduled <- getDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId
         let dfCalculationJobTs = diffUTCTime (addUTCTime dfCalcTime driverFee.endTime) now
         case isDfCaclculationJobScheduled of
           ----- marker ---
@@ -442,10 +431,16 @@ scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards n
                 { merchantId = merchantId,
                   merchantOperatingCityId = Just merchantOpCityId,
                   startTime = driverFee.startTime,
+                  serviceName = Just (driverFee.serviceName),
+                  scheduleNotification = Just True,
+                  scheduleOverlay = Just True,
+                  scheduleManualPaymentLink = Just True,
+                  scheduleDriverFeeCalc = Just True,
+                  createChildJobs = Just True,
                   endTime = driverFee.endTime
                 }
-            setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantId dfCalculationJobTs
-            setDriverFeeBillNumberKey merchantId 1 36000
+            setDriverFeeCalcJobCache driverFee.startTime driverFee.endTime merchantOpCityId dfCalculationJobTs
+            setDriverFeeBillNumberKey merchantOpCityId 1 36000 (driverFee.serviceName)
           _ -> pure ()
 
 mkDriverFee ::
@@ -454,7 +449,10 @@ mkDriverFee ::
     CacheFlow m r,
     EsqDBFlow m r
   ) =>
+  ServiceNames ->
   UTCTime ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   Id Merchant ->
   Id DP.Driver ->
   Maybe Money ->
@@ -463,9 +461,9 @@ mkDriverFee ::
   HighPrecMoney ->
   HighPrecMoney ->
   TransporterConfig ->
-  SRB.Booking ->
+  Maybe SRB.Booking ->
   m DF.DriverFee
-mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig booking = do
+mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst transporterConfig mbBooking = do
   id <- generateGUID
   let potentialStart = addUTCTime transporterConfig.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig.driverPaymentCycleDuration) potentialStart
@@ -476,14 +474,14 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
       isPlanMandatory = transporterConfig.isPlanMandatory
       totalFee = platformFee + cgst + sgst
       (specialZoneRideCount, specialZoneAmount) = specialZoneMetricsIntialization totalFee
-  mbDriverPlan <- findByDriverId (cast driverId) -- what if its changed? needed inside lock?
-  plan <- getPlan mbDriverPlan merchantId
+      numRides = if serviceName == YATRI_SUBSCRIPTION then 1 else 0
+  mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
+  plan <- getPlan mbDriverPlan serviceName transporterConfig.merchantOperatingCityId
   return $
     DF.DriverFee
       { status = DF.ONGOING,
         collectedBy = Nothing,
         collectedAt = Nothing,
-        numRides = 1,
         createdAt = now,
         updatedAt = now,
         platformFee = platformFee_,
@@ -507,65 +505,57 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         notificationRetryCount = 0,
         badDebtDeclarationDate = Nothing,
         badDebtRecoveryDate = Nothing,
+        vehicleNumber = case mbDriverPlan <&> (.subscriptionServiceRelatedData) of
+          Just (RentedVehicleNumber t) -> Just t
+          _ -> Nothing,
+        merchantOperatingCityId = transporterConfig.merchantOperatingCityId,
+        startTime = fromMaybe startTime startTime',
+        endTime = fromMaybe endTime endTime',
         ..
       }
   where
     specialZoneMetricsIntialization totalFee' = do
-      case booking.bookingType of
-        SRB.SpecialZoneBooking -> (1, totalFee')
-        _ -> (0, 0)
+      let mbBookingCategory = mbBooking <&> (.tripCategory)
+      if (DTC.isRideOtpBooking <$> mbBookingCategory) == Just True then (1, totalFee') else (0, 0)
 
-getPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe DriverPlan -> Id Merchant -> m (Maybe Plan)
-getPlan mbDriverPlan merchantId = do
+getPlan ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Maybe DriverPlan ->
+  ServiceNames ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe Plan)
+getPlan mbDriverPlan serviceName merchantOpCityId = do
   case mbDriverPlan of
-    Just dp -> CQP.findByIdAndPaymentMode dp.planId dp.planType
+    Just dp -> CQP.findByIdAndPaymentModeWithServiceName dp.planId dp.planType serviceName
     Nothing -> do
-      plans <- CQP.findByMerchantIdAndType merchantId DEFAULT
+      plans <- CQP.findByMerchantOpCityIdAndTypeWithServiceName merchantOpCityId DEFAULT serviceName
       case plans of
         [] -> pure Nothing
         [pl] -> pure (Just pl)
         _ -> throwError $ InternalError "Multiple default plans found"
 
-mkPendingPaymentProcessingKey :: UTCTime -> Text
-mkPendingPaymentProcessingKey timestamp = "DriverPendingPaymentProcessing:Timestamp:" <> show timestamp
+getDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> m (Maybe Bool)
+getDriverFeeCalcJobCache startTime endTime merchantOpCityId = Hedis.get (mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId)
 
-getPendingPaymentCache :: CacheFlow m r => UTCTime -> m (Maybe Bool)
-getPendingPaymentCache endTime = Hedis.get (mkPendingPaymentProcessingKey endTime)
+mkDriverFeeCalcJobCacheKey :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> Text
+mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId = "DriverFeeCalculation:MerchantOpCityId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
 
-setPendingPaymentCache :: CacheFlow m r => UTCTime -> NominalDiffTime -> m ()
-setPendingPaymentCache endTime expTime = Hedis.setExp (mkPendingPaymentProcessingKey endTime) False (round expTime)
+mkDriverFeeCalcJobFlagKey :: UTCTime -> UTCTime -> Id MerchantOperatingCity -> Text
+mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId = "DriverFeeCalculationFlag:MerchantOpCityId:" <> merchantOpCityId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
 
-mkOverduePaymentProcessingKey :: UTCTime -> Text
-mkOverduePaymentProcessingKey timestamp = "DriverOverduePaymentProcessing:Timestamp:" <> show timestamp
+getDriverFeeCalcJobFlagKey :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> m (Maybe Bool)
+getDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId = Hedis.get (mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId)
 
-getOverduePaymentCache :: CacheFlow m r => UTCTime -> m (Maybe Bool)
-getOverduePaymentCache endTime = Hedis.get (mkOverduePaymentProcessingKey endTime)
+setDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id MerchantOperatingCity -> NominalDiffTime -> m ()
+setDriverFeeCalcJobCache startTime endTime merchantOpCityId expTime = do
+  Hedis.setExp (mkDriverFeeCalcJobFlagKey startTime endTime merchantOpCityId) True (round $ expTime + 86399)
+  Hedis.setExp (mkDriverFeeCalcJobCacheKey startTime endTime merchantOpCityId) False (round $ expTime + 86399)
 
-setOverduePaymentCache :: CacheFlow m r => UTCTime -> NominalDiffTime -> m ()
-setOverduePaymentCache endTime expTime = Hedis.setExp (mkOverduePaymentProcessingKey endTime) False (round expTime)
+mkDriverFeeBillNumberKey :: Id MerchantOperatingCity -> ServiceNames -> Text
+mkDriverFeeBillNumberKey merchantOpCityId service = "DriverFeeCalulation:BillNumber:Counter" <> merchantOpCityId.getId <> ":service:" <> show service
 
-getDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id Merchant -> m (Maybe Bool)
-getDriverFeeCalcJobCache startTime endTime merchantId = Hedis.get (mkDriverFeeCalcJobCacheKey startTime endTime merchantId)
+getDriverFeeBillNumberKey :: CacheFlow m r => Id MerchantOperatingCity -> ServiceNames -> m (Maybe Int)
+getDriverFeeBillNumberKey merchantOpCityId serviceName = Hedis.get (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
 
-mkDriverFeeCalcJobCacheKey :: UTCTime -> UTCTime -> Id Merchant -> Text
-mkDriverFeeCalcJobCacheKey startTime endTime merchantId = "DriverFeeCalculation:MerchantId:" <> merchantId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
-
-mkDriverFeeCalcJobFlagKey :: UTCTime -> UTCTime -> Id Merchant -> Text
-mkDriverFeeCalcJobFlagKey startTime endTime merchantId = "DriverFeeCalculationFlag:MerchantId:" <> merchantId.getId <> ":StartTime:" <> show startTime <> ":EndTime:" <> show endTime
-
-getDriverFeeCalcJobFlagKey :: CacheFlow m r => UTCTime -> UTCTime -> Id Merchant -> m (Maybe Bool)
-getDriverFeeCalcJobFlagKey startTime endTime merchantId = Hedis.get (mkDriverFeeCalcJobFlagKey startTime endTime merchantId)
-
-setDriverFeeCalcJobCache :: CacheFlow m r => UTCTime -> UTCTime -> Id Merchant -> NominalDiffTime -> m ()
-setDriverFeeCalcJobCache startTime endTime merchantId expTime = do
-  Hedis.setExp (mkDriverFeeCalcJobFlagKey startTime endTime merchantId) True (round $ expTime + 86399)
-  Hedis.setExp (mkDriverFeeCalcJobCacheKey startTime endTime merchantId) False (round $ expTime + 86399)
-
-mkDriverFeeBillNumberKey :: Id Merchant -> Text
-mkDriverFeeBillNumberKey merchantId = "DriverFeeCalulation:BillNumber:Counter" <> merchantId.getId
-
-getDriverFeeBillNumberKey :: CacheFlow m r => Id Merchant -> m (Maybe Int)
-getDriverFeeBillNumberKey merchantId = Hedis.get (mkDriverFeeBillNumberKey merchantId)
-
-setDriverFeeBillNumberKey :: CacheFlow m r => Id Merchant -> Int -> NominalDiffTime -> m ()
-setDriverFeeBillNumberKey merchantId count expTime = Hedis.setExp (mkDriverFeeBillNumberKey merchantId) count (round expTime)
+setDriverFeeBillNumberKey :: CacheFlow m r => Id MerchantOperatingCity -> Int -> NominalDiffTime -> ServiceNames -> m ()
+setDriverFeeBillNumberKey merchantOpCityId count expTime serviceName = Hedis.setExp (mkDriverFeeBillNumberKey merchantOpCityId serviceName) count (round expTime)

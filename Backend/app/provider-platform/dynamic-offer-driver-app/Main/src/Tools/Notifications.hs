@@ -20,6 +20,7 @@ import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
@@ -722,7 +723,8 @@ buildSendSearchRequestNotificationData driverId mbDeviceToken entityData dynamic
         body = mkBody,
         title = title,
         auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
-        ttl = Just entityData.searchRequestValidTill
+        ttl = Just entityData.searchRequestValidTill,
+        sound = Nothing
       }
   where
     title = "New ride available for offering"
@@ -742,7 +744,8 @@ buildSendSearchRequestNotificationData driverId mbDeviceToken entityData dynamic
 sendSearchRequestToDriverNotification ::
   ( ServiceFlow m r,
     ToJSON a,
-    ToJSON b
+    ToJSON b,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -760,8 +763,47 @@ sendSearchRequestToDriverNotification merchantId merchantOpCityId req = Notifica
 
     getServiceConfig service = do
       merchantNotificationServiceConfig <-
-        QMSC.findByMerchantIdAndService merchantId (DMSC.NotificationService service)
+        QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.NotificationService service) merchantOpCityId
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Notification" (show service))
       case merchantNotificationServiceConfig.serviceConfig of
         DMSC.NotificationServiceConfig nsc -> pure nsc
         _ -> throwError $ InternalError "Unknow Service Config"
+
+data StopReq = StopReq
+  { bookingId :: Id Booking,
+    stop :: Maybe LocationAPIEntity,
+    isEdit :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+notifyStopModification ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  StopReq ->
+  m ()
+notifyStopModification merchantOpCityId personId mbDeviceToken entityData = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = if entityData.isEdit then FCM.EDIT_STOP else FCM.ADD_STOP
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = entityData.bookingId.getId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationId = Nothing
+        }
+    title = FCMNotificationTitle (if entityData.isEdit then "Stop Edited" else "Stop Added")
+    body =
+      FCMNotificationBody $
+        unwords
+          [ if entityData.isEdit then "Customer edited stop!" else "Customer added a stop!"
+          ]

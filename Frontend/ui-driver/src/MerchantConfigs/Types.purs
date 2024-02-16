@@ -35,10 +35,12 @@ type AppConfigDriver a =
     banners :: BannerConfig,
     referral :: ReferralConfig,
     enableDriverReferral :: Boolean,
+    enableCustomerReferral :: Boolean,
     rideRequest :: RideRequestConfig,
     coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
-    chooseCity :: ChooseCityScreenConfig
+    chooseCity :: ChooseCityScreenConfig,
+    safetyRide :: SafetyRideConfig
     | a
   } 
 
@@ -122,6 +124,8 @@ type RideCompletedCardConfig = {
 type ProfileConfig = {
   bookingOptionMenuForTaxi :: Boolean,
   showBookingOption :: Boolean
+, checkRCStatusForBookingOption :: Boolean
+
 }
 
 type GotoConfig = {
@@ -150,7 +154,9 @@ type MapConfig = {
 type WaitTimeConfig = {
   enableWaitTime :: Boolean,
   thresholdDist :: Number,
-  thresholdTime :: Int
+  thresholdTime :: Int,
+  routeDistance :: Int,
+  diffBtwTwoHeartBeats :: Int
 }
 
 type FlowConfig = {
@@ -179,6 +185,7 @@ type Features = {
 , enableOtpRide :: Boolean
 , enableSuggestions :: Boolean
 , enableYatriCoins :: Boolean
+, enableAutoReferral :: Boolean
 }
  
  -- VV - VechileVerfication
@@ -193,6 +200,8 @@ type BannerConfig = {
 type ReferralConfig = {
   type :: String
 , link :: String
+, customerAppId :: String
+, driverAppId :: String
 }
 
 type RideRequestConfig = {
@@ -215,7 +224,10 @@ type CoinsConfig = {
   rideCompletedCoins :: String,
   fiveStarRatingCoins :: String,
   oneOrTwoStarRatingCoins :: String,
-  rideCancellationCoins :: String
+  rideCancellationCoins :: String,
+  whatAreYatriCoinFAQ :: String,
+  howToEarnYatriCoinFAQ :: String,
+  howToRedeemYatriCoinFAQ :: String
 }
 
 type InAppKeyboardModalConfig = {
@@ -223,4 +235,9 @@ type InAppKeyboardModalConfig = {
 }
 type ChooseCityScreenConfig = {
   straightLineDistLogic :: Boolean
+}
+
+type SafetyRideConfig = {
+  startTime :: String
+, endTime :: String
 }

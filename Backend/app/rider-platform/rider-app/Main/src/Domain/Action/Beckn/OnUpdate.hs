@@ -88,7 +88,10 @@ data OnUpdateReq
       }
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide
+        bppRideId :: Id SRide.BPPRide,
+        tripStartLocation :: Maybe LatLong,
+        endOtp_ :: Maybe Text,
+        startOdometerReading :: Maybe Centesimal
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -98,7 +101,9 @@ data OnUpdateReq
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
         traveledDistance :: HighPrecMeters,
-        paymentUrl :: Maybe Text
+        paymentUrl :: Maybe Text,
+        tripEndLocation :: Maybe LatLong,
+        endOdometerReading :: Maybe Centesimal
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -132,6 +137,9 @@ data OnUpdateReq
         reason :: Text,
         code :: Text
       }
+  | StopArrivedReq
+      { bppRideId :: Id SRide.BPPRide
+      }
 
 data ValidatedOnUpdateReq
   = ValidatedRideAssignedReq
@@ -155,7 +163,10 @@ data ValidatedOnUpdateReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         booking :: SRB.Booking,
-        ride :: SRide.Ride
+        ride :: SRide.Ride,
+        tripStartLocation :: Maybe LatLong,
+        endOtp_ :: Maybe Text,
+        startOdometerReading :: Maybe Centesimal
       }
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -167,7 +178,9 @@ data ValidatedOnUpdateReq
         booking :: SRB.Booking,
         ride :: SRide.Ride,
         person :: DP.Person,
-        paymentUrl :: Maybe Text
+        paymentUrl :: Maybe Text,
+        tripEndLocation :: Maybe LatLong,
+        endOdometerReading :: Maybe Centesimal
       }
   | ValidatedBookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -214,6 +227,10 @@ data ValidatedOnUpdateReq
         ride :: SRide.Ride,
         code :: Text,
         reason :: Text
+      }
+  | ValidatedStopArrivedReq
+      { booking :: SRB.Booking,
+        ride :: SRide.Ride
       }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
@@ -267,8 +284,10 @@ onUpdate ::
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["isBecknSpecVersion2" ::: Bool],
     HasBAPMetrics m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   ValidatedOnUpdateReq ->
   m ()
@@ -301,6 +320,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             SRB.RentalDetails _ -> Nothing
             SRB.DriverOfferDetails details -> Just details.toLocation
             SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+            SRB.InterCityDetails details -> Just details.toLocation
       let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       return
         SRide.Ride
@@ -323,16 +343,23 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideRating = Nothing,
             safetyCheckStatus = Nothing,
             isFreeRide = Just isFreeRide,
+            endOtp = Nothing,
+            startOdometerReading = Nothing,
+            endOdometerReading = Nothing,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
   fork "ride start geohash frequencyUpdater" $ do
-    frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripStart
+    case tripStartLocation of
+      Just location -> frequencyUpdator booking.merchantId location Nothing TripStart
+      Nothing -> return ()
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
              rideStartTime = Just rideStartTime,
-             rideEndTime = Nothing
+             rideEndTime = Nothing,
+             endOtp = endOtp_,
+             startOdometerReading = startOdometerReading
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
@@ -342,7 +369,9 @@ onUpdate ValidatedRideStartedReq {..} = do
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
   fork "ride end geohash frequencyUpdater" $ do
-    frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripEnd
+    case tripEndLocation of
+      Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd
+      Nothing -> return ()
   SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
@@ -353,7 +382,8 @@ onUpdate ValidatedRideCompletedReq {..} = do
              fare = Just fare,
              totalFare = Just totalFare,
              chargeableDistance = Just chargeableDistance,
-             rideEndTime = Just rideEndTime
+             rideEndTime = Just rideEndTime,
+             endOdometerReading = endOdometerReading
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
@@ -402,16 +432,16 @@ onUpdate ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
   let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
-  case cancellationSource of
-    SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
-    SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
-    _ -> pure ()
   fork "incrementing fraud counters" $ do
     let merchantOperatingCityId = booking.merchantOperatingCityId
     mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   case mbRide of
     Just ride -> do
+      case cancellationSource of
+        SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
+        SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
+        _ -> pure ()
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
     Nothing -> do
       logDebug "No ride found for the booking."
@@ -453,6 +483,9 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   Notify.notifyOnEstimatedReallocated booking estimate.id
 onUpdate ValidatedSafetyAlertReq {..} = do
   Notify.notifySafetyAlert booking code
+onUpdate ValidatedStopArrivedReq {..} = do
+  QRB.updateStop booking Nothing
+  Notify.notifyOnStopReached booking ride
 
 validateRequest ::
   ( CacheFlow m r,
@@ -530,6 +563,18 @@ validateRequest SafetyAlertReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (ride.status == SRide.INPROGRESS) $ throwError (BookingInvalidStatus "$ show booking.status")
   return ValidatedSafetyAlertReq {..}
+validateRequest StopArrivedReq {..} = do
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> ride.bookingId.getId)
+  unless (ride.status == SRide.INPROGRESS) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress")
+  case booking.bookingDetails of
+    SRB.OneWayDetails _ -> throwError $ InvalidRequest "Stops are not present in static offer on demand rides"
+    SRB.DriverOfferDetails _ -> throwError $ InvalidRequest "Stops are not present in dynamic offer on demand rides"
+    SRB.OneWaySpecialZoneDetails _ -> throwError $ InvalidRequest "Stops are not present in on ride otp rides"
+    SRB.InterCityDetails _ -> throwError $ InvalidRequest "Stops are not present in intercity rides"
+    SRB.RentalDetails SRB.RentalBookingDetails {..} -> do
+      unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
+      return $ ValidatedStopArrivedReq {..}
 
 mkBookingCancellationReason ::
   Id SRB.Booking ->
@@ -538,6 +583,7 @@ mkBookingCancellationReason ::
   Id DMerchant.Merchant ->
   SBCR.BookingCancellationReason
 mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
+  -- cancellationSource merchantId =
   SBCR.BookingCancellationReason
     { bookingId = bookingId,
       rideId = mbRideId,

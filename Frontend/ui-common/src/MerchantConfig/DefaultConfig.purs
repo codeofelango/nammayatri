@@ -12,7 +12,7 @@ defaultColors = {
 defaultAppData :: AppDatas
 defaultAppData =  {
     link : ""
-  , supportMail :"nammayatri.support@juspay.in"
+  , supportMail :"support@nammayatri.in"
   , name : ""
   , website : "https://nammayatri.in"
   }
@@ -37,7 +37,7 @@ defaultLoaderConfig = {
 }
 defaultGenericHeader :: GenericHeaderConfig
 defaultGenericHeader = {
-    backArrow : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_chevron_left_white.png"
+    backArrow : "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
   }
 
 defaultNavigationAppConfig :: NavigationConfig
@@ -53,3 +53,9 @@ defaultNavigationAppConfig = {
       , packageName : ""
       }
     }
+
+defaultBannerCarousel :: BannerCarousalConfig
+defaultBannerCarousel = {
+  autoScrollDelay : 5000.0,
+  enableAutoScroll : true
+}

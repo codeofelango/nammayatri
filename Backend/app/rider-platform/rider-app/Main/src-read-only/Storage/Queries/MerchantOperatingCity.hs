@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -20,7 +21,16 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.MerchantOp
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.MerchantOperatingCity.MerchantOperatingCity] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
+
+findAllByMerchantIdAndState :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
+findAllByMerchantIdAndState (Kernel.Types.Id.Id merchantId) state = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.state $ Se.Eq state
+        ]
+    ]
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe (Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
 findById (Kernel.Types.Id.Id id) = do
@@ -56,13 +66,16 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ()
 updateByPrimaryKey Domain.Types.MerchantOperatingCity.MerchantOperatingCity {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.city $ city,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId merchantId),
-      Se.Set Beam.merchantShortId $ (Kernel.Types.Id.getShortId merchantShortId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.city city,
+      Se.Set Beam.lat lat,
+      Se.Set Beam.long long,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantShortId (Kernel.Types.Id.getShortId merchantShortId),
+      Se.Set Beam.state state,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
@@ -76,8 +89,11 @@ instance FromTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCit
         Domain.Types.MerchantOperatingCity.MerchantOperatingCity
           { city = city,
             id = Kernel.Types.Id.Id id,
+            lat = lat,
+            long = long,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantShortId = Kernel.Types.Id.ShortId merchantShortId,
+            state = state,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -87,8 +103,11 @@ instance ToTType' Beam.MerchantOperatingCity Domain.Types.MerchantOperatingCity.
     Beam.MerchantOperatingCityT
       { Beam.city = city,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.lat = lat,
+        Beam.long = long,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantShortId = Kernel.Types.Id.getShortId merchantShortId,
+        Beam.state = state,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

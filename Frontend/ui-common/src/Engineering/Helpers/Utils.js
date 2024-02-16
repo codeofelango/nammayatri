@@ -1,3 +1,5 @@
+import { callbackMapper } from "presto-ui";
+
 const JBridge = window.JBridge;
 
 export const saveToLocalStoreImpl = function(key) {

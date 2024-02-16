@@ -19,7 +19,8 @@ import Screens.HomeScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
+import Common.Types.App (LazyCheck(..))
+import Domain.Payments (APIPaymentStatus(..))
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Components.ChatView as ChatView
@@ -65,7 +66,7 @@ import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -347,7 +348,7 @@ driverMapsHeaderView push state =
               , orientation VERTICAL
               , background Color.transparent
               , gravity BOTTOM
-              ] $ [alternateNumberOrOTPView state push] <> getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+              ] $ [addAadhaarOrOTPView state push] <> getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             ]
         ]
         , bottomNavBar push state
@@ -421,8 +422,8 @@ rateCardView push state =
   ][ RateCard.view (push <<< RateCardAC) (rateCardState state) ]
 
 
-alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-alternateNumberOrOTPView state push =
+addAadhaarOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+addAadhaarOrOTPView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -433,12 +434,12 @@ alternateNumberOrOTPView state push =
   ][  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , gravity if showAddAltNumber then CENTER else RIGHT
-      ][  addAlternateNumber push state showAddAltNumber
+      , gravity if showAddAadhaar then CENTER else RIGHT
+      ][  addAadhaarNumber push state showAddAadhaar
         , if state.data.config.feature.enableOtpRide then otpButtonView state push else dummyTextView
         ]
       ]
-  where showAddAltNumber = (state.data.driverAlternateMobile == Nothing || state.props.showlinkAadhaarPopup) && state.props.statusOnline
+  where showAddAadhaar = state.props.showlinkAadhaarPopup && state.props.statusOnline
 
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
@@ -507,6 +508,7 @@ helpAndSupportBtnView push showReportText =
   , padding $ Padding 16 12 16 12
   , gravity CENTER
   , stroke $ "1,"<> Color.grey900
+  , rippleColor Color.rippleShade
   ][ imageView
      [ width $ V 15
      , height $ V 15
@@ -531,6 +533,7 @@ recenterBtnView state push =
   , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) then GONE else VISIBLE
   , cornerRadius 24.0
   , margin $ MarginLeft 12
+  , rippleColor Color.rippleShade
   ][ imageView
     [ width ( V 40 )
     , height ( V 40 )
@@ -622,6 +625,7 @@ offlineView push state =
                     , cornerRadius 75.0
                     , background if showGoInYellow then Color.yellowText else Color.darkMint
                     , onClick  push  (const $ SwitchDriverStatus Online)
+                    , rippleColor Color.rippleShade
                     ][]
                   , textView
                     [ height MATCH_PARENT
@@ -706,7 +710,7 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
   , gravity CENTER
   , visibility if isJust state.data.activeRide.disabilityTag then VISIBLE else GONE
   , margin (Margin 10 10 10 10)
-  , background Color.lightPurple
+  , background accessibilityHeaderconfig.background
   , cornerRadius 50.0
   , padding (Padding 8 8 8 8)
   ][
@@ -725,19 +729,21 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
             , height WRAP_CONTENT
             , padding $ PaddingRight 4
             , text accessibilityHeaderconfig.primaryText
-            , color Color.purple
+            , color accessibilityHeaderconfig.textColor
         ] <> FontStyle.body1 TypoGraphy
       , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text accessibilityHeaderconfig.secondaryText
-        , color Color.purple
+        , color accessibilityHeaderconfig.textColor
         ] <> FontStyle.body4 TypoGraphy
     ]
   ]
 
 driverStatusPill :: forall w . PillButtonState -> (Action -> Effect Unit) -> HomeScreenState -> Int -> PrestoDOM (Effect Unit) w
 driverStatusPill pillConfig push state index =
+  let isStatusBtnClickable = not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])
+  in
   linearLayout
   [ weight 1.0
   , height $ V 35
@@ -750,13 +756,15 @@ driverStatusPill pillConfig push state index =
                     DEFAULT -> Color.white900
   , cornerRadius 50.0
   ][  linearLayout
-      [ width MATCH_PARENT
+      ([ width MATCH_PARENT
       , height MATCH_PARENT
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
-      , clickable if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then false else true
-      ][ imageView
+      , clickable isStatusBtnClickable
+      , cornerRadius 20.0
+      ] <> if isStatusBtnClickable then [rippleColor Color.rippleShade] else [])
+      [ imageView
         [ width $ V 15
         , height $ V 15
         , margin (Margin 3 0 5 0)
@@ -819,7 +827,7 @@ statsModel push state =
         , gravity CENTER_VERTICAL
         , background Color.blue600
         , cornerRadius 12.0
-        , padding $ Padding 16 8 8 8
+        , padding $ Padding 16 2 8 2
         ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
@@ -827,6 +835,7 @@ statsModel push state =
            , color Color.black700
            , weight 1.0
            , onClick push $ const $ ToggleStatsModel
+           , padding $ PaddingVertical 6 6
            ] <> FontStyle.tags TypoGraphy
          , linearLayout
            [ width WRAP_CONTENT
@@ -1441,6 +1450,7 @@ goOfflineModal push state =
              , gravity CENTER
              , margin (MarginRight 10)
              , onClick push (const CancelGoOffline)
+             , rippleColor Color.rippleShade
              ][ textView (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -1458,6 +1468,7 @@ goOfflineModal push state =
              , margin (MarginRight 10)
              , background Color.black900
              , onClick push (const $ GoOffline if state.props.statusOnline then false else true)
+             , rippleColor Color.rippleShade
              ][ textView  (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -1472,8 +1483,8 @@ goOfflineModal push state =
   ]
 
 
-addAlternateNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Boolean -> PrestoDOM (Effect Unit) w
-addAlternateNumber push state visibility' =
+addAadhaarNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+addAadhaarNumber push state visibility' =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -1485,17 +1496,18 @@ addAlternateNumber push state visibility' =
   , gravity CENTER_VERTICAL
   , onClick push $ const ClickAddAlternateButton
   , visibility if visibility' then VISIBLE else GONE
+  , rippleColor Color.rippleShade
   ][  imageView
       [ width $ V 20
       , height $ V 15
-      , imageWithFallback $ HU.fetchImage HU.FF_ASSET $ if state.props.showlinkAadhaarPopup then "ny_ic_aadhaar_logo" else "ic_call_plus"
+      , imageWithFallback $ HU.fetchImage HU.FF_ASSET  "ny_ic_aadhaar_logo" 
       , margin (MarginRight 5)
       ]
     , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , gravity CENTER
-      , text $ getString if state.props.showlinkAadhaarPopup then ENTER_AADHAAR_DETAILS else ADD_ALTERNATE_NUMBER
+      , text $ getString ENTER_AADHAAR_DETAILS 
       , color Color.black900
       ] <> FontStyle.paragraphText TypoGraphy
    ]
@@ -1525,6 +1537,7 @@ offlineNavigationLinks push state =
             , gravity CENTER_VERTICAL
             , onClick push $ const item.action
             , visibility $ itemVisibility item.action
+            , rippleColor Color.rippleShade
             ][  imageView
                 [ width $ V 16
                 , height $ V 16

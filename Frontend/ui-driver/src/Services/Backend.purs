@@ -270,6 +270,7 @@ driverActiveInactiveBT status status_n = do
             BackT $ pure GoBack
 --------------------------------- startRide ---------------------------------------------------------------------------------------------------------------------------------
 
+startRide :: String -> StartRideReq -> Flow GlobalState (Either ErrorResponse StartRideResponse)
 startRide productId payload = do
         headers <- getHeaders "" false
         withAPIResult (EP.startRide productId) unwrapResponse $ callAPI headers ((StartRideRequest productId payload))
@@ -1150,10 +1151,10 @@ autoComplete searchVal lat lon language = do
         components : "",
         sessionToken : Nothing,
         location : (lat <> "," <> lon),
-        radius : 100000,
+        radius : 50000,
         input : searchVal,
         language : language,
-        strictbounds : Nothing,
+        strictbounds : Just true,
         origin : LatLong {
             lat : fromMaybe 0.0 (Number.fromString lat),
             lon : fromMaybe 0.0 (Number.fromString lon)

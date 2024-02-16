@@ -19,13 +19,15 @@ import Data.Array
 import Data.Maybe
 import Data.String
 import Prelude
-
+import Engineering.Helpers.Commons
 import Font.Style (Style(..))
 import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM (Length(..), Margin(..), Padding(..), Prop, toPropValue)
 import PrestoDOM.List (ListItem)
 import Screens.Types (Gender)
 import Styles.Colors as Color
+import Common.RemoteConfig (RCCarousel(..))
+import Data.String as DS
 
 
 data Action = OnClick Int
@@ -35,6 +37,9 @@ data BannerType = AutoPay
   | Disability
   | Gender
   | Remote String --TODO:: Temp added for just youtube links
+  | ZooTicket
+  | Safety
+  | MetroTicket
 
 type CarouselConfig a = {
     item :: ListItem
@@ -71,7 +76,8 @@ type Config a = {
   actionTextCornerRadius :: String,
   actionIconVisibility :: Boolean,
   actionImageUrl :: String,
-  actionImageVisibility :: Boolean
+  actionImageVisibility :: Boolean,
+  actionArrowIconVisibility :: Boolean
 }
 
 config :: forall a. a -> Config a
@@ -86,7 +92,7 @@ config action = {
     imageWidth : (V 118),
     isBanner : true,
     actionTextStyle : ParagraphText,
-    titleStyle : Body7,
+    titleStyle : Body4,
     showActionArrow : true,
     alertText : "",
     alertTextColor : Color.darkGreen,
@@ -101,11 +107,12 @@ config action = {
     "type" : Gender,
     actionIconUrl : "",
     actionTextBackgroundColour : "",
-    actionTextCornerRadius : "",
+    actionTextCornerRadius : if os == "IOS" then "15.0" else "50.0",
     actionIconVisibility : false,
     actionImageUrl : "",
     showImageAsCTA : false,
-    actionImageVisibility : false
+    actionImageVisibility : false,
+    actionArrowIconVisibility : true
 }
 
 
@@ -127,7 +134,8 @@ type PropConfig = (
   actionTextCornerRadius :: PropValue,
   actionIconVisibility :: PropValue,
   actionImageUrl :: PropValue,
-  actionImageVisibility :: PropValue
+  actionImageVisibility :: PropValue,
+  actionArrowIconVisibility :: PropValue
 )
 
 
@@ -145,12 +153,39 @@ bannerTransformer = map (
   actionText : toPropValue item.actionText,
   actionTextColor : toPropValue item.actionTextColor,
   bannerImageUrl : toPropValue $ (fromMaybe "" ((split (Pattern ",") item.imageUrl) !! 0)),
-  cornerRadiusMain : toPropValue $ "32.0",
+  cornerRadiusMain : toPropValue $ if os == "IOS" then "20.0" else "32.0",
   actionIconUrl : toPropValue item.actionIconUrl,
   actionTextBackgroundColour : toPropValue item.actionTextBackgroundColour,
-  actionTextCornerRadius : toPropValue item.actionTextCornerRadius,
+  actionTextCornerRadius : toPropValue $ if os == "IOS" then "15.0" else "50.0",
   actionIconVisibility : toPropValue $ if item.actionIconVisibility then "visible" else "gone",
   actionImageUrl : toPropValue item.actionImageUrl,
-  actionImageVisibility : toPropValue $ if item.actionImageVisibility then "visible" else "gone"
+  actionImageVisibility : toPropValue $ if item.actionImageVisibility then "visible" else "gone",
+  actionArrowIconVisibility : toPropValue $ if item.actionArrowIconVisibility then "visible" else "gone"
   }
 )
+
+
+remoteConfigTransformer :: forall a. Array RCCarousel -> (Action -> a) -> Array (Config (Action -> a))
+remoteConfigTransformer remoteConfig action = 
+  map (\(RCCarousel remoteConfig) -> 
+    let
+      config' = config action
+      config'' = config'{
+        backgroundColor = remoteConfig.banner_color,
+        title = remoteConfig.text,
+        titleColor = remoteConfig.text_color,
+        actionText = remoteConfig.cta_text,
+        actionTextColor = remoteConfig.cta_text_color,
+        imageUrl = remoteConfig.banner_image,
+        "type" = Remote remoteConfig.cta_link,
+        actionIconUrl = remoteConfig.cta_icon,
+        actionIconVisibility = not $ DS.null remoteConfig.cta_text,
+        actionTextBackgroundColour = remoteConfig.cta_background_color,
+        actionTextCornerRadius = remoteConfig.cta_corner_radius,
+        actionImageUrl = remoteConfig.cta_image_url,
+        showImageAsCTA = not $ DS.null remoteConfig.cta_image_url,
+        actionImageVisibility = not $ DS.null remoteConfig.cta_image_url,
+        actionTextVisibility = DS.null remoteConfig.cta_image_url ,
+        actionArrowIconVisibility = DS.null remoteConfig.cta_image_url
+      }
+    in config'') remoteConfig

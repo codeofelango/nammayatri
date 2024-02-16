@@ -15,12 +15,17 @@
 module Mobility.Prelude where
 
 import Data.String (null,Pattern(..), contains, joinWith, toLower, take, toUpper, drop, trim, split)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe, fromJust)
 import PrestoDOM as PD
 import Prelude
-import Data.Array (elem, cons)
 import Data.Array as DA
 import Data.Foldable (foldl)
+import Data.Tuple (Tuple(..))
+import Data.Int (pow)
+import Data.Function.Uncurried (Fn3(..), runFn3)
+import Data.String as DS
+
+foreign import swapElements :: forall a. Fn3 Int Int (Array a) (Array a)
 
 has :: String -> String -> Boolean
 has msg errorPattern = contains (Pattern errorPattern) msg
@@ -41,6 +46,10 @@ maybeToBool val = toBool $ fromMaybe "" val
 boolToVisibility :: Boolean -> PD.Visibility
 boolToVisibility true = PD.VISIBLE
 boolToVisibility false = PD.GONE
+
+boolToInvisibility :: Boolean -> PD.Visibility
+boolToInvisibility true = PD.VISIBLE
+boolToInvisibility false = PD.INVISIBLE
 
 catMaybeStrings :: Array (Maybe String) -> String
 catMaybeStrings arr = 
@@ -67,4 +76,41 @@ caseInsensitiveCompare str1 str2 =
 
 groupAdjacent :: forall a. Array a -> Array (Array a)
 groupAdjacent [] = []
-groupAdjacent x = cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))
+groupAdjacent x = DA.cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))
+
+sortAccToDayName arr = DA.sortBy (\a b -> compare (dayToIndex a) (dayToIndex b)) arr
+
+dayToIndex :: String -> Int
+dayToIndex day =
+  case day of
+    "Mon" -> 0
+    "Tue" -> 1
+    "Wed" -> 2
+    "Thu" -> 3
+    "Fri" -> 4
+    "Sat" -> 5
+    "Sun" -> 6
+    _ -> 7
+
+pseudoRandomInt :: Int -> Tuple Int Int
+pseudoRandomInt seed =
+  let newSeed = (seed * 1103515245 + 12345) `mod` (2 `pow` 31)
+      value = newSeed `mod` 100
+  in Tuple newSeed value
+
+shuffleArray :: forall a. Int -> Array a -> Array a
+shuffleArray seed arr =
+  let len = DA.length arr
+      shuffle :: Int -> Int -> Array a -> Array a
+      shuffle _ 0 array = array
+      shuffle currentSeed i array =
+        let Tuple newSeed randomIndex = pseudoRandomInt currentSeed
+            j = randomIndex `mod` i
+            swapped = runFn3 swapElements i j array
+        in shuffle newSeed (i - 1) swapped
+  in shuffle seed (len - 1) arr
+findStringWithPrefix :: String -> Array String -> Array String
+findStringWithPrefix prefix arr = DA.filter (\item -> startsWith prefix item) arr
+
+startsWith :: String -> String -> Boolean
+startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)

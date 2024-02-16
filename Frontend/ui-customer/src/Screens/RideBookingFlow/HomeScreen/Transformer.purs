@@ -17,7 +17,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
@@ -43,10 +43,10 @@ import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSave
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import JBridge (fromMetersToKm, Paths, getLatLonFromAddress)
+import JBridge (fromMetersToKm, getLatLonFromAddress)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), Paths)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Resources.Localizable.EN (getEN)
 import MerchantConfig.Types (EstimateAndQuoteConfig)
@@ -267,7 +267,7 @@ makePlaceNameResp lat lon =
 getUpdatedLocationList :: Array LocationListItemState -> Maybe String -> Array LocationListItemState
 getUpdatedLocationList locationList placeId = (map
                             (\item ->
-                                ( item  {postfixImageUrl = if (item.placeId == placeId || item.postfixImageUrl == "ic_fav_red") then "ic_fav_red" else "ic_fav" } )
+                                ( item  {postfixImageUrl = if (item.placeId == placeId || item.postfixImageUrl == "ic_fav_red") then "ny_ic_fav_red" else "ic_fav" } )
                             ) (locationList))
 
 transformSavedLocations :: Array LocationListItemState -> FlowBT String Unit
@@ -510,6 +510,7 @@ getEstimatesInfo estimates vehicleVariant state =
   , extraFare: extraFare
   , showRateCardIcon: showRateCardIcon
   , zoneType: zoneType
+  , createdTime : createdTime
   }
   where
     estimatedVariant = 
@@ -531,7 +532,9 @@ getEstimatesInfo estimates vehicleVariant state =
     nightShiftStart = maybe "" (view _nightShiftStart >>> fromMaybe "") nightShiftRate
     nightShiftEnd = maybe "" (view _nightShiftEnd >>> fromMaybe "") nightShiftRate
     nightShiftMultiplier = maybe 0.0 (view _nightShiftMultiplier >>> fromMaybe 0.0) nightShiftRate
-    nightCharges = withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
+    nightCharges = if isJust nightShiftRate 
+                    then withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
+                    else false
 
     baseFare = maybe 0 calculateBaseFare (find hasBaseDistanceFare estimateFareBreakup)
     hasBaseDistanceFare item = item ^. _title == "BASE_DISTANCE_FARE"
@@ -546,6 +549,7 @@ getEstimatesInfo estimates vehicleVariant state =
     zoneType = getSpecialTag $ case head estimatedVariant of
                   Just entity -> view _specialLocationTag entity
                   Nothing -> Nothing
+    createdTime = maybe "" (view _createdAt) (head estimatedVariant)
 
 
 dummyEstimateEntity :: EstimateAPIEntity

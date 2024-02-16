@@ -15,21 +15,24 @@
 
 module Services.Backend where
 
+import Locale.Utils
 import Services.API
 
 import Accessor (_deviceToken)
-import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..))
+import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), FeedbackAnswer)
+import ConfigProvider as CP
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe)
-import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..), FeedbackAnswer)
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.String as DS
 import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion, isInvalidUrl)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
+import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
@@ -38,10 +41,10 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
+import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS) 
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, City(..), PeopleCategoriesRespData)
+import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
+import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..))
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)
@@ -53,6 +56,8 @@ import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
 import Locale.Utils
+import MerchantConfig.Types (GeoCodeConfig)
+import Debug
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -263,15 +268,15 @@ searchLocationBT payload = do
                 BackT $ pure GoBack
 
 
-makeSearchLocationReq :: String -> Number -> Number -> Int -> String -> String-> SearchLocationReq
-makeSearchLocationReq input lat lng radius language components = SearchLocationReq {
+makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> SearchLocationReq
+makeSearchLocationReq input lat lng language components geoCodeConfig = SearchLocationReq {
     "input" : input,
     "location" : (show lat <> "," <> show lng),
-    "radius" : radius,
+    "radius" : geoCodeConfig.radius,
     "components" : components,
     "language" : language,
     "sessionToken" : Nothing,
-    "strictbounds": Nothing,
+    "strictbounds": if geoCodeConfig.strictBounds then Just true else Nothing,
     "origin" : LatLong {
             "lat" : lat,
             "lon" : lng
@@ -620,7 +625,9 @@ postContactsReq contacts = EmergContactsReq {
   "defaultEmergencyNumbers" : map (\item -> ContactDetails {
       "mobileNumber": item.number,
       "name": item.name,
-      "mobileCountryCode": "+91"
+      "mobileCountryCode": "+91",
+      "priority": Just item.priority,
+      "enableForFollowing": Just item.enableForFollowing
   }) contacts
 }
 
@@ -760,6 +767,13 @@ getRouteMarkers variant city trackingType =
         case trackingType of 
             RIDE_TRACKING -> "ny_ic_dest_marker"
             DRIVER_TRACKING -> "ny_ic_src_marker"
+
+    getAutoImage :: City -> String
+    getAutoImage city = case city of
+        Hyderabad -> "ny_ic_black_yellow_auto"
+        Kochi -> "ny_ic_koc_auto_on_map"
+        Chennai -> "ny_ic_black_yellow_auto"
+        _         -> "ny_ic_auto_nav_on_map"
       
 
 
@@ -891,9 +905,10 @@ createUserSosFlow tag content = UserSosFlow {
     "contents" : content
 }
 
-makeSosStatus :: String -> SosStatus
-makeSosStatus sosStatus = SosStatus {
-     "status" : sosStatus
+makeSosStatus :: String -> String -> SosStatus
+makeSosStatus sosStatus comment= SosStatus {
+     "status" : sosStatus,
+     "comment" : comment
 }
 
 
@@ -961,35 +976,43 @@ mkBookingTicketReq ticketBookingScreenData =
     }
   where
     createTicketServiceRequest :: Array TicketServiceData -> Array TicketService
-    createTicketServiceRequest services = mapMaybe createPeopleCategoriesRespRequest services
+    createTicketServiceRequest services = catMaybes $ map createPeopleCategoriesRespRequest services
+      where
+        createPeopleCategoriesRespRequest :: TicketServiceData -> Maybe TicketService
+        createPeopleCategoriesRespRequest service =
+            let filteredSelCategories = filter (\category -> category.isSelected ) service.serviceCategories 
+                updateFilteredSCOntheBasisOfPC = updateServiceCategories filteredSelCategories
+                finalCategoires = filter (\sc -> not null sc.peopleCategories) updateFilteredSCOntheBasisOfPC
+                mbbusinessHourId = case service.selectedBHId of
+                                    Nothing -> getBHIdForSelectedTimeIntervals finalCategoires
+                                    Just val -> Just val
+            in
+            case mbbusinessHourId of
+                Nothing -> Nothing
+                Just bhourId -> 
+                    let generatedCatsData = map generateCatData finalCategoires in 
+                    if null generatedCatsData then Nothing 
+                    else Just $
+                            TicketService 
+                            {   serviceId : service.id,
+                                businessHourId : bhourId,
+                                categories : map generateCatData finalCategoires
+                            }
 
-    createPeopleCategoriesRespRequest :: TicketServiceData -> Maybe TicketService
-    createPeopleCategoriesRespRequest service = 
-        let maybeBusinessHour = maybe Nothing (findSelectedBusinessHour service) service.selectedBHid
-        in maybe Nothing (getTicketServiceReqElement service) maybeBusinessHour
+        getBHIdForSelectedTimeIntervals categories = 
+            case (categories !! 0) of 
+                Nothing -> Nothing
+                Just cat -> maybe Nothing (\selTimeInterval -> Just selTimeInterval.bhourId) (getMbTimeInterval cat)
+                
+        getMbTimeInterval cat = maybe Nothing (\opDay -> opDay.timeIntervals !! 0) cat.validOpDay
+                     
+        updateServiceCategories serviceCategories = map (\cat -> cat {peopleCategories = filter (\pc -> pc.currentValue > 0) cat.peopleCategories}) serviceCategories
 
-    findSelectedBusinessHour service bhId = find (\businessHour -> businessHour.bhourId == bhId) service.businessHours
-    
-    getValidCategories category = do
-        let filteredPC = filter (\pc -> pc.currentValue > 0) category.peopleCategories
-        if null filteredPC then Nothing
-        else Just $ TicketBookingCategory {
-        categoryId : category.categoryId,
-        peopleCategories : map mkPeopleCatReq filteredPC
-        }
-
-    mkPeopleCatReq peopleCat = TicketBookingPeopleCategory {peopleCategoryId : peopleCat.peopleCategoryId, numberOfUnits : peopleCat.currentValue}
-
-    getTicketServiceReqElement service businessHour = do
-        let categories = filter (\cat -> cat.isSelected) businessHour.categories
-            filteredValidCategories = mapMaybe getValidCategories categories
-        if (null categories) || (null filteredValidCategories) then Nothing
-        else Just $ 
-                TicketService {
-                serviceId : service.id,
-                businessHourId : businessHour.bhourId,
-                categories : filteredValidCategories
-            }
+        generateCatData category = 
+          TicketBookingCategory
+          {  categoryId : category.categoryId,
+             peopleCategories : map (\pc -> TicketBookingPeopleCategory {peopleCategoryId : pc.peopleCategoryId, numberOfUnits : pc.currentValue}) category.peopleCategories
+          }
 
 
 ------------------------------------------------------------------------ ZoneTicketBookingFlow --------------------------------------------------------------------------------
@@ -1018,11 +1041,10 @@ getTicketStatusBT shortId = do
     errorHandler errorPayload = do
             BackT $ pure GoBack
 
+getTicketStatus :: String -> Flow GlobalState (Either ErrorResponse GetTicketStatusResp)
 getTicketStatus shortId = do
   headers <- getHeaders "" false
-  withAPIResult (EP.ticketStatus shortId) unwrapResponse $ callAPI headers (GetTicketStatusReq shortId)
-  where
-  unwrapResponse x = x
+  withAPIResult (EP.ticketStatus shortId) identity $ callAPI headers (GetTicketStatusReq shortId)
  
 
 ----------------------------------- fetchIssueList ----------------------------------------
@@ -1075,4 +1097,154 @@ updateIssue language issueId req = do
         where
           errorHandler _ = do
                 BackT $ pure GoBack
+
+------------------------------------------------------------------------ SafetyFlow --------------------------------------------------------------------------------
+
+getEmergencySettingsBT :: String -> FlowBT String GetEmergencySettingsRes
+getEmergencySettingsBT _  = do
+        headers <- getHeaders' "" true
+        withAPIResultBT (EP.getEmergencySettings "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetEmergencySettingsReq))
+    where
+    errorHandler (errorPayload) =  do
+        BackT $ pure GoBack
+
+updateEmergencySettings :: UpdateEmergencySettingsReq -> Flow GlobalState (Either ErrorResponse UpdateEmergencySettingsRes)
+updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.updateEmergencySettings "") unwrapResponse $ callAPI headers (UpdateEmergencySettingsReq payload)
+    where
+        unwrapResponse (x) = x
+
+markRideAsSafe :: String -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
+markRideAsSafe sosId= do
+        headers <- getHeaders "" false
+        withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId)
+    where
+        unwrapResponse (x) = x
+
+getSosDetails :: String -> FlowBT String GetSosDetailsRes
+getSosDetails rideId = do
+        headers <- getHeaders' "" true
+        withAPIResultBT (EP.getSosDetails rideId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetSosDetailsReq rideId))
+    where
+    errorHandler (errorPayload) =  do
+        BackT $ pure GoBack
+
+sendSafetySupport req = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.safetySupport "") unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse (x) = x
+
+makeAskSupportRequest :: String -> Boolean -> String -> AskSupportReq
+makeAskSupportRequest bId isSafe description = AskSupportReq{
+    "bookingId" : bId,
+    "isSafe" : isSafe,
+    "description" : description
+}
+
+createMockSos :: String -> Flow GlobalState (Either ErrorResponse CreateMockSosRes)
+createMockSos dummy = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.createMockSos "") unwrapResponse $ callAPI headers (CreateMockSosReq "")
+    where
+        unwrapResponse (x) = x
+
+shareRide :: ShareRideReq -> Flow GlobalState (Either ErrorResponse ShareRideRes)
+shareRide (ShareRideReq req) = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.shareRide "") unwrapResponse $ callAPI headers (ShareRideReq req)
+    where
+        unwrapResponse (x) = x
+
+getFollowRide :: String -> Flow GlobalState (Either ErrorResponse FollowRideRes)
+getFollowRide _ = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.followRide "") identity $ callAPI headers FollowRideReq
+
+-------------------------------------------------------- Metro Booking --------------------------------------------------------
+
+-- getMetroBookingStatus :: String -> FlowBT String GetMetroBookingStatusResp
+getMetroBookingStatus shortOrderID = do 
+  headers <- getHeaders "" false
+  withAPIResult (EP.getMetroBookingStatus shortOrderID) unwrapResponse $ callAPI headers (GetMetroBookingStatusReq shortOrderID)
+  where
+    unwrapResponse x = x
+
+getMetroBookingStatusListBT :: FlowBT String GetMetroBookingListResp
+getMetroBookingStatusListBT = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.getMetroBookingList "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq))
+      where
+        errorHandler _ = do
+            BackT $ pure GoBack
+
+
+retryMetroTicketPaymentBT :: String -> FlowBT String RetryMetrTicketPaymentResp
+retryMetroTicketPaymentBT quoteId = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.retryMetrTicketPayment quoteId) (\x → x) errorHandler (lift $ lift $ callAPI headers (RetryMetrTicketPaymentReq quoteId))
+      where
+        errorHandler _ = do
+            BackT $ pure GoBack
+
+retryMetroTicketPayment quoteId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.retryMetrTicketPayment quoteId) unwrapResponse $ callAPI headers (RetryMetrTicketPaymentReq quoteId)
+  where
+    unwrapResponse x = x
+
+getMetroStationBT :: String -> FlowBT String GetMetroStationResponse
+getMetroStationBT _ = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getMetroStations "") (\x -> x) errorHandler (lift $ lift $ callAPI headers GetMetroStationReq)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack 
+
+searchMetroBT :: SearchMetroReq -> FlowBT String SearchMetroResp
+searchMetroBT  requestBody = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.searchMetro "") (\x -> x) errorHandler (lift $ lift $ callAPI headers requestBody)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack 
+
+makeSearchMetroReq :: String -> String -> Int -> SearchMetroReq
+makeSearchMetroReq srcCode destCode count = SearchMetroReq {
+    "fromStationCode" : srcCode,
+    "toStationCode" : destCode,
+    "quantity" : count
+    }
+
+getMetroQuotesBT :: String -> FlowBT String GetMetroQuotesRes
+getMetroQuotesBT searchId = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getMetroQuotes searchId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroQuotesReq searchId))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
+getMetroQuotes searchId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getMetroQuotes searchId) unwrapResponse $ callAPI headers (GetMetroQuotesReq searchId)
+  where
+  unwrapResponse x = x
+ 
+confirmMetroQuoteBT :: String -> FlowBT String MetroTicketBookingStatus
+confirmMetroQuoteBT quoteId = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.confirmMetroQuote quoteId) (\x → x) errorHandler (lift $ lift $ callAPI headers (ConfirmMetroQuoteReq quoteId))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
+getMetroStatusBT :: String -> FlowBT String GetMetroBookingStatusResp
+getMetroStatusBT bookingId = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getMetroBookingStatus bookingId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingStatusReq bookingId))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
 

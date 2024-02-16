@@ -91,6 +91,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "no_action"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "countdown_updated"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "password_popup_modal_action" "no_action"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
@@ -106,6 +107,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "countdown_updated"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "contact_support_popup_modal_action" "no_action"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "tip_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "option_with_html_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "popup_modal_action" "popup_dismissed"
@@ -198,7 +200,7 @@ eval UpdateLeaderBoardFailed state = do
   _ <- pure $ setRefreshing (getNewIDWithTag "ReferralRefreshView") false
   continue state{ props{ showShimmer = false, noData = true } }
 
-eval (UpdateDriverPerformance (GetPerformanceRes performanceRes)) state = continue state {data {driverInfo {referralCode = Just (getValueToLocalStore REFERRAL_CODE)},driverPerformance{referrals = performanceRes.referrals}} , props{showShimmer =  if (getValueToLocalStore REFERRAL_CODE) /= "__failed" then false else state.props.showShimmer}}
+eval (UpdateDriverPerformance (GetPerformanceRes performanceRes)) state = continue state {data {driverInfo {referralCode = Just (getValueToLocalStore REFERRAL_CODE)},driverPerformance{referrals{totalActivatedCustomers = performanceRes.referrals.totalActivatedCustomers,totalReferredCustomers = performanceRes.referrals.totalReferredCustomers, totalReferredDrivers = fromMaybe 0 performanceRes.referrals.totalReferredDrivers}}} , props{showShimmer =  if (getValueToLocalStore REFERRAL_CODE) /= "__failed" then false else state.props.showShimmer}}
 
 eval (UpdateDriverPerformanceFailed) state = continue state {props{showShimmer= false}}
 
@@ -229,7 +231,7 @@ eval (ChangeLeaderBoardtab tab) state = do
   let newState = state { props { leaderBoardType = tab, showShimmer = true } }
   updateAndExit newState $ Refresh newState
 
-eval BackPressed state = exit $ GoBack
+eval BackPressed state = exit $ GoToHomeScreen state
 
 eval RefreshScreen state = exit $ Refresh state
 

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -22,7 +23,7 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.SpecialOcc
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.SpecialOccasion.SpecialOccasion] -> m ()
-createMany = traverse_ createWithKV
+createMany = traverse_ create
 
 findAllSpecialOccasionByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m ([Domain.Types.SpecialOccasion.SpecialOccasion])
 findAllSpecialOccasionByEntityId entityId date = do
@@ -61,18 +62,18 @@ findByPrimaryKey (Kernel.Types.Id.Id id) = do
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.SpecialOccasion.SpecialOccasion -> m ()
 updateByPrimaryKey Domain.Types.SpecialOccasion.SpecialOccasion {..} = do
-  now <- getCurrentTime
+  _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.businessHours $ (Kernel.Types.Id.getId <$> businessHours),
-      Se.Set Beam.date $ date,
-      Se.Set Beam.dayOfWeek $ dayOfWeek,
-      Se.Set Beam.description $ description,
-      Se.Set Beam.entityId $ entityId,
-      Se.Set Beam.specialDayType $ specialDayType,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
+      Se.Set Beam.date date,
+      Se.Set Beam.dayOfWeek dayOfWeek,
+      Se.Set Beam.description description,
+      Se.Set Beam.entityId entityId,
+      Se.Set Beam.specialDayType specialDayType,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

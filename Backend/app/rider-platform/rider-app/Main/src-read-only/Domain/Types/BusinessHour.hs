@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.BusinessHour where
 
@@ -8,7 +9,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data BusinessHour = BusinessHour
   { btype :: Domain.Types.BusinessHour.BusinessHourType,
@@ -24,4 +25,4 @@ data BusinessHour = BusinessHour
 data BusinessHourType = Slot Kernel.Prelude.TimeOfDay | Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''BusinessHourType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BusinessHourType)

@@ -54,6 +54,8 @@ import Screens.Types as ST
 import Services.API (Status(..), CoinTransactionRes(..), CoinTransactionHistoryItem(..), CoinsUsageRes(..), CoinUsageHistoryItem(..), RidesInfo(..), LocationInfo(..), DriverProfileSummaryRes(..), RidesSummary(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, getValueToLocalStore)
 import Timers (clearTimerWithId)
+import Debug
+import Foreign (unsafeToForeign)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -97,6 +99,7 @@ instance loggableAction :: Loggable Action where
     RemoveLottie -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "remove_lottie" "remove_lottie"
     (OpenTripDetails _) -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "open_trip_details" "open_trip_details"
     LoadMore -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "load_more" "load_more"
+    YoutubeVideoStatus _ -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "youtube_video_status" "youtube_video_status"
 
 data ScreenOutput
   = GoBack
@@ -144,6 +147,7 @@ data Action
   | RemoveLottie
   | OpenTripDetails Int
   | LoadMore
+  | YoutubeVideoStatus String
 
 eval :: Action -> DriverEarningsScreenState -> Eval Action ScreenOutput DriverEarningsScreenState
 eval BackPressed state = 
@@ -160,7 +164,9 @@ eval BackPressed state =
         exit $ ChangeDriverEarningsTab FAQ_VIEW state
       _ -> exit $ HomeScreen (updateToState state)
 
-eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = exit $ PurchasePlan state
+eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
+  let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_convert_coins_click" $ [{key : "Number of Coins", value : unsafeToForeign state.data.coinsToUse}]
+  exit $ PurchasePlan state
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of
@@ -175,7 +181,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
       exit $ SubscriptionScreen (updateToState state)
     _ -> continue (updateToState state)
 
-eval (ChangeTab subView') state = if subView' == state.props.subView then continue state else exit $ ChangeDriverEarningsTab subView' state
+eval (ChangeTab subView') state = do
+  let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_earnings_scn_change_tab" $ [{key : "Tab", value : unsafeToForeign (show subView')}]
+  if subView' == state.props.subView then continue state else exit $ ChangeDriverEarningsTab subView' state
 
 eval RemoveLottie state = do
   continue state { props { showCoinsEarnedAnim = Nothing } }
@@ -396,7 +404,9 @@ eval (RideHistoryAPIResponseAction rideList) state = do
 
 eval (UpdateRidesEver anyRidesAssignedEver) state = continue state { data { anyRidesAssignedEver = anyRidesAssignedEver }, props { weekIndex = 3 } }
 
-eval ShowPaymentHistory state = exit $ PaymentHistory
+eval ShowPaymentHistory state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_view_details_click_coins"
+  exit $ PaymentHistory
 
 eval FaqViewAction state = continue $ state { props { showShimmer = false } }
 
@@ -594,10 +604,10 @@ updateToState state = do
             Nothing -> 0
   state { props { weekIndex = 3, selectedBarIndex = -1, currWeekData = currentWeekData, totalEarningsData = getTotalCurrentWeekData currentWeekData, currentWeekMaxEarning = currWeekMaxEarning }, data { coinBalance = state.data.coinBalance } }
 
-dummyQuestions :: LazyCheck -> Array ST.FaqQuestions
-dummyQuestions lazy =
+dummyQuestions :: DriverEarningsScreenState -> LazyCheck -> Array ST.FaqQuestions
+dummyQuestions state lazy =
   [ { question: getString YATRI_COINS_FAQS_QUES1
-    , videoLink: Just "https://www.youtube.com/watch?v=1340l2e0ZKY"
+    , videoLink: Just state.data.config.coinsConfig.whatAreYatriCoinFAQ
     , answer:
         [ getString YATRI_COINS_FAQS_QUES1_ANS1
         , getString YATRI_COINS_FAQS_QUES1_ANS2
@@ -614,7 +624,7 @@ dummyQuestions lazy =
     , showTable: false
     }
   , { question: getString YATRI_COINS_FAQS_QUES3
-    , videoLink: Just "https://www.youtube.com/watch?v=1340l2e0ZKY"
+    , videoLink: Just state.data.config.coinsConfig.howToEarnYatriCoinFAQ
     , answer:
         [ getString YATRI_COINS_FAQS_QUES3_ANS1
         , getString YATRI_COINS_FAQS_QUES3_ANS2
@@ -622,7 +632,7 @@ dummyQuestions lazy =
     , showTable: false
     }
   , { question: getString YATRI_COINS_FAQS_QUES4
-    , videoLink: Just "https://www.youtube.com/watch?v=1340l2e0ZKY"
+    , videoLink: Just state.data.config.coinsConfig.howToRedeemYatriCoinFAQ
     , answer:
         [ getString YATRI_COINS_FAQS_QUES4_ANS1
         , getString YATRI_COINS_FAQS_QUES4_ANS2
@@ -653,10 +663,6 @@ tableData state =
   , { key: getString CUSTOMER_REFERRAL, value: state.data.config.coinsConfig.customerReferralCoins }
   , { key: getString RIDES_IN_A_DAY_PREFIX <> state.data.config.coinsConfig.numOfRideThresholdForCoins <> getString RIDES_IN_A_DAY_SUFFIX, value: state.data.config.coinsConfig.eightPlusRidesCoins }
   , { key: getString PURPLE_RIDE, value: state.data.config.coinsConfig.purpleRideCoins }
-  , { key: getString RIDE_COMPLETED, value: state.data.config.coinsConfig.rideCompletedCoins }
-  , { key: getString STAR_RATING_FOR_THE_TRIP, value: state.data.config.coinsConfig.fiveStarRatingCoins }
-  , { key: getString ONE_TWO_START_RATING, value: state.data.config.coinsConfig.oneOrTwoStarRatingCoins }
-  , { key: getString BOOKING_CANCELLATION, value: state.data.config.coinsConfig.rideCancellationCoins }
   ]
 
 dummyRideHistoryItem :: RidesInfo

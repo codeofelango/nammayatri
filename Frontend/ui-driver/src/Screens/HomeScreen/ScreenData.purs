@@ -20,9 +20,9 @@ import Prelude(negate)
 import Services.API (DriverProfileStatsResp(..), Status(..))
 import Data.Maybe
 import Foreign.Object (empty)
-import Common.Types.App as Common
+import Domain.Payments as PP
 import ConfigProvider
-import RemoteConfigs as RC
+import RemoteConfig as RC
 
 initData :: HomeScreenState
 initData = {
@@ -95,7 +95,7 @@ initData = {
           makePaymentModal : false,
           showRateCard : false,
           paymentStatusBanner : false,
-          paymentStatus : Common.Success,
+          paymentStatus : PP.Success,
           invoiceId : "",
           bannerBG : "",
           bannerTitle : "",
@@ -151,7 +151,9 @@ initData = {
         , currentBanner : 0
         , bannerScrollState: "0"
         , currentPage : 0
-      } 
+      },
+      prevLatLon : [],
+      noOfLocations : 0
     },
     props: {
         isFreeRide : false,

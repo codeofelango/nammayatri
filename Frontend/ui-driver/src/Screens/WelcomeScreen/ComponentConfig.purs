@@ -47,6 +47,7 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = getString GET_STARTED }
       , id = "PrimaryButtonWelcomeScreen"
+      , enableRipple = true
       }
   in primaryButtonConfig'
 
@@ -60,4 +61,6 @@ dummyYoutubeData =
   , videoId: ""
   , videoType: ""
   , videoHeight: 0
+  , showFullScreen : false
+  , hideFullScreenButton : false
   }

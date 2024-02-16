@@ -23,7 +23,7 @@ import Animation as Anim
 import Animation.Config (Direction(..), animConfig)
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
-import Data.Function.Uncurried (runFn1, runFn2, runFn3)
+import Data.Function.Uncurried (runFn1, runFn2, runFn5)
 import Components.Calendar.View as Calendar
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader.Controller as GenericHeaderConfig
@@ -56,7 +56,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude
 import Presto.Core.Types.Language.Flow (doAff, Flow)
-import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, lottieAnimationView, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine)
+import PrestoDOM (textFromHtml, scrollView, frameLayout, shimmerFrameLayout, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, lottieAnimationView, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha, singleLine, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Properties (cornerRadii)
@@ -690,6 +690,7 @@ balanceView push state =
           , margin $ MarginTop 16
           , cornerRadius 6.0
           , background Color.blue600
+          , rippleColor Color.rippleShade
           ]
           [ textView
               $ [ text $ getString USE_COINS <> "  →"
@@ -819,7 +820,7 @@ faqView push state =
           , margin $ Margin 16 12 0 12
           ]
         <> FontStyle.subHeading2 TypoGraphy
-    , questionsListView push (dummyQuestions Language) state
+    , questionsListView push (dummyQuestions state Language) state
     ]
 
 questionsListView :: forall w. (Action -> Effect Unit) -> Array ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
@@ -995,7 +996,7 @@ faqVideoView push state =
           ( \action -> do
               let
                 id = getNewIDWithTag "faqVideo"
-              pure $ runFn3 setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY)
+              pure $ runFn5 setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY) push YoutubeVideoStatus
           )
           (const NoAction)
       ]
@@ -1013,6 +1014,8 @@ youtubeData state mediaType =
   , videoId: maybe "" (\x -> getVideoID x) state.props.individualQuestion.videoLink
   , videoType: "VIDEO"
   , videoHeight: 200
+  , showFullScreen: false
+  , hideFullScreenButton : false
   }
 
 answersListView :: forall w. (Action -> Effect Unit) -> Array String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w

@@ -26,13 +26,14 @@ import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDO
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Styles.Colors as Color
+import Engineering.Helpers.Commons
 
 
 view :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w
 view push config =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
+    , width $ V $ screenWidth unit
     , padding $ PaddingHorizontal 16 16
     , root true
     ][ bannerView push config]
@@ -43,7 +44,7 @@ bannerView :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> Presto
 bannerView push config = 
   linearLayout
     ([ height WRAP_CONTENT
-    , width MATCH_PARENT
+    , width $ V $ (screenWidth unit) - 32
     , cornerRadiusHolder "cornerRadiusMain"
     , backgroundHolder "backgroundColor"
     , visibilityHolder "visibility"
@@ -85,21 +86,22 @@ bannerView push config =
           , visibilityHolder "actionImageVisibility"
           ]  
           , linearLayout
-            [ height $ V 25
+            [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , visibility GONE
             , visibilityHolder "actionTextVisibility"
-            , padding $ Padding 10 0 10 0
             , margin $ MarginTop 5
             , gravity CENTER_VERTICAL
-            , backgroundHolder "actionTextBackgroundColour"
             , cornerRadiusHolder "actionTextCornerRadius"
+            , backgroundHolder "actionTextBackgroundColour"
+            , padding $ Padding 10 4 10 4
             ]
             [ imageView
-                [ height $ V 10
-                , width $ V 15
+                [ height $ V 16
+                , width $ V 16
                 , imageUrlHolder "actionIconUrl"
                 , visibilityHolder "actionIconVisibility"
+                , margin $ MarginRight 4
                 ]
             , textView
                 $ [ height WRAP_CONTENT
@@ -115,10 +117,11 @@ bannerView push config =
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , gravity LEFT
-                  , textFromHtml "&rarr;"
+                  , text "→"
                   , colorHolder "actionTextColor"
                   , padding $ PaddingBottom 3
                   , margin $ MarginLeft 5
+                  , visibilityHolder "actionArrowIconVisibility"
                   ]
                 <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
             ]

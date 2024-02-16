@@ -48,14 +48,13 @@ import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowS
 import qualified "rider-app" Storage.Beam.Quote as Quote
 import qualified "rider-app" Storage.Beam.Rating as Rating
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
-import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
+import qualified "rider-app" Storage.Beam.RentalDetails as RentalDetails
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
-import qualified "rider-app" Storage.Beam.Webengage as Webengage
 
 data DBCreateObject
   = AppInstallsObject AppInstalls.AppInstalls
@@ -93,7 +92,7 @@ data DBCreateObject
   | PersonFlowStatusObject PersonFlowStatus.PersonFlowStatus
   | QuoteObject Quote.Quote
   | RegistrationTokenObject RegistrationToken.RegistrationToken
-  | RentalSlabObject RentalSlab.RentalSlab
+  | RentalDetailsObject RentalDetails.RentalDetails
   | RatingObject Rating.Rating
   | RideObject Ride.Ride
   | SavedReqLocationObject SavedReqLocation.SavedReqLocation
@@ -101,7 +100,6 @@ data DBCreateObject
   | SosObject Sos.Sos
   | SpecialZoneQuoteObject SpecialZoneQuote.SpecialZoneQuote
   | TripTermsObject TripTerms.TripTerms
-  | WebengageObject Webengage.Webengage
   | FeedbackFormObject FeedbackForm.FeedbackForm
   | HotSpotConfigObject HotSpotConfig.HotSpotConfig
   | BecknRequestObject BecknRequest.BecknRequest
@@ -146,7 +144,7 @@ modelName (PersonDefaultEmergencyNumberObject _) = "PersonDefaultEmergencyNumber
 modelName (PersonFlowStatusObject _) = "PersonFlowStatus"
 modelName (QuoteObject _) = "Quote"
 modelName (RegistrationTokenObject _) = "RegistrationToken"
-modelName (RentalSlabObject _) = "RentalSlab"
+modelName (RentalDetailsObject _) = "RentalDetails"
 modelName (RatingObject _) = "Rating"
 modelName (RideObject _) = "Ride"
 modelName (SavedReqLocationObject _) = "SavedReqLocation"
@@ -154,7 +152,6 @@ modelName (SearchRequestObject _) = "SearchRequest"
 modelName (SosObject _) = "Sos"
 modelName (SpecialZoneQuoteObject _) = "SpecialZoneQuote"
 modelName (TripTermsObject _) = "TripTerms"
-modelName (WebengageObject _) = "Webengage"
 modelName (FeedbackFormObject _) = "FeedbackForm"
 modelName (HotSpotConfigObject _) = "HotSpotConfig"
 modelName (BecknRequestObject _) = "BecknRequest"

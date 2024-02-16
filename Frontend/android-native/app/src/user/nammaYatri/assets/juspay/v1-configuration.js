@@ -67,7 +67,7 @@ window.getMerchantConfig = function () {
     "cancelRideColor" : "#E55454",
     "merchantLogo" : "ic_invoice_logo,https://assets.juspay.in/beckn/nammayatri/user/images/ic_invoice_logo.png",
     "infoIconUrl" : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png",
-    "sideBarList": ["MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
+    "sideBarList": ["MyRides", "Favorites", "NammaSafety", "MetroTickets", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
     "profileEditGravity" : "center",
     "nyBrandingVisibility": false,
@@ -89,7 +89,7 @@ window.getMerchantConfig = function () {
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "OTP for the Namma Yatri zone has been expired, please try booking again",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Namma Yatri will try to resolve it in under 24 hours.",
       "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Namma Yatri Support. Do you want to proceed?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at nammayatri.support@juspay.in for any queries."
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at support@nammayatri.in for any queries."
     },
     "hindiStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "आपका स्थान हमारे सिस्टम को आस पास के सभी ऑटो को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
@@ -104,7 +104,7 @@ window.getMerchantConfig = function () {
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "नम्मा यात्री क्षेत्र के लिए OTP समाप्त हो गया है, कृपया पुनः बुकिंग का प्रयास करें",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपने मामले का वर्णन करें। नम्मा यात्री 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।",
       "CALL_SUPPORT_DESCRIPTION" : "आप नम्मा यात्री सहायता को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "हमें उम्मीद है कि समस्या का समाधान हो गया है, किसी भी प्रश्न के लिए बेझिझक हमें nammayatri.support@juspay.in पर लिखें।"
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "हमें उम्मीद है कि समस्या का समाधान हो गया है, किसी भी प्रश्न के लिए बेझिझक हमें support@nammayatri.in पर लिखें।"
     },
     "kannadaStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ.",
@@ -119,7 +119,22 @@ window.getMerchantConfig = function () {
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "ನಮ್ಮ ಯಾತ್ರಿ ವಲಯದ OTP ಅವಧಿ ಮುಗಿದಿದೆ, ದಯವಿಟ್ಟು ಮತ್ತೆ ಬುಕ್ ಮಾಡಲು ಪ್ರಯತ್ನಿಸಿ",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ವಿವರಿಸಿ. ನಮ್ಮ ಯಾತ್ರಿ ಅದನ್ನು 24 ಗಂಟೆಗಳಲ್ಲಿ ಪರಿಹರಿಸಲು ಪ್ರಯತ್ನಿಸುತ್ತದೆ.",
       "CALL_SUPPORT_DESCRIPTION" : "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲಾಗಿದೆ ಎಂದು ನಾವು ಭಾವಿಸುತ್ತೇವೆ, ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿಗೆ ನಮಗೆ nammayatri.support@juspay.in ನಲ್ಲಿ ಬರೆಯಲು ಮುಕ್ತವಾಗಿರಿ."
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲಾಗಿದೆ ಎಂದು ನಾವು ಭಾವಿಸುತ್ತೇವೆ, ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿಗೆ ನಮಗೆ support@nammayatri.in ನಲ್ಲಿ ಬರೆಯಲು ಮುಕ್ತವಾಗಿರಿ."
+    },
+    "tamilStrings": {
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "உங்கள் இருப்பிடம் எங்கள் கணினிக்கு அருகில் உள்ள அனைத்தையும் ஆட்டோக்கள் மூலம் வரைபடமாக்கி, உங்களுக்கு விரைவான பயணத்தை சாத்தியமாக்க உதவுகிறது.",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "நம்ம யாத்ரிக்கு வரவேற்கிறோம்! \nசவாரிகளை முன்பதிவு செய்யத் தொடங்க, உங்களைக் கண்டறிய எங்களை அனுமதிக்கவும்!",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "இணையதளம்: <u>https://nammayatri.in/</u>",
+      "YOUR_FEEDBACK_HELPS_US" : "உங்கள் கருத்து நம் யாத்ரி அனுபவத்தை மேம்படுத்த உதவுகிறது",
+      "LEARN_HOW_TEXT" : "நம்மயாத்ரி உங்கள் தேவைகளை எப்படிப் பூர்த்தி செய்கிறது",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" : "டிரைவர் சேர்க்கை வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள ₹10 வரை கணக்கிடப்படும்",
+      "FARE_INFO_TEXT" : "கர்நாடக மாநில அரசு விதிகளின் அடிப்படையிலான ஆட்டோ ஓட்டுநர் சேர்க்கையின் அடிப்படையில் கட்டணம் நிர்ணயிக்கப்பட்டுள்ளது, மேலும் இது நம்ம யாத்ரியால் நிர்ணயிக்கப்படவில்லை.",
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "சவாரிகளைத் தேடத் தொடங்க, அமைப்புகள் பயன்பாட்டிலிருந்து நம்ம யாத்ரிக்கான இருப்பிட அனுமதிகளை இயக்கவும்.",
+      "TAXI_FROM_ZONE" : "நம்ம யாத்ரி மண்டலத்திலிருந்து",
+      "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "நம்ம யாத்ரி மண்டலத்திற்கான OTP காலாவதியானது, மீண்டும் முன்பதிவு செய்ய முயற்சிக்கவும்",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "உங்கள் சிக்கலை விவரிக்கவும். நம்ம யாத்ரி 24 மணி நேரத்திற்குள் அதைத் தீர்க்க முயற்சிக்கும்.",
+      "CALL_SUPPORT_DESCRIPTION" : "நம்ம யாத்ரி ஆதரவிற்கு அழைப்பை மேற்கொள்ள உள்ளீர்கள். தொடர விரும்புகிறீர்களா?",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "சிக்கல் தீர்ந்துவிட்டது என்று நம்புகிறோம், ஏதேனும் கேள்விகளுக்கு தயங்காமல் எங்களுக்கு nammayatri.support@juspay.in இல் எழுதவும்."
     },
     "languageList": [{
       "name": "English",
@@ -133,7 +148,12 @@ window.getMerchantConfig = function () {
       "name": "हिंदी",
       "value": "HI_IN",
       "subTitle": "Hindi"
-    }],
+    }, {
+      "name": "தமிழ்",
+      "value": "TA_IN",
+      "subTitle": "Tamil"
+    }
+  ],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
       , "title" : "Complete your profile for a personalised ride experience"
@@ -172,22 +192,56 @@ window.getMerchantConfig = function () {
       "physicalImpairmentVideo" : "https://youtu.be/-ku9Gc8U5B8",
       "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=QcKeSF9uiJ4"
     }
-    , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
+    , "SUPPORT_EMAIL" : "support@nammayatri.in"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "callOptions" : ["ANONYMOUS", "DIRECT"]
+    , "termsVersion" : 2.0
     , "showDisabilityBanner" : false
     , "enableContactSupport" : false
     , "enableGeocoder" : true
-    , "estimateAndQuoteConfig" :
-                { "enableOnlyAuto" : true
-                }
+    , "estimateAndQuoteConfig" : 
+      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
+      , "variantOrder" : ["AUTO_RICKSHAW"]
+      , "variantInfo" : {
+        "hatchback" : {
+          "name" : "Hatchback",
+          "image" : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
+          },
+        "taxiPlus" : {
+          "name" : "AC Taxi",
+          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
+        },
+        "sedan" : {
+          "name" : "Sedan",
+          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+        },
+        "taxi" : {
+          "name" : "Non-AC Taxi",
+          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+        },
+        "suv" : {
+          "name" : "SUV",
+          "image" : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png"
+        },
+        "autoRickshaw" : {
+          "name" : "Auto Rickshaw",
+          "image" : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+        }
+
+      }
+      , "enableOnlyAuto" : true
+      , "showNearByDrivers": false
+      , "enableBookingPreference": true
+      , "textColor": "#6D7280"
+      , "showInfoIcon" : true 
+      }
     , "feature" : {
-      "enableSupport" : false
+        "enableSupport" : false
       , "enableSuggestions" : true
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)
-      , "supportMail" :"nammayatri.support@juspay.in"
+      , "supportMail" :"support@nammayatri.in"
       , "name" : "Namma Yatri"
       , "website" : "https://nammayatri.in/"
     }

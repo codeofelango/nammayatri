@@ -1,6 +1,7 @@
 module Resources.Localizable.HI where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getHI :: STR -> String
 getHI stringKey =
@@ -646,7 +647,7 @@ getHI stringKey =
         CANCEL_AUTOPAY_STR ->  "ऑटोपे रद्द करें"
         WE_MIGHT_BE_LOST ->  "उह ओह! हम खो सकते हैं"
         EXEPERIENCING_ERROR ->  "त्रुटि का अनुभव हो रहा है"
-        ENJOY_THESE_BENEFITS ->  "इन लाभों का आनंद लें"
+        ENJOY_THESE_BENEFITS ->  "आपके शामिल होने से लाभ!"
         CHOOSE_YOUR_PLAN _ ->  "अभी एक योजना चुनें!"
         SKIP_FOR_NOW ->  "अभी के लिए छोड़ दे"
         SEVEN_DAY_FREE_TRIAL_ACTIVATED ->  "7-दिवसीय निःशुल्क परीक्षण सक्रिय!"
@@ -1190,7 +1191,7 @@ getHI stringKey =
         ONE_TWO_START_RATING -> "यात्रा के लिए 1 या 2 स्टार रेटिंग"
         BOOKING_CANCELLATION -> "बुकिंग रद्दीकरण"
         PAID_BY -> "द्वारा भुगतान किया गया"
-        DRIVER_REFERRAL_CODE -> "ड्राइवर रेफरल कोड"
+        DRIVER_REFERRAL_CODE -> "ड्राइवर \n रेफरल कोड"
         APP_QR_CODE -> "ऐप क्यूआर कोड"
         START_TAKING_RIDES_AND_REFER _ -> "नम्मा यात्री ड्राइवर ऐप पर साइन अप करने के लिए सवारी लेना और ड्राइवरों को रेफर करना शुरू करें"
         REFERRED_DRIVERS -> "संदर्भित ड्राइवर"
@@ -1209,3 +1210,27 @@ getHI stringKey =
         MAX -> "अधिकतम"
         COINS -> "सिक्के"
         COINS_ADDED -> "सिक्के जोड़े गए"
+        REFERRAL -> "रेफरल"
+        BENEFITS -> "लाभ"
+        YOUR_DAILY_RANK -> "आपका दैनिक रैंक"
+        CLICK_TO_EXPAND -> "विस्तृत करने के लिए क्लिक करें"
+        REFERRED -> "संदर्भित"
+        ACTIVATED -> "सक्रिय"
+        REFER_DRIVER -> "ड्राइवर को रेफर करें"
+        REFER_CUSTOMER -> "ग्राहक को रेफर करें"
+        REFERRED_DRIVERS_INFO _ -> "नम्मा यात्री पर पंजीकृत हुए सुझाए गए ड्राइवर्स"
+        REFERRED_CUSTOMERS_INFO _ -> "नम्मा यात्री पर पंजीकृत हुए सुझाए गए ग्राहक"
+        ACTIVATED_CUSTOMERS_INFO -> "उन ग्राहकों को जोने सफलतापूर्वक अपनी पहली यात्रा पूरी की है और उन्हें सुझाया गया है"
+        CUSTOMER_REFERRAL_CODE -> "ग्राहक \n रेफरल कोड"
+        ACCEPT_RIDE_TO_ENTER_LEADERBOARD -> "राइड्स स्वीकार करें\nऔर एक शीर्ष ड्राइवर बनें"
+        CONTACT_SUPPORT_VIA -> "इसके माध्यम से सहायता से संपर्क करें"
+        YOU_CAN_SHARE_SCREENSHOT -> "मैन्युअल ऑनबोर्डिंग के लिए आप स्क्रीनशॉट और दस्तावेज़ साझा कर सकते हैं"
+        PLACE_A_CALL -> "दस्तावेज़ों को सत्यापित करने में त्वरित सहायता के लिए कॉल करें"
+        TERMS_AND_CONDITIONS_UPDATED -> "नियम एवं शर्तें और गोपनीयता नीति अद्यतन कर दी गई है"
+        SAFETY_IS_OUR_RESPONSIBILITY -> "सुरक्षा हमारी जिम्मेदारी है"
+        CUSTOMER_SAFETY_FIRST -> "ग्राहक सुरक्षा पहले!"
+        LETS_ENSURE_SAFE_RIDE -> "सुनिश्चित करें कि यात्रा सुरक्षित है"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ग्राहक सुरक्षा हमारी<br>जिम्मेदारी है। सुनिश्चित<br>करें कि यात्रा सुरक्षित और खुशहाल है"
+        OUR_SAFETY_PARTNER -> "हमारा सुरक्षा साथी"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "नमस्कार!\n\nकृपया " <> name <> " पर पंजीकरण करने के लिए मेरे रेफरल कोड " <> code <> " का उपयोग करें।\n\nऐप डाउनलोड करने के लिए QR कोड को स्कैन करें या नीचे दिए गए लिंक पर क्लिक करें। आवश्यक पंजीकरण चरणों को पूरा करें और मेरा रेफरल कोड इनपुट करें। ऑनलाइन जाएं और कमाई शुरू करें!\n\n"
+        DOWNLOAD_NOW -> "(अभी डाउनलोड करें) "

@@ -16,6 +16,7 @@
 module Tools.Error (module Tools.Error) where
 
 import EulerHS.Prelude
+import Kernel.External.Types (Language)
 import Kernel.Types.Error as Tools.Error hiding (PersonError)
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Utils.Common (Meters)
@@ -712,6 +713,7 @@ data SubscriptionError
   | OngoingManualPayment
   | NoCurrentPlanForDriver Text
   | NoDriverPlanForMandate Text
+  | NoSubscriptionConfigForService Text Text
   | InvalidAutoPayStatus
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -729,6 +731,7 @@ instance IsBaseError SubscriptionError where
     InvalidPaymentMode -> Just "Invalid payment method"
     InvalidAutoPayStatus -> Just "Invalid auto pay status"
     OngoingManualPayment -> Just "There is ongoing manual payment pls wait"
+    NoSubscriptionConfigForService merchantOperatingCityId serviceName -> Just $ "No subscription config exists for merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and serviceName \"" <> show serviceName <> "\""
 
 instance IsHTTPError SubscriptionError where
   toErrorCode = \case
@@ -742,6 +745,7 @@ instance IsHTTPError SubscriptionError where
     InvalidPaymentMode -> "INVALID_PAYMENT_MODE"
     InvalidAutoPayStatus -> "INVALID_AUTO_PAY_STATUS"
     OngoingManualPayment -> "ONGOING_PAYMENT_EXECUTION"
+    NoSubscriptionConfigForService _ _ -> "NO_SUBSCRIPTION_CONFIG_FOR_SERVICE"
   toHttpCode = \case
     PlanNotFound _ -> E500
     MandateNotFound _ -> E500
@@ -753,6 +757,7 @@ instance IsHTTPError SubscriptionError where
     NoCurrentPlanForDriver _ -> E500
     NoDriverPlanForMandate _ -> E500
     OngoingManualPayment -> E400
+    NoSubscriptionConfigForService _ _ -> E500
 
 instance IsAPIError SubscriptionError
 
@@ -918,3 +923,87 @@ instance IsHTTPError CustomerCancellationDuesError where
   toHttpCode _ = E400
 
 instance IsAPIError CustomerCancellationDuesError
+
+data RentalError
+  = OdometerReadingRequired Text
+  | EndRideOtpRequired Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RentalError
+
+instance IsBaseError RentalError where
+  toMessage = \case
+    OdometerReadingRequired tripCategory -> Just $ "Odometer Readings are required for " <> tripCategory <> " ride."
+    EndRideOtpRequired tripCategory -> Just $ "End Ride OTP is required to end a " <> tripCategory <> " ride."
+
+instance IsHTTPError RentalError where
+  toErrorCode = \case
+    OdometerReadingRequired _ -> "ODOMETER_READING_REQUIRED"
+    EndRideOtpRequired _ -> "END_RIDE_OTP_REQUIRED"
+
+  toHttpCode _ = E400
+
+instance IsAPIError RentalError
+
+data LocationMappingError
+  = FromLocationMappingNotFound Text
+  | FromLocationNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LocationMappingError
+
+instance IsBaseError LocationMappingError where
+  toMessage = \case
+    FromLocationMappingNotFound id_ -> Just $ "From location mapping not found for entity id: " <> id_ <> "."
+    FromLocationNotFound id_ -> Just $ "From location not found for locationId: " <> id_ <> "."
+
+instance IsHTTPError LocationMappingError where
+  toErrorCode = \case
+    FromLocationMappingNotFound _ -> "FROM_LOCATION_MAPPING_NOT_FOUND"
+    FromLocationNotFound _ -> "FROM_LOCATION_NOT_FOUND"
+
+  toHttpCode _ = E500
+
+instance IsAPIError LocationMappingError
+
+data LmsError
+  = LmsModuleTranslationNotFound Text Language
+  | LmsVideoNotFound Text Text
+  | LmsVideoTranslationNotFound Text Language
+  | LmsQuestionTranslationNotFound Text Language
+  | LmsModuleNotFound Text
+  | LmsDriverModuleCompletionEntryNotFound Text Text
+  | LmsQuestionNotFound Text Language
+  | LmsQuestionNotFoundForModule Text Text
+  | LmsCorrectOptionNotFound Text Language
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LmsError
+
+instance IsBaseError LmsError where
+  toMessage = \case
+    LmsModuleTranslationNotFound moduleId language -> Just $ "Module Translation Not found for moduleId :" <> moduleId <> "- and Language:" <> show language
+    LmsVideoNotFound videoId moduleId -> Just $ "LMS video not found with videoId " <> videoId <> "- and moduleId:" <> moduleId
+    LmsVideoTranslationNotFound videoId language -> Just $ "Video Translation Not found for videoId :" <> videoId <> "- and Language:" <> show language
+    LmsQuestionTranslationNotFound questionId language -> Just $ "Question Translation Not found for questionId :" <> questionId <> "- and Language:" <> show language
+    LmsModuleNotFound moduleId -> Just $ "Module not found with id : " <> moduleId
+    LmsDriverModuleCompletionEntryNotFound moduleId personId -> Just $ "Driver module completion entry not found with module id : " <> moduleId <> " - and driver Id : " <> personId
+    LmsQuestionNotFound questionId language -> Just $ "Lms Question not found with id : " <> questionId <> " with language : " <> show language
+    LmsQuestionNotFoundForModule questionId moduleId -> Just $ "Lms Question not found with id : " <> questionId <> "for module with id : " <> moduleId
+    LmsCorrectOptionNotFound questionId language -> Just $ "Correct Option not found for question : " <> questionId <> " and language :" <> show language
+
+instance IsHTTPError LmsError where
+  toErrorCode = \case
+    LmsModuleTranslationNotFound _moduleId _language -> "LMS_MODULE_TRANSLATION_NOT_FOUND"
+    LmsVideoNotFound _ _ -> "LMS_VIDEO_NOT_FOUND"
+    LmsVideoTranslationNotFound _videoId _language -> "LMS_VIDEO_TRANSLATION_NOT_FOUND"
+    LmsQuestionTranslationNotFound _questionId _language -> "LMS_QUESTION_TRANSLATION_NOT_FOUND"
+    LmsModuleNotFound _moduleId -> "LMS_MODULE_NOT_FOUND"
+    LmsDriverModuleCompletionEntryNotFound _ _ -> "LMS_DRIVER_MODULE_COMPLETION_ENTRY_NOT_FOUND"
+    LmsQuestionNotFound _questionId _ -> "LMS_QUESTION_NOT_FOUND"
+    LmsQuestionNotFoundForModule _ _ -> "LMS_QUESTION_NOT_FOUND_FOR_MODULE"
+    LmsCorrectOptionNotFound _questionid _ -> "LMS_CORRECT_OPTION_NOT_FOUND"
+
+  toHttpCode _ = E400
+
+instance IsAPIError LmsError

@@ -54,6 +54,7 @@ type AppConfigCustomer a =
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
   , mapConfig :: MapConfig
+  , metroTicketingConfig :: MetroConfig
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
@@ -65,6 +66,7 @@ type AppConfigCustomer a =
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
+  , cityConfig :: Array CityConfig
   | a
   }
 
@@ -121,8 +123,8 @@ type DriverInfoConfig = {
 }
 
 type SearchLocationConfig = {
-  searchLocationTheme :: String, 
-  setLocationOnMapColor :: String, 
+  searchLocationTheme :: String,
+  setLocationOnMapColor :: String,
   strokeColor :: String,
   enableLocationTagbar :: String,
   resultsCardCornerRadius :: Number,
@@ -178,7 +180,8 @@ type SuggestedDestinationAndTripsConfig = {
   repeatRideTime :: Int,
   autoScrollTime :: Int,
   tripWithinXDist :: Number,
-  locationWithinXDist :: Number
+  locationWithinXDist :: Number,
+  destinationGeohashPrecision :: Int
 }
 
 type Language =  {
@@ -196,7 +199,7 @@ type BannerViewState = {
   imageUrl :: String
 }
 type TerminateBtnConfig = {
-    visibility :: Boolean, 
+    visibility :: Boolean,
     title :: String,
     imageUrl :: String,
     backgroundColor :: String
@@ -231,7 +234,12 @@ type Features = {
   enableShareApp:: Boolean,
   enableReAllocation :: Boolean,
   forceLogReferrerUrl :: Boolean,
-  enableSelfServe :: Boolean
+  enableSelfServe :: Boolean,
+  enableAdditionalServices :: Boolean,
+  enableSafetyFlow :: Boolean,
+  shareWithEmergencyContacts :: Boolean,
+  enableAutoReferral :: Boolean,
+  enableRepeatTripBackfilling :: Boolean
   }
 
 type RideCompletedCardConfig = {
@@ -259,10 +267,15 @@ type MapConfig = {
   vehicleMarkerSize :: Int
 }
 
+type MetroConfig = {
+  metroStationTtl :: Int
+}
+
 type LocateOnMapConfigs = {
   dottedLineConfig :: DottedLineConfig
 , apiTriggerRadius :: Number
 , pickUpToSourceThreshold :: Number
+, hotSpotConfig :: HotSpotConfig
 }
 
 type DottedLineConfig = {
@@ -338,4 +351,21 @@ type VariantConfig = {
 type VariantInfo = {
   name :: String,
   image :: String
+}
+
+type HotSpotConfig = {
+  goToNearestPointWithinRadius :: Number,
+  showHotSpotsWithinRadius :: Number,
+  enableHotSpot :: Boolean
+}
+
+type CityConfig = {
+  cityName :: String,
+  cityCode :: String,
+  geoCodeConfig :: GeoCodeConfig
+}
+
+type GeoCodeConfig = {
+  radius :: Int,
+  strictBounds :: Boolean
 }

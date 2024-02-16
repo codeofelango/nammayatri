@@ -57,6 +57,19 @@ pipeline {
                             cachixPush "nammayatri"
                         }
                     }
+                    // stage ('Load Test') {
+                    //     when {
+                    //         allOf {
+                    //             expression { 'x86_64-linux' == env.SYSTEM }
+                    //         }
+                    //     }
+                    //     steps {
+                    //         sh '''
+                    //             nix run .#load-test-prepare
+                    //             nix run .#load-test-dev -- -t=false
+                    //         '''
+                    //     }
+                    // }
                 }
             }
         }

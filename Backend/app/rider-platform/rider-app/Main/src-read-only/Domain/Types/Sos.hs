@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Sos where
 
@@ -9,7 +10,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data Sos = Sos
   { flow :: Domain.Types.Sos.SosType,
@@ -34,8 +35,8 @@ data SosStatus = Resolved | NotResolved | Pending
 data SosType = Police | CustomerCare | EmergencyContact Domain.Types.Sos.EmergencyContactId | SafetyFlow
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''EmergencyContactId)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''EmergencyContactId)
 
-$(mkBeamInstancesForEnum ''SosStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosStatus)
 
-$(mkBeamInstancesForEnum ''SosType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosType)

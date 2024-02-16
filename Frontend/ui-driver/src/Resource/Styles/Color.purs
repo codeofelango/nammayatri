@@ -406,7 +406,8 @@ golden = "#E9BE4D"
 greenGrey :: Color
 greenGrey = "#268C6E"
 
-
+greenGrey100 :: Color
+greenGrey100 = "#29268C6E"
 
 greenDull :: Color
 greenDull = "#5FAF9E"
@@ -419,9 +420,6 @@ transparentWhite = "#30FFFFFF"
 
 lightGradientBlue :: Color
 lightGradientBlue = "#F5F8FF"
-
-darkGradientBlue :: Color
-darkGradientBlue = "#E2EAFF"
 
 lightPurple :: Color
 lightPurple = "#F4ECFF"

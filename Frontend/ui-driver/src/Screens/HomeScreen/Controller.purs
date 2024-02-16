@@ -19,7 +19,8 @@ import Helpers.Utils
 import Screens.SubscriptionScreen.Controller
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Common.Styles.Colors as Color
-import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..), LazyCheck(..)) as Common
+import Common.Types.App (OptionButtonList, LazyCheck(..)) as Common
+import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..)) as PP
 import Components.Banner as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.ChatView as ChatView
@@ -48,8 +49,8 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC)
-import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
 import Language.Strings (getString)
@@ -61,14 +62,14 @@ import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..))
 import Services.Accessor (_lat, _lon)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Helpers.Utils as HU
 import JBridge as JB
-import Effect.Uncurried (runEffectFn4)
+import Effect.Uncurried (runEffectFn1, runEffectFn4)
 import Constants 
 import Data.Function.Uncurried (runFn1, runFn2)
 import Screens.HomeScreen.ComponentConfig
@@ -97,8 +98,10 @@ import Components.BannerCarousel as BannerCarousel
 import Styles.Colors as Color
 import PrestoDOM.Core
 import PrestoDOM.List
-import RemoteConfigs as RC
+import RemoteConfig as RC
 import Locale.Utils
+import Foreign (unsafeToForeign)
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -317,7 +320,7 @@ data Action = NoAction
             | WaitTimerCallback String String Int
             | MakePaymentModalAC MakePaymentModal.Action
             | RateCardAC RateCard.Action
-            | PaymentStatusAction Common.APIPaymentStatus
+            | PaymentStatusAction PP.APIPaymentStatus
             | RemovePaymentBanner
             | KeyboardCallback String
             | OfferPopupAC PopUpModal.Action
@@ -342,9 +345,8 @@ data Action = NoAction
             | UpdateGoHomeTimer Int String String
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
-            | UpdateOriginDist Number Number
             | AccountBlockedAC PopUpModal.Action
-            | UpdateAndNotify ST.Location Boolean
+            | UpdateAndNotify
             | UpdateWaitTime ST.TimerStatus
             | NotifyAPI
             | IsMockLocation String
@@ -361,6 +363,8 @@ data Action = NoAction
             | ToggleStatsModel
             | ToggleBonusPopup
             | GoToEarningsScreen Boolean
+            | CustomerSafetyPopupAC PopUpModal.Action
+            | UpdateLastLoc Number Number Boolean
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -522,6 +526,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
       exit $ GoToNotifications state
     "Rankings" -> do
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
     "Join" -> do
@@ -839,35 +844,38 @@ eval (TimeUpdate time lat lng) state = do
   void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
   continueWithCmd newState [ do
     void $ if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
-    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, state.data.snappedOrigin of
-      true, ST.RideAccepted, false, Nothing -> pure (UpdateOriginDist driverLat driverLong)
-      true, ST.RideAccepted, false, Just snapped -> do
-
-        let dist = (getDistanceBwCordinates driverLat driverLong snapped.lat snapped.lon)
-            isDriverNearBy = ( dist < state.data.config.waitTimeConfig.thresholdDist)
-        pure if isDriverNearBy then NotifyAPI else AfterRender
-      _, _, _, _ -> pure AfterRender
+    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, not (Array.null state.data.prevLatLon) of
+      true, ST.RideAccepted, false, true -> do
+        let lastTwoHeartbeats = checkTwoDriverHeartbeats state.data.prevLatLon {lat:state.data.activeRide.src_lat, lon : state.data.activeRide.src_lon, place : "" , driverInsideThreshold : false} state.data.config.waitTimeConfig.thresholdDist state
+        pure $ if lastTwoHeartbeats && state.data.noOfLocations == 3 then UpdateAndNotify else (UpdateLastLoc driverLat driverLong lastTwoHeartbeats)
+      _, _, _, _-> pure $ UpdateLastLoc driverLat driverLong false
     ]
 
-eval (UpdateOriginDist lat lng) state =
-  continueWithCmd state [ do
-    void $ launchAff $ flowRunner defaultGlobalState $ do
-      push <- liftFlow $ getPushFn Nothing "HomeScreen"
-      rideRouteResp <- Remote.rideRoute state.data.activeRide.id
-      case rideRouteResp of
-        Left _ -> pure unit
-        Right (API.RideRouteResp resp) -> 
-          case Array.head resp.points of
-            Just (API.LatLong loc) -> do
-              let dist = getDistanceBwCordinates lat lng loc.lat loc.lon
-              liftFlow $ push $ UpdateAndNotify {lat : loc.lat, lon : loc.lon, place : ""} $ dist < state.data.config.waitTimeConfig.thresholdDist
-              pure unit
-            _ -> pure unit
-      pure unit
-    pure NoAction]
+eval (UpdateLastLoc lat lon val) state = do
+  let updatedArray = state.data.prevLatLon <> [{lat : lat, lon : lon, place : "", driverInsideThreshold : val}]
+      array = if Array.length updatedArray > 3
+                then Array.drop 1 updatedArray
+                else updatedArray
+      value = if val then (state.data.noOfLocations + 1) else 0
+      minDisplacement = if val then "0.0" else "5.0"
+      _ = setValueToLocalStore DRIVER_MIN_DISPLACEMENT minDisplacement
+  continue state {data { prevLatLon = array, noOfLocations = value }}
   
-eval (UpdateAndNotify snappedOrigin callNotify) state = do
-  continueWithCmd state{data{snappedOrigin = Just snappedOrigin}} [ pure if callNotify then NotifyAPI else NoAction]
+eval (UpdateAndNotify) state =
+  continueWithCmd state
+        [ do
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+              $ do
+                  push <- liftFlowBT $ getPushFn Nothing "HomeScreen"
+                  GetRouteResp routeApiResponse <- Remote.getRouteBT (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon) "pickup"
+                  let shortRoute = (routeApiResponse Array.!! 0)
+                      _ = setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
+                  liftFlowBT $ push $ case shortRoute of
+                      Just (Route route) -> do
+                          if (route.distance) <= state.data.config.waitTimeConfig.routeDistance then NotifyAPI else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
+                      _ -> UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
+            pure NoAction
+        ]
 
 eval NotifyAPI state = updateAndExit state $ NotifyDriverArrived state 
 
@@ -944,6 +952,7 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
           BannerCarousel.Remote link -> do
             void $ openUrlInApp link
             pure NoAction
+          _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
 
@@ -977,13 +986,17 @@ eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment 
 eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
 
 eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
-eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = do
+eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false}} [ do 
   _ <- pure $ pauseYoutubeVideo unit
-  continue state{props{showAccessbilityPopup = false}}
+  void $ runEffectFn1 removeMediaPlayer ""
+  pure NoAction
+  ] 
 
-eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = do
+eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false}} [ do 
   _ <- pure $ pauseYoutubeVideo unit
-  continue state{props{showGenericAccessibilityPopUp = false}}
+  void $ runEffectFn1 removeMediaPlayer ""
+  pure NoAction
+  ] 
 
 eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
       pure $ RideActionModalAction (RideActionModal.MessageCustomer)
@@ -1007,9 +1020,9 @@ eval RemoveGenderBanner state = do
 
 eval (PaymentStatusAction status) state =
   case status of
-    Common.CHARGED -> continue state { data { paymentState { paymentStatusBanner = false}}}
+    PP.CHARGED -> continue state { data { paymentState { paymentStatusBanner = false}}}
     _ -> continue state { data { paymentState {
-                  paymentStatus = Common.Failed,
+                  paymentStatus = PP.Failed,
                   bannerBG = Color.pearl,
                   bannerTitle = getString YOUR_PREVIOUS_PAYMENT_IS_PENDING,
                   bannerTitleColor = Color.dustyRed,
@@ -1043,9 +1056,13 @@ eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetai
 
 eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
 
-eval (CoinsPopupAC PopUpModal.OnButton1Click) state = exit $ EarningsScreen state true
+eval (CoinsPopupAC PopUpModal.OnButton1Click) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_coins_intro_popup_check_now_click"
+  exit $ EarningsScreen state true
 
-eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = continue state {props {showCoinsPopup = false}}
+eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = do
+  void $ pure $ setValueToLocalNativeStore COINS_POPUP_SHOWN_DATE (getCurrentUTC "")
+  continue state {props {showCoinsPopup = false}}
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
@@ -1057,7 +1074,9 @@ eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerIte
 
 eval ToggleStatsModel state = continue state { props { isStatsModelExpanded = not state.props.isStatsModelExpanded } }
 
-eval (GoToEarningsScreen showCoinsView) state = exit $ EarningsScreen state showCoinsView
+eval (GoToEarningsScreen showCoinsView) state = do
+  let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_coins_click_on_homescreen" $ [{key : "CoinBalance", value : unsafeToForeign state.data.coinBalance}]
+  exit $ EarningsScreen state showCoinsView
 
 eval _ state = continue state
 
@@ -1099,6 +1118,7 @@ constructLatLong lat lon =
   { lat: fromMaybe 0.0 (Number.fromString lat)
   , lon : fromMaybe 0.0 (Number.fromString lon)
   , place : ""
+  , driverInsideThreshold : false
   }
 
 activeRideDetail :: ST.HomeScreenState -> RidesInfo -> ST.ActiveRide
@@ -1106,6 +1126,7 @@ activeRideDetail state (RidesInfo ride) =
   let waitTimeSeconds = DS.split (DS.Pattern "<$>") (getValueToLocalStore TOTAL_WAITED)
       waitTime = maybe 0 (fromMaybe 0 <<< Int.fromString) $ waitTimeSeconds Array.!! 1
       isTimerValid = (fromMaybe "" (waitTimeSeconds Array.!! 0)) == ride.id
+      isSafetyRide = isSafetyPeriod state ride.createdAt
   in 
   {
   id : ride.id,
@@ -1133,16 +1154,20 @@ activeRideDetail state (RidesInfo ride) =
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
   requestedVehicleVariant : ride.requestedVehicleVariant,
   waitTimerId : state.data.activeRide.waitTimerId,
-  specialLocationTag :  if isJust ride.disabilityTag then Just "Accessibility"
+  specialLocationTag : if isJust ride.disabilityTag then Just "Accessibility"
                         else if isJust ride.driverGoHomeRequestId then Just "GOTO" 
+                        else if isJust ride.specialLocationTag then ride.specialLocationTag
+                        else if isSafetyRide then Just "Safety"
                         else ride.specialLocationTag, --  "None_SureMetro_PriorityDrop",--"GOTO",
-  disabilityTag :  case ride.disabilityTag of
+  disabilityTag : case ride.disabilityTag of
               Just "BLIND_LOW_VISION" -> Just ST.BLIND_AND_LOW_VISION
               Just "HEAR_IMPAIRMENT" -> Just ST.HEAR_IMPAIRMENT
               Just "LOCOMOTOR_DISABILITY" -> Just ST.LOCOMOTOR_DISABILITY
               Just "OTHER" -> Just ST.OTHER_DISABILITY
               Just _ -> Just ST.OTHER_DISABILITY
-              Nothing -> Nothing
+              Nothing -> if isSafetyRide && (isNothing ride.specialLocationTag) 
+                          then Just ST.SAFETY 
+                          else Nothing
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList
@@ -1255,9 +1280,24 @@ getBannerConfigs state =
   where 
     getRemoteBannerConfigs :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
     getRemoteBannerConfigs = do 
-      let datas = RC.carouselConfigData (toLower $ getValueToLocalStore DRIVER_LOCATION) $ getLanguage $ getLanguageLocale languageKey
-      remoteConfigTransformer datas BannerCarousal
+      let driverLocation = toLower $ getValueToLocalStore DRIVER_LOCATION
+          language = getLanguage $ getLanguageLocale languageKey
+          configName = "driver_carousel_banner" <> language
+          datas = RC.carouselConfigData driverLocation configName "driver_carousel_banner_en"
+      BannerCarousel.remoteConfigTransformer datas BannerCarousal
     getLanguage :: String -> String
     getLanguage lang = 
       let language = toLower $ take 2 lang
       in if not (null language) then "_" <> language else "_en"
+
+
+isSafetyPeriod :: ST.HomeScreenState -> String -> Boolean
+isSafetyPeriod state riseStartTime = 
+  let timeStamp = EHC.convertUTCtoISC riseStartTime "HH:mm:ss"
+  in JB.withinTimeRange state.data.config.safetyRide.startTime state.data.config.safetyRide.endTime timeStamp
+checkTwoDriverHeartbeats :: Array ST.Location -> ST.Location -> Number -> ST.HomeScreenState -> Boolean
+checkTwoDriverHeartbeats locationArray pickupLoc thresholdDist state =
+  let latLon = fromMaybe {lat : 0.0, lon : 0.0, place : "", driverInsideThreshold : false} (Array.last state.data.prevLatLon)
+      dist1 = getDistanceBwCordinates latLon.lat latLon.lon pickupLoc.lat pickupLoc.lon
+      h1 = dist1 < thresholdDist
+  in h1

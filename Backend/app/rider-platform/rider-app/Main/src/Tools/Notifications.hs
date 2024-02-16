@@ -16,6 +16,7 @@ module Tools.Notifications where
 
 import Data.Aeson (object)
 import qualified Data.Text as T
+import Data.Time hiding (secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Estimate (Estimate)
@@ -24,11 +25,13 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
 import Domain.Types.Quote (makeQuoteAPIEntity)
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
+import Domain.Types.RiderConfig as DRC
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -43,12 +46,15 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
-import Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
+import qualified Storage.Queries.Person.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchReq
+import Tools.Error
 import qualified Tools.SMS as Sms
 
 data EmptyDynamicParam = EmptyDynamicParam
@@ -103,6 +109,8 @@ notifyOnDriverOfferIncoming ::
   m ()
 notifyOnDriverOfferIncoming estimateId quotes person = do
   let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_QUOTE_INCOMING merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_QUOTE_INCOMING,
@@ -114,7 +122,8 @@ notifyOnDriverOfferIncoming estimateId quotes person = do
             title = title,
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
       title = "New driver offers incoming!"
       body =
@@ -140,6 +149,9 @@ notifyOnRideAssigned booking ride = do
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_ASSIGNMENT merchantOperatingCityId
+  tag <- getDisabilityTag person.hasDisability personId
+  notificationSound <- getNotificationSound tag notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_ASSIGNMENT,
@@ -151,7 +163,8 @@ notifyOnRideAssigned booking ride = do
             title = title,
             dynamicParams = RideAssignedParam driverName,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
       title = T.pack "Driver assigned!"
       body =
@@ -177,6 +190,9 @@ notifyOnRideStarted booking ride = do
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.TRIP_STARTED merchantOperatingCityId
+  tag <- getDisabilityTag person.hasDisability personId
+  notificationSound <- getNotificationSound tag notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
           { category = Notification.TRIP_STARTED,
@@ -188,7 +204,8 @@ notifyOnRideStarted booking ride = do
             title = title,
             dynamicParams = RideStartedParam driverName,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
       title = T.pack "Trip started!"
       body =
@@ -216,6 +233,9 @@ notifyOnRideCompleted booking ride = do
       totalFare = ride.totalFare
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.TRIP_FINISHED merchantOperatingCityId
+  tag <- getDisabilityTag person.hasDisability personId
+  notificationSound <- getNotificationSound tag notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
           { category = Notification.TRIP_FINISHED,
@@ -227,7 +247,8 @@ notifyOnRideCompleted booking ride = do
             title = title,
             dynamicParams = RideCompleteParam driverName $ show (fromMaybe booking.estimatedFare totalFare),
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
       title = T.pack "Trip finished!"
       body =
@@ -240,6 +261,7 @@ notifyOnRideCompleted booking ride = do
   notifyPerson person.merchantId merchantOperatingCityId notificationData
   where
     updateFollowsRideCount personId = do
+      void $ QPDEN.updateShareRideForAll personId $ Just False
       emContacts <- QPDEN.findAllByPersonId personId
       let followingContacts = filter (.enableForFollowing) emContacts
       mapM_
@@ -266,6 +288,8 @@ notifyOnExpiration searchReq = do
   case person of
     Just p -> do
       let merchantOperatingCityId = p.merchantOperatingCityId
+      notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.EXPIRED_CASE merchantOperatingCityId
+      let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
       let notificationData =
             Notification.NotificationReq
               { category = Notification.EXPIRED_CASE,
@@ -277,7 +301,8 @@ notifyOnExpiration searchReq = do
                 title = title,
                 dynamicParams = EmptyDynamicParam,
                 auth = Notification.Auth p.id.getId p.deviceToken p.notificationToken,
-                ttl = Nothing
+                ttl = Nothing,
+                sound = notificationSound
               }
           title = T.pack "Ride expired!"
           body =
@@ -296,6 +321,8 @@ notifyOnRegistration ::
   m ()
 notifyOnRegistration regToken person mbDeviceToken = do
   let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.REGISTRATION_APPROVED merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let tokenId = RegToken.id regToken
       notificationData =
         Notification.NotificationReq
@@ -308,7 +335,8 @@ notifyOnRegistration regToken person mbDeviceToken = do
             title = title,
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId mbDeviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
       title = T.pack "Registration Completed!"
       body =
@@ -331,9 +359,15 @@ notifyOnBookingCancelled ::
 notifyOnBookingCancelled booking cancellationSource = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
-  notifyPerson person.merchantId merchantOperatingCityId (notificationData booking.providerName person)
+  tag <- getDisabilityTag person.hasDisability person.id
+  notificationSoundFromConfig <- case cancellationSource of
+    SBCR.ByDriver -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT_DRIVER merchantOperatingCityId
+    SBCR.ByUser -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT_USER merchantOperatingCityId
+    _ -> SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT merchantOperatingCityId
+  notificationSound <- getNotificationSound tag notificationSoundFromConfig
+  notifyPerson person.merchantId merchantOperatingCityId (notificationData booking.providerName person notificationSound)
   where
-    notificationData orgName person =
+    notificationData orgName person notificationSound =
       Notification.NotificationReq
         { category = Notification.CANCELLED_PRODUCT,
           subCategory = Just subCategory,
@@ -344,7 +378,8 @@ notifyOnBookingCancelled booking cancellationSource = do
           title = title,
           dynamicParams = RideCancelParam $ showTimeIst (booking.startTime),
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-          ttl = Nothing
+          ttl = Nothing,
+          sound = notificationSound
         }
     title = T.pack "Ride cancelled!"
     subCategory = case cancellationSource of
@@ -394,9 +429,12 @@ notifyOnBookingReallocated ::
 notifyOnBookingReallocated booking = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
-  notifyPerson person.merchantId merchantOperatingCityId (notificationData person)
+  tag <- getDisabilityTag person.hasDisability person.id
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.REALLOCATE_PRODUCT merchantOperatingCityId
+  notificationSound <- getNotificationSound tag notificationSoundFromConfig
+  notifyPerson person.merchantId merchantOperatingCityId (notificationData person notificationSound)
   where
-    notificationData person =
+    notificationData person notificationSound =
       Notification.NotificationReq
         { category = Notification.REALLOCATE_PRODUCT,
           subCategory = Nothing,
@@ -407,7 +445,8 @@ notifyOnBookingReallocated booking = do
           title = title,
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-          ttl = Nothing
+          ttl = Nothing,
+          sound = notificationSound
         }
     title = T.pack "Ride cancelled! We are allocating another driver"
     body =
@@ -425,9 +464,12 @@ notifyOnEstimatedReallocated ::
 notifyOnEstimatedReallocated booking estimateId = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
-  notifyPerson person.merchantId merchantOperatingCityId (notificationData person)
+  tag <- getDisabilityTag person.hasDisability person.id
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.REALLOCATE_PRODUCT merchantOperatingCityId
+  notificationSound <- getNotificationSound tag notificationSoundFromConfig
+  notifyPerson person.merchantId merchantOperatingCityId (notificationData person notificationSound)
   where
-    notificationData person =
+    notificationData person notificationSound =
       Notification.NotificationReq
         { category = Notification.REALLOCATE_PRODUCT,
           subCategory = Nothing,
@@ -438,7 +480,8 @@ notifyOnEstimatedReallocated booking estimateId = do
           title = title,
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-          ttl = Nothing
+          ttl = Nothing,
+          sound = notificationSound
         }
     title = T.pack "Searching for a New Driver!"
     body =
@@ -456,10 +499,12 @@ notifyOnQuoteReceived quote = do
   searchRequest <- QSearchReq.findById quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
   person <- Person.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
-  let notificationData = mkNotificationData person
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.QUOTE_RECEIVED merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
+  let notificationData = mkNotificationData person notificationSound
   notifyPerson person.merchantId merchantOperatingCityId notificationData
   where
-    mkNotificationData person = do
+    mkNotificationData person notificationSound = do
       let title = T.pack "Quote received!"
           body =
             unwords
@@ -476,7 +521,8 @@ notifyOnQuoteReceived quote = do
           title = title,
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-          ttl = Nothing
+          ttl = Nothing,
+          sound = notificationSound
         }
 
 notifyDriverOnTheWay ::
@@ -486,6 +532,8 @@ notifyDriverOnTheWay ::
 notifyDriverOnTheWay personId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_ON_THE_WAY merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_ON_THE_WAY,
@@ -497,7 +545,8 @@ notifyDriverOnTheWay personId = do
             title = title,
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
       title = T.pack "Driver On The Way!"
       body =
@@ -521,6 +570,8 @@ notifyDriverHasReached ::
 notifyDriverHasReached personId otp vehicleNumber = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_HAS_REACHED merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_HAS_REACHED,
@@ -532,7 +583,8 @@ notifyDriverHasReached personId otp vehicleNumber = do
             title = title,
             dynamicParams = DriverReachedParam vehicleNumber otp,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
       title = T.pack "Driver Has Reached!"
       body =
@@ -552,6 +604,8 @@ notifyOnNewMessage booking message = do
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   -- person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CHAT_MESSAGE merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
           { category = Notification.CHAT_MESSAGE,
@@ -563,7 +617,8 @@ notifyOnNewMessage booking message = do
             title = title,
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
       title = T.pack "Driver"
       body =
@@ -577,11 +632,14 @@ notifySafetyAlert ::
   SRB.Booking ->
   T.Text ->
   m ()
-notifySafetyAlert booking reason = do
+notifySafetyAlert booking _ = do
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.SAFETY_ALERT_DEVIATION merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
-          { category = Notification.SAFETY_ALERT,
+          { category = Notification.SAFETY_ALERT_DEVIATION,
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
@@ -590,13 +648,12 @@ notifySafetyAlert booking reason = do
             title = title,
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
-      title = T.pack "SafetyAlert"
-      body =
-        unwords
-          [ reason
-          ]
+      title = "Everything okay?"
+      body = "We noticed your ride is on a different route. Are you feeling safe on your trip?"
+
   notifyPerson person.merchantId person.merchantOperatingCityId notificationData
 
 notifyDriverBirthDay ::
@@ -607,6 +664,8 @@ notifyDriverBirthDay ::
 notifyDriverBirthDay personId driverName = do
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_BIRTHDAY merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
           { category = Notification.DRIVER_BIRTHDAY,
@@ -618,7 +677,8 @@ notifyDriverBirthDay personId driverName = do
             title = title,
             dynamicParams = EmptyDynamicParam,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-            ttl = Nothing
+            ttl = Nothing,
+            sound = notificationSound
           }
       title = T.pack "Driver's Birthday!"
       body =
@@ -638,24 +698,32 @@ notifyRideStartToEmergencyContacts ::
   SRide.Ride ->
   m ()
 notifyRideStartToEmergencyContacts booking ride = do
-  merchantConfig <- CQM.findById (booking.merchantId) >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  let trackLink = merchantConfig.trackingShortUrlPattern <> ride.shortId.getShortId
-  emContacts <- QPDEN.findAllByPersonId booking.riderId
-  decEmContacts <- decrypt `mapM` emContacts
-  let followingContacts = filter (.enableForFollowing) decEmContacts
   rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  for_ followingContacts \contact -> do
-    case contact.contactPersonId of
-      Just personId -> do
-        updateFollowsRideCount personId
-        sendFCM personId rider.firstName
-      Nothing -> sendSMS contact rider.firstName trackLink
+  let merchantOperatingCityId = rider.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.FOLLOW_RIDE merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
+  riderConfig <- QRC.findByMerchantOperatingCityId rider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
+  now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
+  case (rider.shareTripWithEmergencyContacts == Just True && checkTimeConstraintForFollowRide riderConfig now) of
+    True -> do
+      unless (checkTimeConstraintForFollowRide riderConfig now) $ return ()
+      let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+      emContacts <- QPDEN.findAllByPersonId booking.riderId
+      decEmContacts <- decrypt `mapM` emContacts
+      let followingContacts = filter (.enableForFollowing) decEmContacts
+      for_ followingContacts \contact -> do
+        case contact.contactPersonId of
+          Just personId -> do
+            updateFollowsRideCount personId
+            sendFCM personId rider.firstName notificationSound
+          Nothing -> sendSMS contact rider.firstName trackLink
+    False -> logInfo "Follow ride is not enabled"
   where
     updateFollowsRideCount emPersonId = do
       _ <- CQFollowRide.incrementFollowRideCount emPersonId
       Person.updateFollowsRide emPersonId True
 
-    sendFCM personId name = do
+    sendFCM personId name notificationSound = do
       person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let notificationData =
             Notification.NotificationReq
@@ -668,7 +736,8 @@ notifyRideStartToEmergencyContacts booking ride = do
                 title = title,
                 dynamicParams = EmptyDynamicParam,
                 auth = Notification.Auth personId.getId person.deviceToken person.notificationToken,
-                ttl = Nothing
+                ttl = Nothing,
+                sound = notificationSound
               }
           title = T.pack "Follow Ride"
           body =
@@ -689,3 +758,55 @@ notifyRideStartToEmergencyContacts booking ride = do
       void $
         Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (Sms.SendSMSReq message emergencyContact.mobileNumber sender)
           >>= Sms.checkSmsResult
+
+checkTimeConstraintForFollowRide :: DRC.RiderConfig -> UTCTime -> Bool
+checkTimeConstraintForFollowRide config now = do
+  let time = timeToTimeOfDay $ utctDayTime now
+  isTimeWithinBounds (secondsToTimeOfDay config.safetyCheckStartTime) (secondsToTimeOfDay config.safetyCheckEndTime) time
+
+notifyOnStopReached ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  SRide.Ride ->
+  m ()
+notifyOnStopReached booking ride = do
+  let personId = booking.riderId
+      rideId = ride.id
+      driverName = ride.driverName
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.STOP_REACHED merchantOperatingCityId
+  let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.STOP_REACHED, --- Notification.STOP_REACHED, FIX THIS
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product rideId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+      title = T.pack "Stop Reached!"
+      body =
+        unwords
+          [ driverName,
+            "has reached the stop. You may add another stop!"
+          ]
+  notifyPerson person.merchantId merchantOperatingCityId notificationData
+
+getDisabilityTag :: (ServiceFlow m r) => Maybe Bool -> Id Person -> m (Maybe Text)
+getDisabilityTag hasDisability personId = case hasDisability of
+  Just True -> runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
+  _ -> return Nothing
+
+getNotificationSound :: (ServiceFlow m r) => Maybe Text -> Maybe NSC.NotificationSoundsConfig -> m (Maybe Text)
+getNotificationSound tag notificationSoundFromConfig =
+  return case (tag, notificationSoundFromConfig) of
+    (Just "BLIND_LOW_VISION", Just ns) -> ns.blindSound
+    (_, Just ns) -> ns.defaultSound
+    (_, _) -> Nothing

@@ -43,6 +43,7 @@ import Domain.Types.Invoice (InvoicePaymentMode)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Plan as DPlan
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
@@ -178,6 +179,10 @@ type API =
              :> MandatoryQueryParam "from" Day
              :> QueryParam "to" Day
              :> Get '[JSON] [DDriver.DriverFeeResp]
+           :<|> "getDummyRideRequest"
+             :> ( TokenAuth
+                    :> Get '[JSON] APISuccess
+                )
        )
 
 handler :: FlowServer API
@@ -211,6 +216,7 @@ handler =
     :<|> getDriverPaymentsHistoryEntityDetailsV2
     :<|> getCity
     :<|> getDownloadInvoiceData
+    :<|> getDummyRideRequest
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.DriverInformationRes
 getInformation = withFlowHandlerAPI . DDriver.getInformation
@@ -281,19 +287,22 @@ remove :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
 remove = withFlowHandlerAPI . DDriver.remove
 
 getDriverPayments :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Day -> Maybe Day -> Maybe DriverFeeStatus -> Maybe Int -> Maybe Int -> FlowHandler [DDriver.DriverPaymentHistoryResp]
-getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset
+getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset DPlan.YATRI_SUBSCRIPTION
 
 clearDriverDues :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.ClearDuesRes
-clearDriverDues = withFlowHandlerAPI . DDriver.clearDriverDues
+clearDriverDues authInfo = withFlowHandlerAPI $ DDriver.clearDriverDues authInfo DPlan.YATRI_SUBSCRIPTION Nothing
 
 getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler DDriver.HistoryEntityV2
-getDriverPaymentsHistoryV2 pMode mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPaymentsHistoryV2 pMode mbLimit mbOffset
+getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset DPlan.YATRI_SUBSCRIPTION
 
 getDriverPaymentsHistoryEntityDetailsV2 :: Text -> (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.HistoryEntryDetailsEntityV2
-getDriverPaymentsHistoryEntityDetailsV2 invoiceId (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DDriver.getHistoryEntryDetailsEntityV2 (driverId, merchantId, merchantOpCityId) invoiceId
+getDriverPaymentsHistoryEntityDetailsV2 invoiceId authInfo = withFlowHandlerAPI $ DDriver.getHistoryEntryDetailsEntityV2 authInfo invoiceId DPlan.YATRI_SUBSCRIPTION
 
 getCity :: DDriver.GetCityReq -> FlowHandler DDriver.GetCityResp
 getCity = withFlowHandlerAPI . DDriver.getCity
 
 getDownloadInvoiceData :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Day -> FlowHandler [DDriver.DriverFeeResp]
 getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate = withFlowHandlerAPI . DDriver.getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate
+
+getDummyRideRequest :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
+getDummyRideRequest = withFlowHandlerAPI . DDriver.getDummyRideRequest

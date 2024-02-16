@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -70,7 +70,8 @@ initData = {
        baseFare : 0,
        extraFare : 0,
        pickUpCharges : 0,
-       vehicleVariant : ""
+       vehicleVariant : "",
+       createdTime : ""
        }
     , speed : 0
     , selectedLocationListItem : Nothing
@@ -79,7 +80,6 @@ initData = {
       , tag : ""
       , tagExists : false
       , selectedItem : locationListStateObj
-      , tagData : []
       , isBtnActive : false
       }
     , rideDistance : "--"
@@ -142,6 +142,15 @@ initData = {
     , infoCardPeekHeight : 0
     , peekHeight : 0
     , rideHistoryTrip : Nothing
+    , rentalsInfo : Just {rentalsScheduledAt : "12 : 45 PM"}
+    , bannerData : {
+        bannerItem : Nothing
+      , currentBanner : 0
+      , bannerScrollState: "0"
+      , currentPage : 0
+    } 
+    , contactList : []
+    , followers : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -230,13 +239,15 @@ initData = {
       , activeIndex : -1
       , primaryButtonText : ""
       }
+    , focussedBottomIcon : MOBILITY
     , timerId : ""
     , findingRidesAgain : false
     , routeEndPoints : Nothing
     , findingQuotesProgress : 0.0
     , confirmLocationCategory : ""
     , canSendSuggestion : true
-    , sheetState : COLLAPSED
+    , sheetState : Nothing
+    , currentSheetState : COLLAPSED
     , showOfferedAssistancePopUp : false
     , showDisabilityPopUp : false
     , isChatNotificationDismissed : false
@@ -280,6 +291,13 @@ initData = {
     , autoScrollTimerId : ""
     , autoScroll : true
     , enableChatWidget : false
+    , sosBannerType : Nothing
+    , showShareRide : false
+    , followsRide: false
+    , referral : {
+        referralStatus : NO_REFERRAL,
+        referralCode : Nothing
+      }
     }
 }
 
@@ -393,6 +411,7 @@ dummySettingBar = {
   , gender : Nothing
   , appConfig : getAppConfig appConfig
   , sideBarList : ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
+  , hasCompletedSafetySetup : false
 }
 
 dummyAddress :: Address
@@ -487,7 +506,8 @@ dummyRideBooking = RideBookingRes
   fromLocation :  dummyBookingDetails,
   merchantExoPhone : "",
   specialLocationTag : Nothing,
-  hasDisability : Nothing
+  hasDisability : Nothing,
+  sosStatus: Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
