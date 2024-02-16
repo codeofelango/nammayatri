@@ -610,6 +610,8 @@ type IndividualRideCardState =
   , optionsVisibility :: Boolean
   , merchantExoPhone :: String
   , showRepeatRide :: String
+  , rideType :: FareProductType
+  , estimatedDistance :: Int
   }
 
 
@@ -711,7 +713,6 @@ type HomeScreenState =
 type HomeScreenStateData =
   {
     suggestedAmount :: Int
-  , currentSearchResultType :: SearchResultType
   , finalAmount :: Int
   , startedAt :: String
   , endedAt :: String
@@ -755,7 +756,6 @@ type HomeScreenStateData =
   , quoteList :: Array ChooseVehicle.Config
   , selectedQuoteId :: Maybe String
   , selectedQuoteVariant :: Maybe String
-  , intercity :: Boolean
   , selectedEstimatesObject :: ChooseVehicle.Config
   , lastMessage :: ChatComponentConfig
   , cancelRideConfirmationData :: CancelRideConfirmationData
@@ -778,9 +778,9 @@ type HomeScreenStateData =
   , bannerData :: BannerCarousalData
   , contactList :: Array NewContacts
   , followers :: Maybe (Array Followers)
-  , rideType :: RideType
   , startTimeUTC :: String
   , selectedDateTimeConfig :: DateTimeConfig
+  , fareProductType :: FareProductType
   }
 
 type RentalsInfo = 
@@ -934,7 +934,6 @@ type HomeScreenStateProps =
   , flowWithoutOffers :: Boolean
   , showEducationalCarousel :: Boolean
   , locateOnMapLocation :: LocateOnMapLocation
-  , specialZoneType :: String
   , currentLocation :: Location
   , isShorterTrip :: Boolean
   , isNotificationExpanded :: Boolean
@@ -1287,7 +1286,6 @@ type Location = {
 type DriverInfoCard =
   { otp :: String
   , driverName :: String
-  , currentSearchResultType :: SearchResultType
   , eta :: Maybe Int
   , vehicleDetails :: String
   , registrationNumber :: String
@@ -1319,6 +1317,7 @@ type DriverInfoCard =
   , sourceAddress :: Address
   , destinationAddress :: Address
   , rentalData :: RentalBookingConfig
+  , fareProductType :: FareProductType
   }
 
 type RatingCard =
@@ -1906,7 +1905,7 @@ type RideScheduledScreenData = {
   , bookingId :: String
   , cancellationReasons :: Array OptionButtonList
   , config :: AppConfig
-  , rideType :: RideType
+  , fareProductType :: FareProductType
 }
 
 type RideScheduledScreenProps = {
@@ -2182,3 +2181,11 @@ type DateTimeConfig = {
   , hour :: Int
   , minute :: Int
 }
+
+----------------------------------------------------------------------
+
+data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER
+
+derive instance genericFareProductType :: Generic FareProductType _
+instance showFareProductType :: Show FareProductType where show = genericShow
+instance eqFareProductType :: Eq FareProductType where eq = genericEq

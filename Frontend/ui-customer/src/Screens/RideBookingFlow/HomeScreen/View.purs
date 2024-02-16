@@ -87,7 +87,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight, getBannerConfigs)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (transformSavedLocations)
+import Screens.HomeScreen.Transformer (transformSavedLocations, getFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
@@ -122,8 +122,8 @@ import Components.BannerCarousel as BannerCarousel
 import Components.MessagingView.Common.Types
 import Components.MessagingView.Common.View
 import Data.FoldableWithIndex
-import Common.Types.App (RideType(..)) as RideType
 import Effect.Unsafe (unsafePerformEffect)
+import Screens.Types (FareProductType(..)) as FPT
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -133,7 +133,6 @@ screen initialState =
   , globalEvents:
       [ ( \push -> do
             _ <- pure $ printLog "storeCallBackCustomer initially" "." 
-            _ <- pure $ spy "Inside homeScreen" initialState
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
@@ -190,7 +189,6 @@ screen initialState =
                 when (initialState.props.autoScroll) $ do
                   startTimer initialState.data.config.suggestedTripsAndLocationConfig.autoScrollTime "autScroll" "1" push AutoScrollCountDown
                 _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
-                void $ pure $ spy "inside remove all polylines" "hgh"
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
                 _ <- pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
@@ -210,7 +208,6 @@ screen initialState =
               PickUpFarFromCurrentLocation -> 
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
-                _ <- pure $ spy "Inside RideAccepted" (getValueToLocalStore TRACKING_DRIVER)
                 when 
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
                     $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown
@@ -219,11 +216,10 @@ screen initialState =
                   void $ waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction
                 else 
                   when 
-                    (initialState.data.currentSearchResultType == QUOTES) $ do
+                    (initialState.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) $ do
                       let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
                       void $ startTimer secondsLeft "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
-                  _ <- pure $ spy "Inside RideAccepted" "TRACKING_DRIVER"
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
@@ -242,18 +238,16 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 -- _ <- pure $ enableMyLocation false
-                void $ pure $ spy "inside RideStarted" "Sdfjhgdfjkbk"
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  void $ pure $ spy "Inside RideStarted" (getValueToLocalStore TRACKING_ID)
                   _ <- launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
                   pure unit
                 else
                   pure unit
                 _ <- push RemoveChat
                 pure unit
-                if initialState.data.rideType == RideType.RENTAL_RIDE then 
+                if initialState.data.fareProductType == FPT.RENTAL then 
                   void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") initialState.data.driverInfoCardState.rentalData.startTimeUTC ))/60) "1" "RideDurationTimer" push (RideDurationTimer)
                   else pure unit
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
@@ -491,7 +485,7 @@ bottomNavBarView push state = let
                 , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
     ]
 getMapHeight :: HomeScreenState -> Length
-getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) 
+getMapHeight state = V (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then (((screenHeight unit)/ 4)*3) 
                             else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then ((screenHeight unit) - (getInfoCardPeekHeight state)) + 50
                             else (((screenHeight unit)/ 15)*10))
 
@@ -542,8 +536,8 @@ cancelSearchPopUp push state =
 rideInfoView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideInfoView push state = 
   let isClickable = os == "IOS"
-      isWidgetVisible = (((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && (os == "ANDROID" || state.props.enableChatWidget)) || (state.props.currentStage == RideStarted && os == "IOS")
-      disableChatWidget = (not (os == "IOS" || state.props.enableChatWidget)) && (((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions
+      isWidgetVisible = (((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && (os == "ANDROID" || state.props.enableChatWidget)) || (state.props.currentStage == RideStarted && os == "IOS")
+      disableChatWidget = (not (os == "IOS" || state.props.enableChatWidget)) && (((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions
   in 
   linearLayout
   [ height MATCH_PARENT
@@ -607,7 +601,7 @@ rideInfoView push state =
      ]
   ]
   where disableSuggestions :: HomeScreenState -> Boolean
-        disableSuggestions state = state.data.currentSearchResultType == QUOTES || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
+        disableSuggestions state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
 
 messagingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messagingView push state = 
@@ -2296,7 +2290,7 @@ rideTrackingView push state =
                         , background Color.transparent 
                         , accessibility DISABLE
                         , enableShift false
-                        , peakHeight $ spy "PeakHeight is being set to" (getInfoCardPeekHeight state)
+                        , peakHeight $ getInfoCardPeekHeight state
                         , halfExpandedRatio $ halfExpanded
                         , orientation VERTICAL
                         ] <> (if lowVisionDisability || (os == "ANDROID") then 
@@ -2325,7 +2319,7 @@ getMessageNotificationViewConfig state = {
     showChatNotification : state.props.showChatNotification
   , enableChatWidget : state.props.enableChatWidget
   , isNotificationExpanded :state.props.isNotificationExpanded
-  , currentSearchResultType : state.data.currentSearchResultType
+  , fareProductType : state.data.fareProductType
   , config : state.data.config
   , rideStarted : state.props.currentStage == RideStarted
   , lastMessage : state.data.lastMessage
@@ -2625,9 +2619,9 @@ otpAndWaitView push state =
       ] <> FontStyle.body22 TypoGraphy
     , otpView push state
     ]
-  ] <> if (state.data.currentSearchResultType == QUOTES || state.data.driverInfoCardState.driverArrived) then 
+  ] <> if (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || state.data.driverInfoCardState.driverArrived) then 
         [(PrestoAnim.animationSet [ fadeIn true ] $ 
-        let isQuotes = state.data.currentSearchResultType == QUOTES
+        let isQuotes = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE
         in
         linearLayout
         [ width WRAP_CONTENT
@@ -2719,7 +2713,7 @@ waitTimeView push state =
   ]
 
 waitTimeHint :: HomeScreenState -> String
-waitTimeHint state = (if state.data.currentSearchResultType == QUOTES then "O T P Expires in : " else "Wait Time : ") <> case DS.split (DS.Pattern ":") state.data.driverInfoCardState.waitingTime of
+waitTimeHint state = (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then "O T P Expires in : " else "Wait Time : ") <> case DS.split (DS.Pattern ":") state.data.driverInfoCardState.waitingTime of
                         [minutes, seconds] -> do 
                           let min = DS.trim $ minutes
                           let sec = DS.trim $ seconds
@@ -2733,7 +2727,7 @@ colorForWaitTime state =
   case waitTime of
     [minutes, _] -> 
       let mins = fromMaybe 0 (fromString (DS.trim minutes))
-          threshold = if state.data.currentSearchResultType == QUOTES then mins < 5 else mins > 2
+          threshold = if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then mins < 5 else mins > 2
       in
       if threshold then Color.carnation100 else Color.grey700 
     _ -> Color.grey700
@@ -2763,7 +2757,7 @@ otpView push state =
         , padding $ Padding 8 4 8 6
         ] <> FontStyle.body22 TypoGraphy
       ]
-  , if state.data.currentSearchResultType == QUOTES then shineAnimation shimmerHeight shimmerWidth else emptyTextView state
+  , if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then shineAnimation shimmerHeight shimmerWidth else emptyTextView state
   ]
 
 rideInfoActionView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
@@ -2962,7 +2956,7 @@ getQuotesPolling pollingId action retryAction count duration push state = do
       let gotQuote = (getValueToLocalStore GOT_ONE_QUOTE)
       let minimumPollingCount = fromMaybe 0 (fromString (getValueToLocalStore TEST_MINIMUM_POLLING_COUNT))
       let usableCount = if gotQuote == "TRUE" && count > minimumPollingCount then minimumPollingCount else count
-      if (spy "USABLECOUNT :- " usableCount > 0) then do
+      if  usableCount > 0 then do
         resp <- selectList (state.props.estimateId)
         _ <- pure $ printLog "caseId" (state.props.estimateId)
         case resp of
@@ -3013,9 +3007,7 @@ updateRecentTrips action push response = do
 driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> RideBookingRes -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
-  void $ pure $ spy "INside state" state
   (GlobalState currentState) <- getState 
-  void $ pure $ spy "inside currentState" currentState.homeScreen
   let updatedState = currentState.homeScreen
   if (any (\stage -> isLocalStageOn stage) [ RideAccepted, RideStarted, ChatWithDriver]) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
     when (state.props.bookingId /= "") $ do
@@ -3036,7 +3028,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                     else pure unit
                   Nothing -> pure unit
         Left err -> pure unit
-    if (state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES) && (isLocalStageOn RideAccepted) then do
+    if (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
       _ <- pure $ removeAllPolylines ""
       _ <- doAff $ liftEffect $ animateCamera state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng zoomLevel "ZOOM"
@@ -3049,14 +3041,13 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           Right (GetDriverLocationResp resp) -> do
             -- (GlobalState currentState) <- getState Fget
             let
-              updatedState = spy "UpdatedState" (currentState.homeScreen)
               rideID = state.data.driverInfoCardState.rideId
               srcLat = (resp ^. _lat)
               srcLon = (resp ^. _lon)
-              dstLat = spy "Inside DestLat" $ if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-              dstLon = spy "Inside DestLon" $ if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
+              dstLat = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
+              dstLon = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
               trackingType = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then Remote.DRIVER_TRACKING else Remote.RIDE_TRACKING
-              markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.rideType
+              markers = getRouteMarkers state.data.driverInfoCardState.vehicleVariant state.props.city trackingType state.data.fareProductType
               sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
               destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
               specialLocationTag =  if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then
@@ -3066,10 +3057,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
             
             
             if ((getValueToLocalStore TRACKING_ID) == trackingId) then do
-              let _ = spy "inside locationosidhkhksdc" "line 3061"
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-                let _ = spy "sourceLat Long" (show srcLat <> "lat ::" <> show srcLon <> " dLat" <> show dstLat <> "dLon" <> show dstLon)
                 
                 if (srcLat /= 0.0 && srcLon /= 0.0 && dstLat /= 0.0 && dstLon /= 0.0) then do 
                   _ <- pure $ removeAllPolylines ""
@@ -3079,12 +3068,10 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
                 pure unit
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
-                let _ = spy "Inside TRACKING_DRIVER" state.props.stopLoc
-                let _ = spy "INside srcLat srcLon" (show srcLat <> "lat ::" <> show srcLon <> " dLat" <> show dstLat <> "dLon" <> show dstLon)
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 
                 {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) --state.data.driverInfoCardState.destinationLng
-                let rentalPoints = spy "RentalPoints" if state.data.rideType == RideType.RENTAL_RIDE && isLocalStageOn RideAccepted then points else Nothing
+                let rentalPoints = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then points else Nothing
                     rentalRoute = route 
                     rentalDistance = routeDistance
                     rentalDuration = routeDuration
@@ -3132,10 +3119,10 @@ confirmRide action count duration push state = do
       Right response -> do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
-            fareProductType = (resp.bookingDetails) ^. _fareProductType
-            status = if any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"] then "CONFIRMED" else "TRIP_ASSIGNED"
-            willRideListNull = any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"]
-        if  status == resp.status && (willRideListNull || not (null resp.rideList)) then do
+            fareProductType = getFareProductType $ (resp.bookingDetails) ^. _fareProductType
+            receivedQuotes  = any ( _ == fareProductType ) [ FPT.ONE_WAY_SPECIAL_ZONE , FPT.RENTAL, FPT.INTER_CITY ]
+            status = if receivedQuotes then "CONFIRMED" else "TRIP_ASSIGNED"
+        if  status == resp.status && (receivedQuotes || not (null resp.rideList)) then do
             doAff do liftEffect $ push $ action response
             -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
             pure unit
@@ -3149,10 +3136,6 @@ confirmRide action count duration push state = do
   else
     pure unit
 
--- rentalAndInterCityConfirmSchedule :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
--- rentalAndInterCityConfirmSchedule action count duration push state = do
-  -- if count /= 0 && state.props/
-
 rentalAndIntercityConfirmRide :: forall action. (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 rentalAndIntercityConfirmRide action checkFlowStatusAction count duration push state = do -- TODO-codex : refactor current confirm Ride on the basis of fareProductType for Rental, Intercity and SpecialZone
   if (count /= 0) && (isLocalStageOn ConfirmingQuotes) && (state.props.bookingId /= "")then do
@@ -3162,8 +3145,8 @@ rentalAndIntercityConfirmRide action checkFlowStatusAction count duration push s
       Right response -> do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
-            fareProductType = (resp.bookingDetails) ^. _fareProductType
-            status = if any ( _ == fareProductType) ["RENTAL", "INTER_CITY"] then "TRIP_ASSIGNED" else "CONFIRMED"
+            fareProductType = getFareProductType $ (resp.bookingDetails) ^. _fareProductType
+            status = if any ( _ == fareProductType) [ FPT.RENTAL, FPT.INTER_CITY ] then "TRIP_ASSIGNED" else "CONFIRMED"
         if status == resp.status && not (null resp.rideList) then do
             doAff do liftEffect $ push $ action response
             pure unit
@@ -4584,7 +4567,7 @@ endOTPView push state =
   , clickable true
   , accessibility DISABLE
   , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-  , visibility $ boolToVisibility $ any (_ == state.data.rideType) [RideType.RENTAL_RIDE, RideType.INTERCITY] && state.props.currentStage == RideStarted
+  , visibility $ boolToVisibility $ any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.INTER_CITY] && state.props.currentStage == RideStarted
   , margin $ MarginRight 4
   ]
   [ textView $
@@ -4633,11 +4616,6 @@ endOTPView push state =
   ]
 
 createRouteHelper routeState startLat startLon endLat endLon = do
-  
-  let _ = spy "Route Response" startLat
-  let _ = spy "Roueyfghjsdf" startLon 
-  let _ = spy "sdfkjhksidyfiosdf" endLat 
-  let _ = spy "sdfjhsdkjflk" endLon
   if (startLat /= 0.0 && startLon /= 0.0 && endLat /= 0.0 && endLon /= 0.0) then do
     routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon
     case routeResp of 
