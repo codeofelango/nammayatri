@@ -14,7 +14,10 @@
 
 module BecknV2.OnDemand.Enums where
 
+import Data.Aeson
+import Data.Aeson.Types (typeMismatch)
 import Kernel.Prelude
+import Kernel.Utils.JSON
 import Prelude (show)
 
 -- #################################################################
@@ -64,12 +67,25 @@ data PaymentStatus
   = -- ..fulfillments.payment.status
     PAID
   | NOT_PAID
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Eq, Generic)
+
+instance Show PaymentStatus where
+  show PAID = "PAID"
+  show NOT_PAID = "NOT-PAID"
+
+instance FromJSON PaymentStatus where
+  parseJSON (String "PAID") = return PAID
+  parseJSON (String "NOT-PAID") = return NOT_PAID
+  parseJSON wrongVal = typeMismatch "Invalid PaymentStatus" wrongVal
+
+instance ToJSON PaymentStatus where
+  toJSON = genericToJSON constructorsWithHyphens
 
 data PaymentCollectedBy
   = -- ..fulfillments.payment.collected.by
     BAP
   | BPP
+  | SELLER
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentType
@@ -77,7 +93,21 @@ data PaymentType
     PRE_ORDER
   | ON_FULFILLMENT
   | POST_FULFILLMENT
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Eq, Generic)
+
+instance Show PaymentType where
+  show PRE_ORDER = "PRE-ORDER"
+  show ON_FULFILLMENT = "ON-FULFILLMENT"
+  show POST_FULFILLMENT = "POST-FULFILLMENT"
+
+instance ToJSON PaymentType where
+  toJSON = genericToJSON constructorsWithHyphens
+
+instance FromJSON PaymentType where
+  parseJSON (String "PRE-ORDER") = return PRE_ORDER
+  parseJSON (String "ON-FULFILLMENT") = return ON_FULFILLMENT
+  parseJSON (String "POST-FULFILLMENT") = return POST_FULFILLMENT
+  parseJSON wrongVal = typeMismatch "Invalid PaymentType" wrongVal
 
 data OrderStatus
   = -- ..order.status
@@ -86,7 +116,25 @@ data OrderStatus
   | ACTIVE
   | COMPLETE
   | CANCELLED
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
+  deriving (Eq, Generic, Read)
+
+instance Show OrderStatus where
+  show SOFT_CANCEL = "SOFT-CANCEL"
+  show CONFIRM_CANCEL = "CONFIRM-CANCEL"
+  show ACTIVE = "ACTIVE"
+  show COMPLETE = "COMPLETE"
+  show CANCELLED = "CANCELLED"
+
+instance ToJSON OrderStatus where
+  toJSON = genericToJSON constructorsWithHyphens
+
+instance FromJSON OrderStatus where
+  parseJSON (String "SOFT-CANCEL") = return SOFT_CANCEL
+  parseJSON (String "CONFIRM-CANCEL") = return CONFIRM_CANCEL
+  parseJSON (String "ACTIVE") = return ACTIVE
+  parseJSON (String "COMPLETE") = return COMPLETE
+  parseJSON (String "CANCELLED") = return CANCELLED
+  parseJSON wrongVal = typeMismatch "Invalid OrderStatus" wrongVal
 
 data QuoteBreakupTitle
   = -- ..quote.breakup.title
@@ -137,3 +185,26 @@ instance Show CancellationReasonCode where
   show NO_DRIVERS_AVAILABLE = "011"
   show COULD_NOT_FIND_CUSTOMER = "012"
   show RIDE_ACCEPTED_MISTAKENLY = "013"
+
+data CancelReqMessageCancellationReasonId
+  = CANCELLED_BY_CUSTOMER -- 001
+  | CANCELLED_BY_DRIVER -- 002
+  deriving (Eq, Generic)
+
+instance Show CancelReqMessageCancellationReasonId where
+  show CANCELLED_BY_CUSTOMER = "001"
+  show CANCELLED_BY_DRIVER = "002"
+
+instance FromJSON CancelReqMessageCancellationReasonId where
+  parseJSON (String "001") = return CANCELLED_BY_CUSTOMER
+  parseJSON (String "002") = return CANCELLED_BY_DRIVER
+  parseJSON wrongVal = typeMismatch "Invalid Cancellation Reason Id" wrongVal
+
+instance ToJSON CancelReqMessageCancellationReasonId where
+  toJSON CANCELLED_BY_CUSTOMER = String "001"
+  toJSON CANCELLED_BY_DRIVER = String "002"
+
+data CancellationSource
+  = CONSUMER
+  | PROVIDER
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
