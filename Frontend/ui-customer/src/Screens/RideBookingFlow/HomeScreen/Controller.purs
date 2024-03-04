@@ -129,7 +129,7 @@ import RemoteConfig as RC
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
-
+import Components.BottomNavBar.Controller as BottomNavBarController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -927,7 +927,6 @@ data Action = NoAction
             | LocationTagBarAC LocationTagBarV2Controller.Action
             | UpdateSheetState BottomSheetState
             | RentalBannerAction Banner.Action
-            | BottomNavBarAction BottomNavBarIcon
             | BannerCarousel BannerCarousel.Action
             | SetBannerItem ListItem
             | UpdateBanner
@@ -949,6 +948,7 @@ data Action = NoAction
             | ShowEndOTP
             | RentalInfoAction PopUpModal.Action
             | IntercitySpecialZone PopUpModal.Action
+            | BottomNavBarAction BottomNavBarController.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (IntercitySpecialZone PopUpModal.DismissPopup) state = continue state
@@ -956,6 +956,11 @@ eval (IntercitySpecialZone PopUpModal.DismissPopup) state = continue state
 eval (IntercitySpecialZone PopUpModal.OnButton1Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}}
 
 eval (IntercitySpecialZone PopUpModal.OnButton2Click) state = updateAndExit state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}} $ StayInHomeScreenSO state { props { showIntercityUnserviceablePopUp = false, showNormalRideNotSchedulablePopUp = false}}
+
+eval (BottomNavBarAction (BottomNavBarController.OnNavigate screenName)) state =
+  case screenName of
+    "home_screen" -> continue state
+    _ -> exit $ GoToTicketBookingFlow state
 
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
   continue state 
@@ -2732,13 +2737,6 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
     _ -> continue state
   
 eval (RentalBannerAction Banner.OnClick) state = exit $ GoToScheduledRides
-
-eval (BottomNavBarAction id) state = do 
-  let newState = state {props {focussedBottomIcon = id}}
-  case id of 
-    TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
-    MOBILITY -> continue newState 
-    _ -> continue state 
     
 eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
   void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_i_feel_safe"
