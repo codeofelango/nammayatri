@@ -825,7 +825,7 @@ addVehicle merchantShortId opCity reqDriverId req = do
     vehicle <- buildVehicle merchantId personId req
     -- Esq.runTransaction $ do
     QVehicle.create vehicle
-    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     when (vehicle.variant == DVeh.SUV) $
       QDriverInfo.updateDriverDowngradeForSuv personId transporterConfig.canSuvDowngradeToTaxi transporterConfig.canSuvDowngradeToHatchback
 

@@ -122,7 +122,7 @@ data ServiceHandle m = ServiceHandle
     finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
-    findConfig :: (Maybe Text) -> m (Maybe DTConf.TransporterConfig),
+    findConfig :: Maybe Text -> m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
     getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m Meters,
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
@@ -130,8 +130,8 @@ data ServiceHandle m = ServiceHandle
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
   }
 
-buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DP.Person) -> Flow (ServiceHandle Flow)
-buildEndRideHandle merchantId merchantOpCityId _ = do
+buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
+buildEndRideHandle merchantId merchantOpCityId = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId True
   return $
     ServiceHandle

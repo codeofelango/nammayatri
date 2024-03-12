@@ -91,8 +91,8 @@ createThroughConfigHelper id' toss = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
   tenant <- liftIO (Se.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
-  config <- KSQS.findById' $ Text.pack tenant
-  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
+  config <- KSQS.findById $ Text.pack tenant
+  _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "config not found for transporterConfig in db") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getTransporterConfigFromCACStrict id' toss
 
 parsingMiddleware :: DAKM.KeyMap Value -> DAKM.KeyMap Value

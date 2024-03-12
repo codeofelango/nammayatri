@@ -1,16 +1,19 @@
-module API.Cac
+module API.Internal.Cac
   ( API,
     handler,
   )
 where
 
-import qualified Domain.Action.Cac as Domain
+import qualified Domain.Action.Internal.Cac as Domain
 import Environment (FlowHandler, FlowServer)
 import Kernel.Prelude
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant
 
-type API = "typeCheck" :> ReqBody '[JSON] Domain.CacTypeValidationReq :> Post '[JSON] Domain.CacTypeValidationResp
+type API =
+  "typeCheck"
+    :> ReqBody '[JSON] Domain.CacTypeValidationReq
+    :> Post '[JSON] Domain.CacTypeValidationResp
 
 handler :: FlowServer API
 handler = typeCheckHandler

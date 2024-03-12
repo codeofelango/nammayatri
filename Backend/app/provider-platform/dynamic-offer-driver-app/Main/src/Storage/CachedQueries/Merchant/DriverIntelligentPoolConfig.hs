@@ -90,8 +90,8 @@ cacFallbackHelper id srId = do
   mbHost <- liftIO $ Se.lookupEnv "CAC_HOST"
   mbInterval <- liftIO $ Se.lookupEnv "CAC_INTERVAL"
   tenant <- liftIO (SE.lookupEnv "TENANT") <&> fromMaybe "atlas_driver_offer_bpp_v2"
-  config <- KSQS.findById' $ Text.pack tenant
-  _ <- initializeCACThroughConfig CM.createClientFromConfig config.configValue tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
+  config <- KSQS.findById $ Text.pack tenant
+  _ <- initializeCACThroughConfig CM.createClientFromConfig (fromMaybe (error "Config not found for DriverIntelligentPoolConfig in db") config) tenant (fromMaybe "http://localhost:8080" mbHost) (fromMaybe 10 (readMaybe =<< mbInterval))
   getConfigFromCACStrict id srId
 
 getDriverIntelligentPoolConfigFromCAC :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Maybe Text -> m DriverIntelligentPoolConfig
