@@ -6,12 +6,20 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/Backend/feat/CACChanges-rebase";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     namma-dsl = {
       url = "github:nammayatri/namma-dsl";
+    };
+
+    haskell-cac = {
+      url = "github:piyushKumar-1/haskell_cac_client/Testing";
+      inputs = {
+        common.follows = "common";
+        nixpkgs.follows = "common/nixpkgs"; # nix eval is failing in pipeline without giving proper error message #36 for nix update https://github.com/srid/nixci/issues/36
+      };
     };
 
     beckn-gateway = {
@@ -62,10 +70,12 @@
         ./Frontend/default.nix
       ];
 
-      flake.nix-health.default = {
-        caches.required = [ "https://nammayatri.cachix.org" ];
-        direnv.required = true;
-        system.min_ram = "24G";
+      flake = {
+        nix-health.default = {
+          caches.required = [ "https://nammayatri.cachix.org" ];
+          direnv.required = true;
+          system.min_ram = "24G";
+        };
       };
     };
 }
