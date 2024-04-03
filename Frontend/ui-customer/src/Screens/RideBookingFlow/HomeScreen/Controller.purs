@@ -992,7 +992,7 @@ eval (UpdateRepeatTrips rideList) state = do
     continue shimmerState
 
         
-eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}}
+eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}, props{showShimmer = if os =="IOS" then false else state.props.showShimmer}}
 
 eval (Scroll item) state = do
   let sheetState = if item == state.props.currSlideIndex then state.props.isHomescreenExpanded
@@ -1007,7 +1007,7 @@ eval ReAllocate state =
     updateAndExit updatedState $ ReAllocateRide updatedState
   else continue state
   
-eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
+eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}, props{isBannerDataComputed = true}}
 
 eval UpdateBanner state = do
   if state.data.bannerData.bannerScrollState == "1" then continue state
