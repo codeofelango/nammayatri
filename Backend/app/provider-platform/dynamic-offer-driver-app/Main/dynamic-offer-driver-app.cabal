@@ -789,11 +789,13 @@ library
     , cryptonite
     , dashboard-helper-api
     , data-default-class
+    , directory
     , either
     , esqueleto
     , euler-hs
     , exceptions
     , extra
+    , filepath
     , generic-lens
     , geohash ==1.0.1
     , haskell-cac
@@ -907,12 +909,14 @@ executable dynamic-offer-driver-app-exe
     , cryptonite
     , dashboard-helper-api
     , data-default-class
+    , directory
     , dynamic-offer-driver-app
     , either
     , esqueleto
     , euler-hs
     , exceptions
     , extra
+    , filepath
     , generic-lens
     , geohash ==1.0.1
     , haskell-cac
