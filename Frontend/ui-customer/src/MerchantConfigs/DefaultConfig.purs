@@ -372,6 +372,7 @@ config =
   , tipDisplayDuration : 10
   , tipsEnabled : true
   , tipEnabledCities : []
+  , defaultCountryCodeConfig : countryCode
 }
 
 defaultCityConfig :: CityConfig

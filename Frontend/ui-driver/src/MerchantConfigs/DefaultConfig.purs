@@ -4,6 +4,8 @@ import MerchantConfig.Types
 import Common.DefaultConfig
 import Common.Types.Config as CTC
 import JBridge as JB
+import Foreign.Object (fromHomogeneous)
+import Prelude (($))
 
 config :: AppConfig
 config =
@@ -138,7 +140,7 @@ config =
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : true,
+              enableYatriCoins : false,
               vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig,
               variantSubscriptionConfig : {
@@ -462,10 +464,27 @@ config =
         defCity : "Bangalore"
       }
   }
-  , homeScreen : {
-    specialRideOtpView : false,
-    showGenderBanner : true
-  }
+  , homeScreen:
+      { specialRideOtpView: false
+      , showGenderBanner: true
+      , statusPills: fromHomogeneous $
+          { "Offline":
+              { background: defaultColors.red
+              , imageUrl: "ic_driver_status_offline,https://assets.juspay.in/beckn/nammayatri/user/images/ic_driver_status_offline.png"
+              , textColor: "#FFFFFF"
+              }
+          , "Silent":
+              { background: "#2194FF"
+              , imageUrl: "ic_driver_status_silent,https://assets.juspay.in/beckn/nammayatri/user/images/ic_driver_status_silent.png"
+              , textColor: "#FFFFFF"
+              }
+          , "Online":
+              { background: "#53BB6F"
+              , imageUrl: "ic_driver_status_online,https://assets.juspay.in/beckn/nammayatri/user/images/ic_driver_status_online.png"
+              , textColor: "#FFFFFF"
+              }
+          }
+      }
   , colors : defaultColors
   , primaryButtonConfig : defaultPrimaryButtonConfig
   , fontConfig : defaultFontConfig
@@ -543,6 +562,13 @@ config =
     startTime : "21:00:00"
   , endTime : "06:00:00"
   }
+  , welcomeScreen : {
+    background :"#FFFAED"
+  }
+  , enterMobileNumberScreen : {
+    headerBackground: "#2C2F3A"
+  }
+  , defaultCountryCodeConfig : countryCode
 }
 
 registrationConfig :: CTC.RegistrationConfig

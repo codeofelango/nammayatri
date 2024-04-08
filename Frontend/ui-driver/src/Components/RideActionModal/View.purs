@@ -24,7 +24,7 @@ import Components.SeparatorView.View as SeparatorView
 import Data.Maybe as Maybe
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
+import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, safeMarginBottomWithDefault, os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..))
@@ -58,6 +58,7 @@ view push config =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , padding $ PaddingBottom $ if os == "IOS" then safeMarginBottomWithDefault 24 else 0
     ][linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -89,12 +90,12 @@ messageButton push config =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) && checkVersionForChat (getCurrentAndroidVersion (getMerchant FunctionCall)) then VISIBLE else GONE
+  , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) then VISIBLE else GONE
   , padding $ Padding 20 16 20 16
   , margin $ MarginLeft 16
   , background Color.white900
   , stroke $ "1,"<> Color.black500
-  , cornerRadius 30.0
+  , cornerRadius 26.0
   , afterRender push $ const $ LoadMessages
   , onClick push $ const $  if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then VisuallyImpairedCustomer else MessageCustomer
   , alpha if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then 0.5 else 1.0
@@ -107,18 +108,6 @@ messageButton push config =
       ]
   ]
 
-getCurrentAndroidVersion :: Merchant -> Int
-getCurrentAndroidVersion merchant =
-  case merchant of
-    NAMMAYATRI -> 54
-    YATRI -> 47
-    YATRISATHI -> 1
-    _ -> 1
-
-checkVersionForChat :: Int -> Boolean
-checkVersionForChat reqVersion =
-  let currVersion = unsafePerformEffect getVersionCode
-    in currVersion > reqVersion
 
 callButton :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 callButton push config =
@@ -131,7 +120,7 @@ callButton push config =
   , margin $ MarginLeft 8
   , background Color.white900
   , stroke $ "1,"<> Color.black500
-  , cornerRadius 30.0
+  , cornerRadius 26.0
   , alpha if config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT then 0.5 else 1.0
   , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) then VISIBLE else GONE
   , onClick push (const $ CallCustomer)
@@ -294,7 +283,7 @@ openGoogleMap push config =
       , background Color.blue900
       , padding $ Padding 24 16 24 16
       , margin $ MarginRight 16
-      , cornerRadius 30.0
+      , cornerRadius 26.0
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
@@ -327,7 +316,7 @@ rideActionDataView push config =
     ][  linearLayout
           [ width (V 34)
           , height (V 4)
-          , cornerRadius 4.0
+          , cornerRadius 2.0
           , background Color.black500
           ][]
       , customerNameView push config

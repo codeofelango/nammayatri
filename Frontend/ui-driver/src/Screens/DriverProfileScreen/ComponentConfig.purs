@@ -69,13 +69,12 @@ genericHeaderConfig state = let
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-      , height = (V 25)
-      , width = (V 25)
-      , margin = (Margin 8 8 8 8)
-      , layoutMargin = Margin 8 8 8 8
+      , height = V 30
+      , width = V 30
+      , margin = MarginTop 0
       , enableRipple = true
       }
-    , padding = (PaddingVertical 5 5)
+    , padding = Padding 10 (EHC.safeMarginTopWithDefault 13) 0 13
     , textConfig {
         text = if state.props.updateLanguages then (getString LANGUAGES_SPOKEN) else (getString SETTINGS)
       , color = Color.darkCharcoal
@@ -138,11 +137,10 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = getString UPDATE
-      , color = Color.primaryButtonColor}
+      { text = getString UPDATE}
       , margin = Margin 10 0 10 10
       , cornerRadius = 10.0
-      , background = Color.black900
+      , width = MATCH_PARENT
       , height = (V 48)
       , id = "DriverProfilePrimaryButton"
       , enableRipple = true
@@ -158,11 +156,9 @@ updateButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = getString UPDATE
-      , color = Color.primaryButtonColor}
+      { text = getString UPDATE}
       , margin = MarginHorizontal 10 10
       , cornerRadius = 10.0
-      , background = Color.black900
       , height = (V 48)
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.5
@@ -175,11 +171,9 @@ downloadQRConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = getString DOWNLOAD_QR
-      , color = Color.primaryButtonColor}
+      { text = getString DOWNLOAD_QR}
       , margin = MarginHorizontal 10 10
       , cornerRadius = 10.0
-      , background = Color.black900
       , height = (V 48)
       , id = "downloadQRPrimaryButton"
       }
@@ -192,7 +186,7 @@ shareOptionButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = getString SHARE_OPTIONS
-      , color = Color.black900
+      , color = state.data.config.primaryBackground
       , textStyle = Tags}
       , isPrefixImage = true
       , prefixImageConfig {
@@ -256,8 +250,8 @@ removeAlternateNumberConfig state = let
         },
       option1 {
         text = getString CANCEL
-      , color = Color.black900
-      , strokeColor = Color.black700
+      , color = state.data.config.primaryBackground
+      , strokeColor = state.data.config.primaryBackground
       },
       option2 {
         text = getString YES_REMOVE_IT
@@ -341,9 +335,9 @@ activateAndDeactivateRcPopUpConfig push state =
         , option1 {
           text = if state.data.isRCActive then (getString YES_DEACTIVATE) else (getString YES_ACTIVATE)
         , width = MATCH_PARENT
-        , color = Color.yellow900
-        , strokeColor = Color.black900
-        , background = Color.black900
+        , color = state.data.config.primaryTextColor
+        , strokeColor = state.data.config.primaryBackground
+        , background = state.data.config.primaryBackground
         , padding = (PaddingVertical 10 10)
         }
         , option2 {
@@ -375,8 +369,8 @@ paymentInfoPopUpConfig push state =
             visibility = GONE },
          option1 {
            text = getString GOT_IT
-         , background = Color.black900
-         , color = Color.yellow900
+         , background = state.data.config.primaryBackground
+         , color = state.data.config.primaryTextColor
          },
          option2 {
            visibility = false
@@ -403,9 +397,9 @@ callDriverPopUpConfig push state =
         , option1 {
           text = (getString PLACE_CALL_REQUEST)
         , width = MATCH_PARENT
-        , color = Color.yellow900
-        , strokeColor = Color.black900
-        , background = Color.black900
+        , color = state.data.config.primaryTextColor
+        , strokeColor = state.data.config.primaryBackground
+        , background = state.data.config.primaryBackground
         , padding = (PaddingVertical 10 10)
         }
         , option2 {

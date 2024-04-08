@@ -615,6 +615,15 @@ export const parseAddress = function (json) {
   return JSON.parse(json);
 };
 
+export const methodArgumentCount = function (functionName) {
+  try {
+    return window.JBridge.methodArgumentCount(functionName);
+  } catch (error) {
+    console.log("error inside argumentCount : " + error)
+    return 0;
+  }
+}
+
 export const drawRoute = function (data, style, trackColor, isActual, sourceMarkerConfig, destMarkerConfig, polylineWidth, type, mapRouteConfig) {
   console.log("I AM HERE ------------------ IN DRAW ROUTE");
   try {
@@ -633,15 +642,6 @@ export const updateMarker = function (markerConfig) {
     if (window.JBridge.updateMarker) {
       return window.JBridge.updateMarker(JSON.stringify(markerConfig));
     }
-  }
-}
-
-export const methodArgumentCount = function (functionName) {
-  try {
-    return window.JBridge.methodArgumentCount(functionName);
-  } catch (error) {
-    console.log("error inside argumentCount : " + error)
-    return 0;
   }
 }
 
@@ -1456,11 +1456,15 @@ export const showDialer = function (str) {
 };
 
 export const startLocationPollingAPI = function () {
-  if (locationPollingTimer) {
-    clearTimeout(locationPollingTimer);
-    locationPollingTimer = undefined;
+  if (window.__OS == "IOS") {
+    window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"start_location_updates"}))()()
+  } else {
+    if (locationPollingTimer) {
+      clearTimeout(locationPollingTimer);
+      locationPollingTimer = undefined;
+    }
+    return window.JBridge.startLocationPollingAPI();
   }
-  return window.JBridge.startLocationPollingAPI();
 }
 
 export const generatePDF = function (state) {
@@ -1480,13 +1484,17 @@ function stopLocationService() {
 
 
 export const stopLocationPollingAPI = function () {
-  if (locationPollingTimer) return;
-  if (JBridge.isServiceRunning) {
-    if (JBridge.isServiceRunning(locationUpdateServiceName)) {
+  if (window.__OS == "IOS") {
+    window.JOS.emitEvent("java")("onEvent")(JSON.stringify({event:"stop_location_updates"}))()()
+  } else {
+    if (locationPollingTimer) return;
+    if (JBridge.isServiceRunning) {
+      if (JBridge.isServiceRunning(locationUpdateServiceName)) {
+        stopLocationService();
+      }
+    } else {
       stopLocationService();
     }
-  } else {
-    stopLocationService();
   }
 }
 
@@ -1691,7 +1699,7 @@ export const storeCallBackBatteryUsagePermission = function (cb) {
 
 export const isBatteryPermissionEnabled = function (unit) {
   return function () {
-    return window.JBridge.isBatteryPermissionEnabled();
+    return window.__OS == "IOS" ? true : window.JBridge.isBatteryPermissionEnabled();
   };
 };
 
@@ -1709,10 +1717,18 @@ export const isInternetAvailable = function (unit) {
   };
 };
 
+export const emitJOSEvent = function (mapp, eventType, payload) {
+  console.log("payload", payload);
+  JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
+};
+
+
 export const restartApp = function () {
   return function() {
     console.log("HERE IN RESET ===--->>")
-    if (JBridge.restartApp){
+    if (window.__OS == "IOS") {
+      emitJOSEvent("java","onEvent",{event: "reboot"})
+    } else if (JBridge.restartApp){
       JBridge.restartApp();
     } else {
       JBridge.factoryResetApp();
@@ -1723,7 +1739,11 @@ export const restartApp = function () {
 // Deprecated
 export const factoryResetApp = function (str) {
   console.log("HERE IN RESET ===--->>")
-  JBridge.factoryResetApp()
+  if (window.__OS == "IOS") {
+    emitJOSEvent("java","onEvent",{event: "reboot"})
+  } else {
+    JBridge.factoryResetApp()
+  }
 }
 
 export const uploadFile = function (unit) {
@@ -1769,7 +1789,7 @@ export const renderBase64Image = function (image) {
 
 export const isOverlayPermissionEnabled = function (unit) {
   return function () {
-    return JBridge.isOverlayPermissionEnabled();
+    return window.__OS == "IOS" ? true : JBridge.isOverlayPermissionEnabled();
   };
 };
 
@@ -2057,11 +2077,13 @@ export const initialWebViewSetUp = function (cb) {
     return function (action) {
       return function () {
         try {
-          const callback = callbackMapper.map(function (val) {
-            cb(action(val))();
-          });
+          if (JBridge.initialWebViewSetUp) {
+            const callback = callbackMapper.map(function (val) {
+              cb(action(val))();
+            });
 
-          return JBridge.initialWebViewSetUp(callback, id);
+            JBridge.initialWebViewSetUp(callback, id);
+          }
         } catch (err) {
           console.log("initialWebViewSetUp error " + err);
         }
@@ -2165,11 +2187,6 @@ export const cleverTapEvent = function (_event) {
   }
 }
 
-export const emitJOSEvent = function (mapp, eventType, payload) {
-  console.log("payload", payload);
-  JOS.emitEvent(mapp)(eventType)(JSON.stringify(payload))()()
-};
-
 export const getLocationNameV2 = function (lat, lon) { 
   try {
     if (JBridge.getLocationNameSDK) {
@@ -2243,9 +2260,11 @@ export const listDownloadedTranslationModels = function (cb) {
   }
 }
 
-export const horizontalScrollToPos = function (id, childId, scrollFocus) {
+export const horizontalScrollToPos = function (id, childId, idx, scrollFocus) {
   if (window.JBridge.horizontalScrollToPos) {
     window.JBridge.horizontalScrollToPos(id, childId, scrollFocus);
+  } else if (window.JBridge.focusChild) {
+    window.JBridge.focusChild(id, idx)
   }
 }
 
@@ -2445,11 +2464,7 @@ export const renderCameraProfilePicture = function (id) {
 
 export const isNotificationPermissionEnabled = function () {
   return function() {
-    if (window.JBridge.isNotificationPermissionEnabled) {
-      return window.JBridge.isNotificationPermissionEnabled();
-    } else {
-      return false;
-    }
+    return window.JBridge.isNotificationPermissionEnabled ? window.JBridge.isNotificationPermissionEnabled() : true;
   }
 }
 
