@@ -20,6 +20,7 @@ Issue:
     createdAt : UTCTime
     updatedAt : UTCTime
     merchantId : Maybe (Id Merchant)
+    becknIssueId : Maybe Text
 
   excludedFields: [merchantId, merchantOperatingCityId]
 

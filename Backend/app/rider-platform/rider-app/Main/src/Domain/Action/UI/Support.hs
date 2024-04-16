@@ -138,7 +138,8 @@ safetyCheckSupport (personId, merchantId) req = do
             phoneNo = phoneNumber,
             personId = person.id.getId,
             classification = Ticket.CUSTOMER,
-            rideDescription = Just rideDesc
+            rideDescription = Just rideDesc,
+            becknIssueId = Nothing
           }
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> Id Merchant.Merchant -> m DIssue.Issue
@@ -158,7 +159,8 @@ buildDBIssue (Id customerId) SendIssueReq {..} merchantId = do
         nightSafety = fromMaybe False nightSafety,
         createdAt = time,
         updatedAt = time,
-        merchantId = Just merchantId
+        merchantId = Just merchantId,
+        becknIssueId = Nothing
       }
 
 mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> m Ticket.CreateTicketReq
@@ -177,7 +179,8 @@ mkTicket issue person phoneNumber disposition queue = do
         phoneNo = phoneNumber,
         personId = person.id.getId,
         classification = Ticket.CUSTOMER,
-        rideDescription = Just rideDesc
+        rideDescription = Just rideDesc,
+        becknIssueId = Nothing
       }
 
 mkRideInfo :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Ride.Ride -> Person.Person -> Maybe Text -> m Ticket.RideInfo
