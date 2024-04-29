@@ -39,6 +39,7 @@ import Kernel.External.Verification as Reexport hiding
   )
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.InternalScripts
+import qualified Kernel.External.Verification.Types as KVT
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -63,7 +64,18 @@ verifyRC ::
   m VerifyRCResp
 verifyRC merchantId merchantOptCityId req = do
   config <- CQMSUC.findByMerchantOpCityId merchantOptCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
-  runWithServiceConfig (Verification.verifyRC config.verificationProvidersPriorityList) (.verificationService) merchantId merchantOptCityId req
+  merchantServiceConfigList <- mapM getServiceConfig config.verificationProvidersPriorityList
+  runWithServiceConfig (Verification.verifyRC merchantServiceConfigList) (.verificationService) merchantId merchantOptCityId req
+  where
+    getServiceConfig msuc =
+      if msuc == KVT.GovtData
+        then return $ GovtDataConfig {}
+        else do
+          cfg <- CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.VerificationService msuc) merchantOptCityId >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOptCityId.getId)
+          extractCfg . (.serviceConfig) $ cfg
+      where
+        extractCfg (DMSC.VerificationServiceConfig x) = return x
+        extractCfg _ = throwError (InternalError "Unknown Service Config extracted") -- This case should never occure as we are finding svc config using svc name.
 
 validateImage ::
   ServiceFlow m r =>
