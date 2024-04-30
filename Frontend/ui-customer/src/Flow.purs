@@ -4033,8 +4033,8 @@ checkForSpecialZoneAndHotSpots state (ServiceabilityRes serviceabilityResp) lat 
       pickUpPoints = mapSpecialZoneGates srcSpecialLocation.gatesInfo
       geoJson = transformGeoJsonFeature srcSpecialLocation.geoJson srcSpecialLocation.gatesInfo
       zoneType = getZoneType srcSpecialLocation.category
-      canUpdateHotSpots = maybe true (\point -> (getDistanceBwCordinates lat lon point.lat point.lng) * 1000.0 > 150.0) state.props.hotSpot.centroidPoint
       locationName = srcSpecialLocation.locationName
+      canUpdateHotSpots = maybe true (\point -> (getDistanceBwCordinates lat lon point.lat point.lng) * 1000.0 > 150.0) state.props.hotSpot.centroidPoint
 
   if not (DS.null geoJson) && not (null pickUpPoints) then do
     if (geoJson /= state.data.polygonCoordinates || pickUpPoints /= state.data.nearByPickUpPoints) then do
