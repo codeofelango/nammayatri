@@ -47,6 +47,9 @@ findByIdAndLanguage (Id issueCategoryId) language = do
 
     headMaybe dInfosWithTranslations' = if null dInfosWithTranslations' then Nothing else Just (head dInfosWithTranslations')
 
+findByIGMIssueCategory :: BeamFlow m r => Text -> m (Maybe IssueCategory)
+findByIGMIssueCategory igmCategory = findOneWithKV [Is BeamIC.igmCategory $ Eq $ Just igmCategory]
+
 instance FromTType' BeamIC.IssueCategory IssueCategory where
   fromTType' BeamIC.IssueCategoryT {..} = do
     pure $
@@ -56,7 +59,8 @@ instance FromTType' BeamIC.IssueCategory IssueCategory where
             category = category,
             logoUrl = logoUrl,
             priority = priority,
-            merchantId = Id merchantId
+            merchantId = Id merchantId,
+            igmCategory = igmCategory
           }
 
 instance ToTType' BeamIC.IssueCategory IssueCategory where
@@ -66,5 +70,6 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
         BeamIC.category = category,
         BeamIC.logoUrl = logoUrl,
         BeamIC.priority = priority,
-        BeamIC.merchantId = getId merchantId
+        BeamIC.merchantId = getId merchantId,
+        BeamIC.igmCategory = igmCategory
       }
