@@ -35,6 +35,8 @@ import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
+import qualified Kernel.External.Tokenize.Interface.Types as TokenizeIntTypes
+import Kernel.External.Tokenize.Types as TokenizeTypes
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude as P
@@ -97,6 +99,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> valueToMaybe configJSON
       Domain.VerificationService Verification.InternalScripts -> Domain.VerificationServiceConfig . Verification.FaceVerificationConfig <$> valueToMaybe configJSON
       Domain.VerificationService Verification.GovtData -> Just $ Domain.VerificationServiceConfig Verification.GovtDataConfig
+      Domain.VerificationService Verification.HyperVerge -> Domain.VerificationServiceConfig . Verification.HyperVergeSvcConfig <$> valueToMaybe configJSON
       Domain.DriverBackgroundVerificationService Verification.SafetyPortal -> Domain.DriverBackgroundVerificationServiceConfig . Verification.SafetyPortalConfig <$> valueToMaybe configJSON
       Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
       Domain.CallService Call.Knowlarity -> Nothing
@@ -107,7 +110,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> valueToMaybe configJSON
       Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
       Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
-
+      Domain.TokenizationService TokenizeTypes.HyperVerge -> Domain.TokenizationServiceConfig . TokenizeIntTypes.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
     pure $
       Just
         MerchantServiceConfig
@@ -151,6 +154,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, toJSON cfg)
           Verification.FaceVerificationConfig cfg -> (Domain.VerificationService Verification.InternalScripts, toJSON cfg)
           Verification.GovtDataConfig -> (Domain.VerificationService Verification.GovtData, toJSON (A.object []))
+          Verification.HyperVergeSvcConfig cfg -> (Domain.VerificationService Verification.HyperVerge, toJSON cfg)
         Domain.DriverBackgroundVerificationServiceConfig driverBackgroundVerificationCfg -> case driverBackgroundVerificationCfg of
           Verification.SafetyPortalConfig cfg -> (Domain.DriverBackgroundVerificationService Verification.SafetyPortal, toJSON cfg)
         Domain.CallServiceConfig callCfg -> case callCfg of
@@ -167,3 +171,5 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
           Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
           Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
+        Domain.TokenizationServiceConfig tokenizationConfig -> case tokenizationConfig of
+          TokenizeIntTypes.HyperVergeTokenizationServiceConfig cfg -> (Domain.TokenizationService TokenizeTypes.HyperVerge, toJSON cfg)
