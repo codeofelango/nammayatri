@@ -1499,7 +1499,8 @@ activeRideDetail state (RidesInfo ride) =
   capacity : ride.vehicleCapacity,
   hasToll :  maybe false (\charge -> charge /= 0) ride.estimatedTollCharges,
   estimatedTollCharge : ride.estimatedTollCharges,
-  acRide : fromMaybe false ride.isVehicleAirConditioned
+  acRide : fromMaybe false ride.isVehicleAirConditioned,
+  parkingCharge : ride.parkingCharge
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String
