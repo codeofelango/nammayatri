@@ -1245,7 +1245,7 @@ instance decodeFeedbackRes :: Decode FeedbackRes where decode = defaultDecode
 instance encodeFeedbackRes  :: Encode FeedbackRes where encode = defaultEncode
 
 
-data GetProfileReq = GetProfileReq
+newtype GetProfileReq = GetProfileReq Int
 
 newtype GetProfileRes = GetProfileRes
   {
@@ -1273,6 +1273,7 @@ newtype GetProfileRes = GetProfileRes
   , followsRide :: Maybe Boolean
   , isSafetyCenterDisabled :: Maybe Boolean
   , customerReferralCode :: Maybe String
+  , frontendConfigHash    :: Maybe String
   }
 
 
@@ -1312,12 +1313,12 @@ instance decodeDisability :: Decode Disability where decode = defaultDecode
 instance encodeDisability  :: Encode Disability where encode = defaultEncode
 
 instance makeGetProfileReq :: RestEndpoint GetProfileReq GetProfileRes where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.profile "") headers reqBody Nothing
+  makeRequest reqBody@(GetProfileReq toss) headers = defaultMakeRequest GET (EP.profile (Just toss)) headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
 instance makeUpdateProfileReq :: RestEndpoint UpdateProfileReq UpdateProfileRes where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.profile "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.profile Nothing) headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
 
@@ -1329,7 +1330,7 @@ instance decodeGetProfileRes :: Decode GetProfileRes where decode = defaultDecod
 instance encodeGetProfileRes  :: Encode GetProfileRes where encode = defaultEncode
 
 derive instance genericGetProfileReq :: Generic GetProfileReq _
-instance standardEncodeGetProfileReq :: StandardEncode GetProfileReq where standardEncode (GetProfileReq) = standardEncode {}
+instance standardEncodeGetProfileReq :: StandardEncode GetProfileReq where standardEncode (GetProfileReq req) = standardEncode req
 instance showGetProfileReq :: Show GetProfileReq where show = genericShow
 instance decodeGetProfileReq :: Decode GetProfileReq where decode = defaultDecode
 instance encodeGetProfileReq  :: Encode GetProfileReq where encode = defaultEncode

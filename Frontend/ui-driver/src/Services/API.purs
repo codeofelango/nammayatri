@@ -13,11 +13,14 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Services.API where
+module Services.API 
+  (module Services.API,
+    module ReExport)
+  where
 
 import Data.Maybe
 import PaymentPage
-
+import Data.Map as DM
 import Common.Types.App (Version(..), ReelButtonConfig(..)) as Common
 import Domain.Payments as PP
 import Control.Alt ((<|>))
@@ -40,6 +43,7 @@ import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=), (==))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
+import Services.CacAPIType as ReExport
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorResponse
 
@@ -433,7 +437,7 @@ instance encodeLogOutRes :: Encode LogOutRes where encode = defaultEncode
 ------------------------------------------------------------GET DRIVER PROFILE----------------------------------------------------------------------------------------------------------------------------------------------
 
 -- GetDriverInfo API request, response types
-data GetDriverInfoReq = GetDriverInfoReq { }
+newtype GetDriverInfoReq = GetDriverInfoReq Int 
 
 newtype GetDriverInfoResp = GetDriverInfoResp
     { id                    :: String
@@ -475,6 +479,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , operatingCity         :: Maybe String
     , isVehicleSupported    :: Maybe Boolean
     , canSwitchToRental     :: Boolean
+    , frontendConfigHash    :: Maybe String
     , checkIfACWorking      :: Maybe Boolean
     }
 
@@ -510,7 +515,7 @@ newtype Vehicle = Vehicle
     }
 
 instance makeGetDriverInfoReq :: RestEndpoint GetDriverInfoReq GetDriverInfoResp where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getDriverInfo "") headers reqBody Nothing
+    makeRequest reqBody@(GetDriverInfoReq toss) headers = defaultMakeRequest GET (EP.getDriverInfo toss) headers reqBody Nothing
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
 
