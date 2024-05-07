@@ -1484,7 +1484,7 @@ endOTPAnimConfig state =
       , ifAnim = state.props.showEndOTP
       }
 
-getTripDetails :: DriverInfoCardState -> TripDetails Action
+getTripDetails :: DriverInfoCardState -> TripDetails Action 
 getTripDetails state = {
   rideStarted : state.props.currentStage == RideStarted
   , source : state.data.source
@@ -1495,6 +1495,9 @@ getTripDetails state = {
   , fareProductType : state.data.fareProductType
   , enableEditDestination : state.data.config.feature.enableEditDestination
   , editingDestinationLoc : EditingDestination
+  , rideAccepted : state.props.currentStage == RideAccepted
+  , editingPickupLocation : EditingPickupLocation
+  , isEditPickupEnabled : state.data.config.feature.enableEditPickupLocation
 }
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String

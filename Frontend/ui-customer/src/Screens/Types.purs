@@ -554,6 +554,7 @@ data Stage = HomeScreen
            | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
+           | EditPickUpLocation
            | ProviderSelection
            | RideSearch
            | ConfirmRentalRide
@@ -833,6 +834,7 @@ type HomeScreenStateProps =
   , showRateCard :: Boolean
   , showRevisedFareDetails :: Boolean
   , showRateCardIcon :: Boolean
+  , markerLabel :: String
   , sendMessageActive :: Boolean
   , chatcallbackInitiated :: Boolean
   , estimatedDistance :: Maybe Int
@@ -936,7 +938,13 @@ type HomeScreenStateProps =
   , shimmerViewTimerId :: String
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
+  , editedPickUpLocation :: EditedLocation
   }
+
+type EditedLocation = {
+  gps :: LatLong ,
+  address :: Address
+}
 
 data BottomNavBarIcon = TICKETING | MOBILITY
 
@@ -1269,6 +1277,8 @@ type DriverInfoCard =
   , price :: Int
   , sourceLat :: Number
   , sourceLng :: Number
+  , initialPickupLat :: Number
+  , initialPickupLon :: Number
   , destinationLat :: Number
   , destinationLng :: Number
   , driverLat :: Number
@@ -1287,6 +1297,7 @@ type DriverInfoCard =
   , vehicleVariant :: String
   , sourceAddress :: Address
   , destinationAddress :: Address
+  , editPickupAttemptsLeft :: Int
   , status :: String
   , serviceTierName :: Maybe String
   , vehicleModel :: String

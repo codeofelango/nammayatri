@@ -47,6 +47,7 @@ import Common.Types.App as CTP
 
 data ScreenOutput = LogoutUser
   | RefreshHomeScreen HomeScreenState
+  | RestartTracking HomeScreenState
   | GoToHelp HomeScreenState
   | ConfirmRide HomeScreenState
   | GoToAbout HomeScreenState
@@ -96,6 +97,8 @@ data ScreenOutput = LogoutUser
   | GoToMyTickets HomeScreenState
   | RepeatTrip HomeScreenState Trip
   | ExitToTicketing HomeScreenState
+  | EditLocationScreenOutput HomeScreenState
+  | EditTheLocation HomeScreenState
   | GoToHelpAndSupport HomeScreenState
   | ReAllocateRide HomeScreenState
   | GoToRentalsFlow HomeScreenState
@@ -273,6 +276,7 @@ data Action = NoAction
   | UpdateRepeatTrips RideBookingListRes 
   | RemoveShimmer 
   | ReportIssueClick
+  | EditLocation String
   | DateTimePickerAction String Int Int Int String Int Int
   | ChooseSingleVehicleAction ChooseVehicleController.Action
   | LocationTagBarAC LocationTagBarV2Controller.Action
