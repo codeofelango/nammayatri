@@ -580,6 +580,7 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   createdAt :: String,
   discount :: Maybe Int,
   estimatedTotalFare :: Int,
+  estimatedTotalFareWithCurrency :: PriceAPIEntity,
   agencyName :: String,
   vehicleVariant :: String,
   estimatedFare :: Int,
@@ -608,11 +609,30 @@ newtype NightShiftRate = NightShiftRate {
 
 newtype FareRange = FareRange {
   maxFare :: Int,
-  minFare :: Int
+  minFare :: Int,
+  maxFareWithCurrency :: PriceAPIEntity,
+  minFareWithCurrency :: PriceAPIEntity
 }
 
+newtype PriceAPIEntity = PriceAPIEntity {
+  currency :: Currency,
+  amount :: Number
+}
+
+data Currency = INR | USD | EUR
+
+derive instance genericCurrency :: Generic Currency _
+instance showCurrency :: Show Currency where show = genericShow
+instance decodeCurrency :: Decode Currency where decode = defaultEnumDecode
+instance encodeCurrency :: Encode Currency where encode = defaultEnumEncode
+instance eqCurrency :: Eq Currency where eq = genericEq
+instance standardEncodeCurrency :: StandardEncode Currency
+  where
+    standardEncode _ = standardEncode {}
+
 newtype EstimateFares = EstimateFares {
-  priceWithCurrency :: CTA.Price,
+  price :: Int,
+  priceWithCurrency :: PriceAPIEntity,
   title :: String
 }
 
@@ -631,6 +651,7 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   createdAt :: String,
   discount :: Maybe Int,
   estimatedTotalFare :: Int,
+  estimatedTotalFareWithCurrency :: PriceAPIEntity,
   agencyName :: String,
   quoteDetails :: QuoteAPIDetails,
   vehicleVariant :: String,
@@ -873,6 +894,13 @@ instance showPublicTransportStation :: Show PublicTransportStation where show = 
 instance decodePublicTransportStation :: Decode PublicTransportStation where decode = defaultDecode
 instance encodePublicTransportStation  :: Encode PublicTransportStation where encode = defaultEncode
 
+derive instance genericPriceAPIEntity :: Generic PriceAPIEntity _
+derive instance newtypePriceAPIEntity :: Newtype PriceAPIEntity _
+instance standardEncodePriceAPIEntity :: StandardEncode PriceAPIEntity where standardEncode (PriceAPIEntity body) = standardEncode body
+instance showPriceAPIEntity :: Show PriceAPIEntity where show = genericShow
+instance decodePriceAPIEntity :: Decode PriceAPIEntity where decode = defaultDecode
+instance encodePriceAPIEntity  :: Encode PriceAPIEntity where encode = defaultEncode
+
 
 ----- For rideSearch/quotes/{quoteId}/confirm
 
@@ -915,9 +943,11 @@ newtype RideBookingRes = RideBookingRes {
   createdAt :: String,
   discount :: Maybe Int,
   estimatedTotalFare :: Int,
+  estimatedTotalFareWithCurrency :: PriceAPIEntity,
   agencyName :: String,
   rideList :: Array RideAPIEntity,
   estimatedFare :: Int,
+  estimatedFareWithCurrency :: PriceAPIEntity,
   tripTerms :: Array String,
   id :: String,
   updatedAt :: String,
@@ -936,11 +966,13 @@ newtype RideBookingRes = RideBookingRes {
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
   amount :: Int,
-  description :: String
+  description :: String,
+  amountWithCurrency :: PriceAPIEntity
 }
 
 newtype RideAPIEntity = RideAPIEntity {
   computedPrice :: Maybe Int,
+  computedPriceWithCurrency :: Maybe PriceAPIEntity,
   status :: String,
   vehicleModel :: String,
   createdAt :: String,
