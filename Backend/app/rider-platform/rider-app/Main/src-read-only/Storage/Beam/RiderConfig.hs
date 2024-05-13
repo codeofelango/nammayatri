@@ -31,6 +31,7 @@ data RiderConfigT f = RiderConfigT
     placeNameCacheExpiryDays :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     safetyCheckEndTime :: (B.C f Kernel.Types.Common.Seconds),
     safetyCheckStartTime :: (B.C f Kernel.Types.Common.Seconds),
+    shouldBlockedBySameDeviceToken :: B.C f Kernel.Prelude.Bool,
     specialZoneRadius :: (B.C f Kernel.Prelude.Int),
     timeDiffFromUtc :: (B.C f Kernel.Types.Common.Seconds),
     trackingShortUrlPattern :: (B.C f Kernel.Prelude.Text),

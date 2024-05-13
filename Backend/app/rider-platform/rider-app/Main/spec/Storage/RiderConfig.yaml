@@ -26,6 +26,7 @@ RiderConfig:
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
+    shouldBlockedBySameDeviceToken: Bool
     kaptureQueue: Text
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
 
@@ -46,6 +47,7 @@ RiderConfig:
     distanceWeightage: "70"
     isAvoidToll: "true"
     autoUnblockSafetyCenterAfterDays: "14"
+    shouldBlockedBySameDeviceToken: "false"
     kaptureQueue: "''"
 
   queries:

@@ -53,9 +53,15 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN booking_sync_status_call_seconds_d
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN should_blocked_by_same_device_token boolean NOT NULL default false;
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.rider_config ADD COLUMN kapture_queue text NOT NULL default '';
 
 
 ------- SQL updates -------
 
+
 ALTER TABLE atlas_app.rider_config ADD COLUMN email_otp_config json USING email_otp_config::json ;
+
