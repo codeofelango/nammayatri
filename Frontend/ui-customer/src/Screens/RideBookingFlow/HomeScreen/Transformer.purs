@@ -470,7 +470,11 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                       orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
                     in
                       { item: Just quote, order: orderNumber }
-                  _ -> { item: Nothing, order: orderListLength }
+                  RentalQuotes body -> 
+                    let (QuoteAPIEntity quoteEntity) = body.onRentalCab
+                        orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
+                    in {item : Just quote, order : orderNumber}
+                  _ -> {item : Nothing, order : orderListLength}
               )
               quotes
           filterMappedQuotes = filter (\quote -> isJust quote.item) mappedQuotes
@@ -487,6 +491,9 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                     Quotes body -> do
                       let
                         (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                      DA.any (_ == quoteEntity.vehicleVariant) variant
+                    RentalQuotes body -> do
+                      let (QuoteAPIEntity quoteEntity) = body.onRentalCab
                       DA.any (_ == quoteEntity.vehicleVariant) variant
                     _ -> false
                 )
