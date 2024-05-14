@@ -410,7 +410,7 @@ view push state =
             , if (not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen] then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
-            -- , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then rideInfoView push state else emptyTextView state
+            , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then rideInfoView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
                 relativeLayout 
                 [ width MATCH_PARENT
@@ -564,117 +564,75 @@ cancelSearchPopUp push state =
   , accessibility DISABLE
   ][PopUpModal.view (push <<< CancelSearchAction) (cancelAppConfig state)]
 
--- rideInfoView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
--- rideInfoView push config =
---   linearLayout
---     [ height WRAP_CONTENT
---     , width MATCH_PARENT
---     , stroke $ "1," <> Color.grey900
---     , cornerRadius 8.0
---     , padding $ Padding 14 14 5 14
---     , afterRender push $ const NoAction
---     ][  horizontalScrollView
---         [ width MATCH_PARENT
---         , height WRAP_CONTENT
---         , scrollBarX false
---         , fillViewport true
---         ][ linearLayout
---             [ height WRAP_CONTENT
---             , width MATCH_PARENT
---             ][ estimatedFareView push config
---             , separatorView1 true
---             , totalDistanceView push config
---             , separatorView1 $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
---             , waitTimeView push config
---             , linearLayout
---               [ weight 1.0
---               , height MATCH_PARENT
---               ][]
---             ]
---           ]
---     ]
---   where
---     separator1 :: forall w . Boolean -> PrestoDOM (Effect Unit) w
---     separator1 visibility' =
---       linearLayout
---         [ weight 1.0
---         , height MATCH_PARENT
---         , margin $ MarginHorizontal 5 5
---         , visibility if visibility' then VISIBLE else GONE
---         ][ linearLayout
---           [ width $ V 1
---           , background Color.lightGrey
---           , height MATCH_PARENT
---           ][]
---     ]
-
--- messageWidgetView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
--- messageWidgetView push state = 
---   let isWidgetVisible = ((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || state.props.isChatWithEMEnabled) && state.data.currentSearchResultType /= CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && not state.props.removeNotification
---   in 
---   linearLayout
---   [ height MATCH_PARENT
---   , width MATCH_PARENT
---   , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.props.bottomSheetState == STATE_EXPANDED || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
---   , clickable isClickable
---   , orientation VERTICAL
---   ][ (if disableSuggestions state then 
---         PrestoAnim.animationSet[] 
---       else (if state.props.showChatNotification then 
---         PrestoAnim.animationSet [translateYAnimFromTop $ messageInAnimConfig true] 
---       else if state.props.isNotificationExpanded then 
---         PrestoAnim.animationSet [translateYAnimFromTop $ messageOutAnimConfig true] 
---       else PrestoAnim.animationSet[scaleYAnimWithDelay 5000])) $ 
---      linearLayout
---      [ height $ MATCH_PARENT
---      , width MATCH_PARENT
---      , padding $ PaddingHorizontal 8 8
---      , alignParentBottom "true,-1"
---      , gravity BOTTOM
---      , accessibility DISABLE
---      , onAnimationEnd push $ const $ NotificationAnimationEnd
---      , orientation VERTICAL
---      , clickable isClickable
---      ][ linearLayout
---        [ height $ MATCH_PARENT
---        , width $ MATCH_PARENT
---        , clickable isClickable
---        , clipChildren false
---        , accessibility DISABLE
---        , margin $ MarginBottom 8
---        , gravity BOTTOM
---        ][ linearLayout
---           [ height $ MATCH_PARENT
---           , accessibility DISABLE
---           , gravity BOTTOM
---           , clickable isClickable
---           , clipChildren false
---           ] $
---           [ otpAndWaitView push state
---           , endOTPView push state
---           ] <> if state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted then [trackRideView push state] else []
---         , linearLayout[weight 1.0][]
---         , linearLayout
---           [ height $ MATCH_PARENT
---           , clipChildren false
---           , gravity BOTTOM
---           , clickable isClickable
---           , accessibility DISABLE
---           ][ rideInfoActionView push state 
---            ]
---          ]
---        , if disableChatWidget then -- Temp fix for chat widget
---             linearLayout[height $ V 138, width MATCH_PARENT][]
---          else messageNotificationView push (getMessageNotificationViewConfig state)
---        , linearLayout
---         [ height $ V $ ((getInfoCardPeekHeight state) - if isWidgetVisible then 140 else 0)
---         , width $ MATCH_PARENT
---         , accessibility DISABLE
---         ][]
---      ]
-  -- ]
-  -- where disableSuggestions :: HomeScreenState -> Boolean
-        -- disableSuggestions state = (state.data.rideType == RideType.RENTAL_RIDE && state.props.currentStage == RideStarted) || state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
+rideInfoView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rideInfoView push state = 
+  let isClickable = os == "IOS"
+      isWidgetVisible = ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE ))&& state.data.currentSearchResultType /= CTP.QUOTES CTP.INTER_CITY && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && (os == "ANDROID" || state.props.enableChatWidget)) || (state.props.currentStage == RideStarted && os == "IOS")
+      disableChatWidget = (not (os == "IOS" || state.props.enableChatWidget)) && ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver] || (state.props.currentStage == RideStarted && state.data.rideType == RideType.RENTAL_RIDE))) && state.data.currentSearchResultType /= CTP.QUOTES CTP.INTER_CITY && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions
+  in 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.props.bottomSheetState == STATE_EXPANDED || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
+  , clickable isClickable
+  , orientation VERTICAL
+  ][ (if disableSuggestions state then 
+        PrestoAnim.animationSet[] 
+      else (if state.props.showChatNotification then 
+        PrestoAnim.animationSet [translateYAnimFromTop $ messageInAnimConfig true] 
+      else if state.props.isNotificationExpanded then 
+        PrestoAnim.animationSet [translateYAnimFromTop $ messageOutAnimConfig true] 
+      else PrestoAnim.animationSet[scaleYAnimWithDelay 5000])) $ 
+     linearLayout
+     [ height $ MATCH_PARENT
+     , width MATCH_PARENT
+     , padding $ PaddingHorizontal 8 8
+     , alignParentBottom "true,-1"
+     , gravity BOTTOM
+     , accessibility DISABLE
+     , onAnimationEnd push $ const $ NotificationAnimationEnd
+     , orientation VERTICAL
+     , clickable isClickable
+     ][ linearLayout
+       [ height $ MATCH_PARENT
+       , width $ MATCH_PARENT
+       , clickable isClickable
+       , clipChildren false
+       , accessibility DISABLE
+       , margin $ MarginBottom 8
+       , gravity BOTTOM
+       ][ linearLayout
+          [ height $ MATCH_PARENT
+          , accessibility DISABLE
+          , gravity BOTTOM
+          , clickable isClickable
+          , clipChildren false
+          ] $
+          [ otpAndWaitView push state
+          , endOTPView push state
+          ] <> if state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted then [trackRideView push state] else []
+        , linearLayout[weight 1.0][]
+        , linearLayout
+          [ height $ MATCH_PARENT
+          , clipChildren false
+          , gravity BOTTOM
+          , clickable isClickable
+          , accessibility DISABLE
+          ][ rideInfoActionView push state 
+           ]
+         ]
+       , if disableChatWidget then -- Temp fix for chat widget
+            linearLayout[height $ V 138, width MATCH_PARENT][]
+         else messageNotificationView push (getMessageNotificationViewConfig state)
+       , linearLayout
+        [ height $ V $ ((getInfoCardPeekHeight state) - if isWidgetVisible then 140 else 0)
+        , width $ MATCH_PARENT
+        , accessibility DISABLE
+        ][]
+     ]
+  ]
+  where disableSuggestions :: HomeScreenState -> Boolean
+        disableSuggestions state = (state.data.rideType == RideType.RENTAL_RIDE && state.props.currentStage == RideStarted) || (isQuotes state.data.currentSearchResultType) || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
 
 messagingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 messagingView push state = 
@@ -2387,26 +2345,26 @@ rideTrackingView push state =
     ]
   where halfExpanded = (toNumber (getInfoCardPeekHeight state)) / (toNumber if (runFn1 getLayoutBounds $ getNewIDWithTag "BottomSheetLayout").height == 0 then 536 else (runFn1 getLayoutBounds $ getNewIDWithTag "BottomSheetLayout").height)
 
--- getMessageNotificationViewConfig :: HomeScreenState -> MessageNotificationView Action
--- getMessageNotificationViewConfig state = {
---     showChatNotification : state.props.showChatNotification
---   , enableChatWidget : state.props.enableChatWidget
---   , isNotificationExpanded :state.props.isNotificationExpanded
---   , currentSearchResultType : state.data.currentSearchResultType
---   , config : state.data.config
---   , showNotificationBanner : (state.props.currentStage == RideStarted && state.data.rideType /= RideType.RENTAL_RIDE)
---   , lastMessage : state.data.lastMessage
---   , lastSentMessage : state.data.lastSentMessage
---   , lastReceivedMessage : state.data.lastReceivedMessage
---   , removeNotificationAction : RemoveNotification
---   , messageViewAnimationEnd : MessageViewAnimationEnd
---   , messageReceiverAction : MessageDriver
---   , sendQuickMessageAction : SendQuickMessage
---   , timerCounter : state.data.triggerPatchCounter
---   , messageExpiryAction : MessageExpiryTimer
---   , chatSuggestions : getChatSuggestions state
---   , messages : state.data.messages
--- }
+getMessageNotificationViewConfig :: HomeScreenState -> MessageNotificationView Action
+getMessageNotificationViewConfig state = {
+    showChatNotification : state.props.showChatNotification
+  , enableChatWidget : state.props.enableChatWidget
+  , isNotificationExpanded :state.props.isNotificationExpanded
+  , currentSearchResultType : state.data.currentSearchResultType
+  , config : state.data.config
+  , showNotificationBanner : (state.props.currentStage == RideStarted && state.data.rideType /= RideType.RENTAL_RIDE)
+  , lastMessage : state.data.lastMessage
+  , lastSentMessage : state.data.lastSentMessage
+  , lastReceivedMessage : state.data.lastReceivedMessage
+  , removeNotificationAction : RemoveNotification
+  , messageViewAnimationEnd : MessageViewAnimationEnd
+  , messageReceiverAction : MessageDriver
+  , sendQuickMessageAction : SendQuickMessage
+  , timerCounter : state.data.triggerPatchCounter
+  , messageExpiryAction : MessageExpiryTimer
+  , chatSuggestions : getChatSuggestions state
+  , messages : state.data.messages
+}
 
 
 separatorView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
@@ -4640,6 +4598,7 @@ getFollowRide push action = do
     Left err -> do
       _ <- pure $ printLog "api error " err
       pure unit
+
 endOTPView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 endOTPView push state =
   linearLayout
