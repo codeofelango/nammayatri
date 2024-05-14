@@ -1622,17 +1622,17 @@ eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonAct
 --           exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
 --         else continue state
 
--- eval (UpdatePickupLocation  key lat lon) state =
---   case key of
---     "LatLon" -> do
---       exit $ UpdatePickupName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
---     _ -> do
---       let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
---       case focusedIndex of
---         Just index -> do
---           _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
---           exit $ UpdatePickupName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
---         Nothing -> continue state
+eval (UpdatePickupLocation  key lat lon) state =
+  case key of
+    "LatLon" -> do
+      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+    _ -> do
+      let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
+      case focusedIndex of
+        Just index -> do
+          _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
+          exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
+        Nothing -> continue state
         
 eval (LocateOnMapCallBack key lat lon) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)
