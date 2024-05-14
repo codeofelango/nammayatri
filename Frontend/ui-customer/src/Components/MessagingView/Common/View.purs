@@ -98,64 +98,64 @@ import Components.MessagingView.View
 import Common.Types.App as CT
 
 
-messageNotificationView :: forall w action. (action -> Effect Unit) -> (MessageNotificationView action) -> PrestoDOM ( Effect Unit) w
-messageNotificationView push state =
-  let enableChatWidget = not (os == "ANDROID" || state.enableChatWidget)
-  in
-  (if state.showChatNotification then 
-    if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeInWithDuration 1000 true]
-  else if state.isNotificationExpanded then 
-    if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeOutWithDuration 1000 true]
-  else  PrestoAnim.animationSet []) $ 
-  linearLayout
-  [ height $ if enableChatWidget then V 1 else V 130
-  , width $ if enableChatWidget then V 1 else MATCH_PARENT
-  , margin $ MarginBottom if enableChatWidget then 0 else 8
-  , padding $ Padding 12 12 12 12
-  , background Color.black900
-  , orientation VERTICAL
-  , clickable true
-  , accessibility $ if state.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
-  , accessibilityHint $ "Quick Chat : Widget"
-  , onAnimationEnd push $ const state.messageViewAnimationEnd
-  , visibility $ boolToVisibility $ (((any (_ == state.currentStage)) [ RideAccepted, ChatWithDriver, RideStarted]) && state.currentSearchResultType /= CT.QUOTES CT.OneWaySpecialZoneAPIDetails && state.config.feature.enableChat) && state.config.feature.enableSuggestions && not state.removeNotification
-  , cornerRadius 20.0
-  ][linearLayout 
-    [ height $ WRAP_CONTENT
-    , width $ MATCH_PARENT
-    , clickable true
-    , accessibility DISABLE
-    ][ messagePromtView push state
-     , chatNotificationMessageView push state
-     , linearLayout
-       [ height $ WRAP_CONTENT
-       , width $ MATCH_PARENT
-       , gravity RIGHT
-       , clickable true
-       , accessibility DISABLE
-       ][ linearLayout
-         [ height $ WRAP_CONTENT
-         , width $ WRAP_CONTENT
-         , cornerRadius 20.0
-         , clickable true
-         , accessibility ENABLE
-         , accessibilityHint $ "Close : Button : Select to close chat widget"
-         , background Color.manatee200
-         , padding $ Padding 10 10 10 10
-         , onClick push $ const state.removeNotificationAction
-         ][imageView
-           [ height $ V 16
-           , width $ V 16
-           , accessibility DISABLE
-           , imageWithFallback $ fetchImage FF_ASSET "ny_ic_cross_white"
-           ]
-         ]
-       ]  
-    ]
-    , separatorView state
-    , if (state.lastMessage.sentBy == "Driver" || not (didDriverMessage FunctionCall)) then quickRepliesView push state else dummyView state
-    , if ((not $ DS.null state.lastSentMessage.sentBy) && (not $ DS.null state.lastReceivedMessage.sentBy)) then messageView push state state.lastSentMessage else dummyView state
-  ]
+-- messageNotificationView :: forall w action. (action -> Effect Unit) -> (MessageNotificationView action) -> PrestoDOM ( Effect Unit) w
+-- messageNotificationView push state =
+--   let enableChatWidget = not (os == "ANDROID" || state.enableChatWidget)
+--   in
+--   (if state.showChatNotification then 
+--     if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeInWithDuration 1000 true]
+--   else if state.isNotificationExpanded then 
+--     if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeOutWithDuration 1000 true]
+--   else  PrestoAnim.animationSet []) $ 
+--   linearLayout
+--   [ height $ if enableChatWidget then V 1 else V 130
+--   , width $ if enableChatWidget then V 1 else MATCH_PARENT
+--   , margin $ MarginBottom if enableChatWidget then 0 else 8
+--   , padding $ Padding 12 12 12 12
+--   , background Color.black900
+--   , orientation VERTICAL
+--   , clickable true
+--   , accessibility $ if state.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
+--   , accessibilityHint $ "Quick Chat : Widget"
+--   , onAnimationEnd push $ const state.messageViewAnimationEnd
+--   , visibility $ boolToVisibility $ (((any (_ == state.currentStage)) [ RideAccepted, ChatWithDriver, RideStarted]) && state.currentSearchResultType /= CT.QUOTES CT.OneWaySpecialZoneAPIDetails && state.config.feature.enableChat) && state.config.feature.enableSuggestions && not state.removeNotification
+--   , cornerRadius 20.0
+--   ][linearLayout 
+--     [ height $ WRAP_CONTENT
+--     , width $ MATCH_PARENT
+--     , clickable true
+--     , accessibility DISABLE
+--     ][ messagePromtView push state
+--      , chatNotificationMessageView push state
+--      , linearLayout
+--        [ height $ WRAP_CONTENT
+--        , width $ MATCH_PARENT
+--        , gravity RIGHT
+--        , clickable true
+--        , accessibility DISABLE
+--        ][ linearLayout
+--          [ height $ WRAP_CONTENT
+--          , width $ WRAP_CONTENT
+--          , cornerRadius 20.0
+--          , clickable true
+--          , accessibility ENABLE
+--          , accessibilityHint $ "Close : Button : Select to close chat widget"
+--          , background Color.manatee200
+--          , padding $ Padding 10 10 10 10
+--          , onClick push $ const state.removeNotificationAction
+--          ][imageView
+--            [ height $ V 16
+--            , width $ V 16
+--            , accessibility DISABLE
+--            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_cross_white"
+--            ]
+--          ]
+--        ]  
+--     ]
+--     , separatorView state
+--     , if (state.lastMessage.sentBy == "Driver" || not (didDriverMessage FunctionCall)) then quickRepliesView push state else dummyView state
+--     , if ((not $ DS.null state.lastSentMessage.sentBy) && (not $ DS.null state.lastReceivedMessage.sentBy)) then messageView push state state.lastSentMessage else dummyView state
+--   ]
 
 messagePromtView :: forall w action . (action -> Effect Unit) -> (MessageNotificationView action) -> PrestoDOM ( Effect Unit) w
 messagePromtView push state = 

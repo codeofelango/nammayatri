@@ -43,7 +43,7 @@ import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!), sortBy)
+import Data.Array ((!!), sortBy, mapWithIndex)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber)
@@ -1178,9 +1178,8 @@ searchLocationModelViewState state = let
       in EHC.convertUTCtoISC startTime formatSTR
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
-quoteListModelViewState state = let vehicleVariant = case (getSelectedEstimatesObject "Lazy") of
-                                                        Nothing -> state.data.selectedEstimatesObject.vehicleVariant
-                                                        Just obj -> obj.vehicleVariant
+quoteListModelViewState state = let vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
+                                    tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
                                 in
                                 { source: state.data.source
                                 , destination: state.data.destination
@@ -1771,11 +1770,11 @@ safetyIssueOptions forceEnglish =
 setSelectedEstimatesObject :: Encode ChooseVehicle.Config => ChooseVehicle.Config -> Effect Unit
 setSelectedEstimatesObject object = void $ pure $ setValueToLocalStore ESTIMATE_DATA (encodeJSON object)
 
-getSelectedEstimatesObject :: String -> Maybe ChooseVehicle.Config
-getSelectedEstimatesObject dummy =
-  case runExcept (decodeJSON (getValueToLocalStore ESTIMATE_DATA) :: _ ChooseVehicle.Config) of
-    Right res -> Just res
-    Left err -> Nothing
+-- getSelectedEstimatesObject :: String -> Maybe ChooseVehicle.Config
+-- getSelectedEstimatesObject dummy =
+--   case runExcept (decodeJSON (getValueToLocalStore ESTIMATE_DATA) :: _ ChooseVehicle.Config) of
+--     Right res -> Just res
+--     Left err -> Nothing
 
 getChatSuggestions :: ST.HomeScreenState -> Array String
 getChatSuggestions state = do 
@@ -1975,3 +1974,61 @@ intercityInSpecialZonePopupConfig state = let
     }
   }
   in popUpConfig'
+
+type TipConfig = {
+  customerTipArray :: Array String,
+  customerTipArrayWithValues :: Array Int
+} 
+
+getTipConfig :: String -> TipConfig
+getTipConfig variant = do
+  let city = HU.getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  case city of 
+    Bangalore -> bangaloreConfig variant
+    Hyderabad -> hyderabadConfig variant
+    _ -> defaultTipConfig variant
+
+mkTipConfig :: Array Int -> TipConfig
+mkTipConfig customerTipArrayWithValues = {
+  customerTipArray: getTips customerTipArrayWithValues,
+  customerTipArrayWithValues: customerTipArrayWithValues
+}
+
+getTips :: Array Int -> Array String
+getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP) 
+                                           else "₹" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
+  where
+    emoji = [(getString NO_TIP), "🙂", "😀", "😃", "😁", "🤩"]
+
+bangaloreConfig :: String -> TipConfig
+bangaloreConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
+
+hyderabadConfig :: String -> TipConfig
+hyderabadConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
+
+defaultTipConfig :: String -> TipConfig
+defaultTipConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []

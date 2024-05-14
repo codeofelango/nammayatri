@@ -1011,3 +1011,5 @@ getEN stringKey =
         RENTAL_POLICY_DESC_1 -> "You can still review your fare on the next screen before confirming the booking."
         RENTALS_INTERCITY_AVAILABLE -> "Rentals and Intercity trips, now on Yatri Sathi"
         CHECK_IT_OUT -> "Check it out"
+        AC_IS_NOT_AVAILABLE_ON_THIS_RIDE -> "AC is not available on this ride"
+        AC_NOT_WORKING_DESC -> "AC not working/Driver refused to switch on"
