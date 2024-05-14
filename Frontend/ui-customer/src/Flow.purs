@@ -1465,8 +1465,8 @@ homeScreenFlow = do
                   _ , _ -> state.data.destinationAddress 
               }
               })
-        let _ = spy "UPDATE_LOCATION_NAME" "UPDATE_LOCATION_NAME"
-        homeScreenFlow
+      let _ = spy "UPDATE_LOCATION_NAME" "UPDATE_LOCATION_NAME"
+      homeScreenFlow
     GO_TO_FAVOURITES_  -> do
         _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_addresses"
         savedLocationFlow
