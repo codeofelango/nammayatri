@@ -712,7 +712,7 @@ instance loggableAction :: Loggable Action where
   --         ChooseVehicleController.OnSelect arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnSelect"
 
 data ScreenOutput = LogoutUser
-                  | Reload HomeScreenState
+                  -- | ReloadScreen HomeScreenState
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
@@ -772,17 +772,18 @@ data ScreenOutput = LogoutUser
                   | RideSearchSO
                   | ConfirmRentalRideSO HomeScreenState
                   | StayInHomeScreenSO HomeScreenState
-                  | GoToMyMetroTickets HomeScreenState
-                  | GoToMetroTicketBookingFlow HomeScreenState
+                  -- | GoToMyMetroTickets HomeScreenState
+                  -- | GoToMetroTicketBookingFlow HomeScreenState
                   | GoToSafetyEducation HomeScreenState
                   | RepeatSearch HomeScreenState
                   | ChangeVehicleVarient HomeScreenState
                   | ExitToConfirmingLocationStage HomeScreenState
                   | UpdateReferralCode HomeScreenState String
-                  | GoToSafetySettingScreen 
+                  -- | GoToSafetySettingScreen 
                   | GoToRideRelatedIssues HomeScreenState
                   | SelectEstimateAndQuotes HomeScreenState
-                  | Retry HomeScreenState
+                  -- | Retry HomeScreenState
+                  -- | UpdatePickupName HomeScreenState Number Number
 
 data Action = NoAction
             | BackPressed
@@ -953,6 +954,7 @@ data Action = NoAction
             | ShowEndOTP
             | RentalInfoAction PopUpModal.Action
             | IntercitySpecialZone PopUpModal.Action
+            | UpdatePickupLocation String String String
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (IntercitySpecialZone PopUpModal.DismissPopup) state = continue state
@@ -1256,7 +1258,7 @@ eval OnResumeCallback state =
         let findingQuotesProgress = 1.0 - 30.0/(toNumber (getSearchExpiryTime "LazyCheck"))
         void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = "progress_loader_line", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = findingQuotesProgress, scaleType="CENTER_CROP"}
         continue state
-      "RideAccepted" | (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails && state.data.rideType == RideType.NORMAL_RIDE) -> exit $ Retry state
+      "RideAccepted" | (state.data.currentSearchResultType == CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails && state.data.rideType == RideType.NORMAL_RIDE) -> exit $ ReloadScreen state
       _ -> continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
@@ -1535,7 +1537,7 @@ eval BackPressed state = do
                         if state.props.showCallPopUp then continue state {props{showCallPopUp = false}}
                          else do
                             _ <- pure $ updateLocalStage state.props.stageBeforeChatScreen
-                            updateAndExit state {props {currentStage = state.props.stageBeforeChatScreen}} $ Reload state {props {currentStage = state.props.stageBeforeChatScreen}}
+                            updateAndExit state {props {currentStage = state.props.stageBeforeChatScreen}} $ ReloadScreen state {props {currentStage = state.props.stageBeforeChatScreen}}
     RideRating ->     do
                       _ <- pure $ updateLocalStage RideCompleted
                       continue state {props {currentStage = RideCompleted}}
@@ -1635,30 +1637,21 @@ eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonAct
 eval (LocateOnMapCallBack key lat lon) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)
       longitude = fromMaybe 0.0 (NUM.fromString lon)
-  -- if os == "IOS"  > 5.0 then do
-  --   continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } } [do
-  --     void $ animateCamera state.props.sourceLat state.props.sourceLong 25.0 "NO_ZOOM"
-  --     pure NoAction
-  --   ]
-  -- else do
-  let updatedState = state
-      sourceManuallyMoved = if updatedState.props.isSource == Just true then true else updatedState.props.rideSearchProps.sourceManuallyMoved
-      destManuallyMoved = if updatedState.props.isSource == Just false then true else updatedState.props.rideSearchProps.destManuallyMoved
   case key of
     "LatLon" -> do
-      let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates latitude longitude spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot)  ) updatedState.data.nearByPickUpPoints)
-      exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved }, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
+      -- let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates latitude longitude spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot)  ) updatedState.data.nearByPickUpPoints)
+      exit $ UpdateLocationName state{props{defaultPickUpPoint = ""}} latitude longitude
     _ -> do
       if state.props.currentStage == ConfirmingLocation then do
-        let focusedIndex = findIndex (\item -> item.place == key) updatedState.data.nearByPickUpPoints
+        let focusedIndex = findIndex (\item -> item.place == key) state.data.nearByPickUpPoints
         case focusedIndex of
           Just index -> void $ pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
           Nothing -> pure unit
       else pure unit
 
-      case (filter(\item -> item.place == key) updatedState.data.nearByPickUpPoints) !! 0 of
-        Just spot -> exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot.lat spot.lng
-        Nothing -> continue updatedState
+      case (filter(\item -> item.place == key) state.data.nearByPickUpPoints) !! 0 of
+        Just spot -> exit $ UpdateLocationName state{props{defaultPickUpPoint = key}} spot.lat spot.lng
+        Nothing -> continue state
 
 eval (CheckBoxClick autoAssign) state = do
   _ <- pure $ performHapticFeedback unit
@@ -1904,7 +1897,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC P
     ]
 eval (DriverArrivedAction driverArrivalTime) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
-  exit $ Reload state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
+  exit $ ReloadScreen state { data { driverInfoCardState { driverArrived = true, driverArrivalTime = getExpiryTime driverArrivalTime true } } }
 eval (DriverArrivedAction driverArrivalTime) state =
   if any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] then do
       _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_WAITING_ACTION"
@@ -2423,7 +2416,7 @@ eval (StartLocationTracking item) state = do
     "IN_APP" -> exit $ InAppTrackStatus state { props { isInApp = not state.props.isInApp, isLocationTracking = false, forFirst = true } }
     _ -> continue state
 
-eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
+eval (GetEstimates (GetQuotesRes quotesRes) ) state = do
   -- -- logStatus "finding_estimates_and_quotes" quotesRes
   let 
     alreadyGotEstimates = not $ null $ state.data.specialZoneQuoteList 
@@ -2431,14 +2424,14 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
     quotes = getSpecialZoneQuotes quotesRes.quotes state.data.config.estimateAndQuoteConfig
     quoteList = spy "debug quotes allQuoteListWithUpdatedIndex" (mapWithIndex (\index item -> item{ index = index }) (estimates <> quotes))
     -- quoteList = filter (\item -> (item.providerType == OFFUS && state.data.currentCityConfig.iopConfig.enable)) allQuoteListWithUpdatedIndex
-    repeatRideFailCheck =  not $ checkRecentRideVariantInEstimates quoteList state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
-    isRepeatRide = state.props.isRepeatRide && repeatRideFailCheck -- if repeat ride is enabled and the variant is not available in the estimates then disable repeat ride
+    -- repeatRideFailCheck =  not $ checkRecentRideVariantInEstimates quoteList state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
+    isRepeatRide = state.props.isRepeatRide -- if repeat ride is enabled and the variant is not available in the estimates then disable repeat ride
     -- nYQuotes = filter (\item -> item.providerType == CTP.ONUS) quoteList
     -- showMultiProvider' =  if alreadyGotEstimates then
     --                         state.data.iopState.showMultiProvider
     --                       else
     --                         null quoteList -- if we already got the estimate show current screen only else if we have NY show ny provider else show multi provider    
-    fareProductType = case head quotes of 
+    fareProductType = case head quotesRes.quotes of 
                           Just (Quotes body) -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
                                                     fareProductType = quoteEntity.quoteDetails^._fareProductType
                                                 in fareProductType 
@@ -2466,7 +2459,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
     -- shouldShowEstimates = not $ null quoteList-- if iop is not enabled then show ny provider else show multi provider
     
   if not $ null quoteList then do -- if choosing multiple provider is not enabled then only show ny
-    if fareProductType == "INTER_CITY" then interCityFlow quotes state
+    if fareProductType == "INTER_CITY" then interCityFlow quotesRes.quotes state
     else do
       let 
         _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
@@ -2754,11 +2747,11 @@ eval ConfirmRentalRideAction state = do
 
 eval ChangeToRideAcceptedAction state = do
   void $ pure $ updateLocalStage RideAccepted
-  updateAndExit state{props{currentStage = LoadMap}} $ Reload state{props{currentStage = RideAccepted}}
+  updateAndExit state{props{currentStage = LoadMap}} $ ReloadScreen state{props{currentStage = RideAccepted}}
 
 eval ChangeToRideStartedAction state = do
   void $ pure $ updateLocalStage RideStarted
-  updateAndExit state{props{currentStage = LoadMap}} $ Reload state{props{currentStage = RideStarted}}
+  updateAndExit state{props{currentStage = LoadMap}} $ ReloadScreen state{props{currentStage = RideStarted}}
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do
