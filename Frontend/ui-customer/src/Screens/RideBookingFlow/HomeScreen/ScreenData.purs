@@ -251,7 +251,6 @@ initData = {
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
     , showEducationalCarousel : false
-    -- , specialZoneType : ""
     , currentLocation : {
         lat : 0.0,
         lng : 0.0,

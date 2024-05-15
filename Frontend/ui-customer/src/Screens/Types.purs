@@ -681,6 +681,7 @@ data Stage = HomeScreen
            | FavouriteLocationModel
            | ChatWithDriver
            | FindEstimateAndSearch
+           | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
            | RideSearch
@@ -688,7 +689,6 @@ data Stage = HomeScreen
            | ChangeToRideAccepted
            | ChangeToRideStarted
            | ConfirmingQuotes
-           | RetryFindingQuote
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -1164,13 +1164,6 @@ type EstimateInfo = {
   extraFare :: Int,
   showRateCardIcon :: Boolean,
   zoneType :: SpecialTags
-}
-
-type EstimatesAndQuotesInfo = {
-    defaultQuote :: ChooseVehicle.Config
-  , nearByDrivers :: Maybe Int
-  , zoneType :: SpecialTags
-  , hasToll :: Boolean
 }
 
 -- ################################## SelectLanguageScreenState ###############################
@@ -2159,23 +2152,6 @@ type RentalFareDetails = {
   perHourCharge :: Int,
   nightShiftCharge :: Int
 }
-
-data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling
-
-derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
-instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
-instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
-
-data TicketType = ONE_WAY_TICKET | ROUND_TRIP_TICKET
-
-derive instance genericTicketType :: Generic TicketType _
-instance eqTicketType :: Eq TicketType where eq = genericEq
-
-data LocationActionId = Src | Dest
-
-derive instance genericLocationActionId :: Generic LocationActionId _
-instance eqLocationActionId :: Eq LocationActionId where eq = genericEq
-instance showLocationActionId :: Show LocationActionId where show = genericShow
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION
 

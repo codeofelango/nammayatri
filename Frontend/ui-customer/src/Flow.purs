@@ -154,35 +154,7 @@ import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduled
 import Helpers.API (callApiBT)
 import Effect.Unsafe ( unsafePerformEffect)
 import Common.Types.App as Common
--- import Screens.Types (SearchResultType(..)) as SearchResultType
--- import Data.Array (groupBy, fromFoldable, singleton)
--- import Data.Foldable (maximumBy, foldl)
--- import Data.Ord (comparing)
--- import Types.App
--- import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
--- import Screens.Types
--- import Screens.TicketBookingFlow.TicketStatus.Transformer as TicketStatusTransformer
--- import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
--- import Screens.TicketBookingFlow.MetroTicketDetails.Transformer
--- import Screens.TicketBookingFlow.MetroMyTickets.Transformer
--- import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
--- import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
--- import Services.Config(getNumbersToWhiteList)
--- import SessionCache(getValueFromWindow, setValueInWindow)
--- import LocalStorage.Cache (clearCache)
--- import DecodeUtil (getAnyFromWindow)
--- import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
--- import Screens.FollowRideScreen.Controller (deleteDismisedMockDrills)
--- import Data.Map as Map
--- import Foreign.Object (lookup)
--- import Screens.RideSelectionScreen.Transformer (myRideListTransformer)
--- import Services.FlowCache as FlowCache
--- import Data.HashMap as DHM
--- import Helpers.API as HelpersAPI
--- import Helpers.Referral (applyReferralCode)
--- import Helpers.SpecialZoneAndHotSpots
 import Components.ChooseVehicle.Controller as ChooseVehicle
--- import Screens.HelpAndSupportScreen.Transformer (getUpdatedIssueList, getApiIssueList)
 import Components.ChooseVehicle as CCV
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
@@ -857,13 +829,6 @@ homeScreenFlow = do
           setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-
-          -- if state.data.iopState.showMultiProvider then do 
-          --   updateLocalStage ProviderSelection
-          --   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { estimateId = selectedEstimateOrQuote.id }
-          --                                                                       , data { iopState { providerSelectionStage = true }
-          --                                                                       } })
-          -- else do
           setValueToLocalStore FARE_ESTIMATE_DATA selectedEstimateOrQuote.price
           setValueToLocalStore SELECTED_VARIANT selectedEstimateOrQuote.vehicleVariant
           case selectedEstimateOrQuote.searchResultType of
@@ -879,7 +844,6 @@ homeScreenFlow = do
                                                                                           , searchExpire = (getSearchExpiryTime "LazyCheck") }
                                                                                   , data { currentSearchResultType = selectedEstimateOrQuote.searchResultType } })
               else do
-                -- void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN)
                 findEstimates state
             Common.QUOTES Common.OneWaySpecialZoneAPIDetails -> do
               void $ pure $ enableMyLocation false
@@ -1372,7 +1336,6 @@ homeScreenFlow = do
           isSource = state.props.isSource == Just true
                           
       setValueToLocalStore CUSTOMER_LOCATION $ show cityName
-      -- checkForSpecialZoneAndHotSpots state (ServiceabilityRes sourceServiceabilityResp) lat lon
       let cachedLat = (if isSource then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
           cachedLon = (if isSource then state.props.locateOnMapLocation.sourceLng else state.props.locateOnMapLocation.destinationLng)
           cachedLocation = (if isSource then state.props.locateOnMapLocation.source else state.props.locateOnMapLocation.destination)
@@ -1410,7 +1373,6 @@ homeScreenFlow = do
                                       then homeScreen.data.destinationAddress
                                       else encodeAddress placeDetails.formattedAddress placeDetails.addressComponents Nothing}
             })
-          -- Nothing -> void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN  
       else do
         let cachedLat = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLat else state.props.locateOnMapLocation.destinationLat)
             cachedLon = (if state.props.isSource == Just true then state.props.locateOnMapLocation.sourceLng else state.props.locateOnMapLocation.destinationLng)

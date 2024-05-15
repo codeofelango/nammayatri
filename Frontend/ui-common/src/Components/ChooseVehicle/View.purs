@@ -96,7 +96,7 @@ priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Ef
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon = if isActiveIndex then "ny_ic_info_blue_lg" else "ny_ic_info_grey"
-      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType == ESTIMATES
+      enableRateCard = config.showInfo && (isActiveIndex) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType == ESTIMATES
   in
   linearLayout
     [ height WRAP_CONTENT

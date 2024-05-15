@@ -167,8 +167,6 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
       , config : getAppConfig appConfig
-      -- , providerName : resp.agencyName
-      -- , providerType : CT.ONUS -- maybe CT.ONUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) resp.isValueAddNP -- get from API
       , vehicleVariant : if rideList.vehicleVariant /= "" 
                             then rideList.vehicleVariant 
                          else
@@ -357,9 +355,6 @@ getSpecialZoneQuote quote index =
       , searchResultType = CT.QUOTES CT.OneWaySpecialZoneAPIDetails
       , pickUpCharges = 0
       , serviceTierName = quoteEntity.serviceTierName
-      -- , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
-      -- , airConditioned = Nothing
-      , providerType = CT.ONUS -- maybe CT.OFFUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) quoteEntity.isValueAddNP
       , specialLocationTag = quoteEntity.specialLocationTag
       }
     RentalQuotes body -> let (QuoteAPIEntity quoteEntity) = body.onRentalCab
@@ -405,8 +400,7 @@ sortEstimateWithVariantOrder estimates orderList =
 
 getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Int -> Array ChooseVehicle.Config
 getEstimateList estimates estimateAndQuoteConfig activeIndex = 
-  let estimatesWithOrWithoutBookAny = (createEstimateForBookAny estimates) <> estimates
-      filteredWithVariantAndFare = filterWithFareAndVariant estimatesWithOrWithoutBookAny estimateAndQuoteConfig
+  let filteredWithVariantAndFare = filterWithFareAndVariant estimates estimateAndQuoteConfig
       estimatesConfig = mapWithIndex (\index item -> getEstimates item filteredWithVariantAndFare index activeIndex) filteredWithVariantAndFare
   in
     updateBookAnyEstimate estimatesConfig 
@@ -509,7 +503,6 @@ getEstimates (EstimateAPIEntity estimate) estimates index activeIndex =
       config = getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       tipConfig = getTipConfig estimate.vehicleVariant
       maxTip = fromMaybe 0 (maximum tipConfig.customerTipArrayWithValues)
-      -- breakupConfig = getFareBreakupList (EstimateAPIEntity estimate) maxTip
       additionalFare = maybe 20 calculateFareRangeDifference (estimate.totalFareRange)
       extractFare f = case estimate.totalFareRange of
                         Just (FareRange fareRange) -> Just (f fareRange)
@@ -531,23 +524,7 @@ getEstimates (EstimateAPIEntity estimate) estimates index activeIndex =
       , basePrice = estimate.estimatedTotalFare
       , searchResultType = CT.ESTIMATES
       , serviceTierName =  mapServiceTierName estimate.vehicleVariant estimate.isValueAddNP estimate.serviceTierName
-      -- , serviceTierShortDesc = mapServiceTierShortDesc estimate.vehicleVariant estimate.isValueAddNP estimate.serviceTierShortDesc
-      -- , extraFare = breakupConfig.fareList
-      -- , additionalFare = additionalFare
-      , providerName = fromMaybe "" estimate.providerName
-      , providerId = fromMaybe "" estimate.providerId
-      , providerType = CT.ONUS -- maybe CT.OFFUS (\valueAdd -> if valueAdd then CT.ONUS else CT.OFFUS) estimate.isValueAddNP
-      , maxPrice = extractFare _.maxFare
-      -- , minPrice = extractFare _.minFare
-      , priceShimmer = false
-      -- , fareInfoDescription = breakupConfig.fareInfo
-      -- , isNightShift = breakupConfig.isNightShift
-      -- , nightChargeFrom = breakupConfig.nightChargeStart
-      -- , nightChargeTill = breakupConfig.nightChargeEnd
-      -- , driverAdditions = breakupConfig.driverAdditions
-      , availableServices = []
       , selectedServices = []
-      , validTill = estimate.validTill
       , specialLocationTag = estimate.specialLocationTag
       }
 
@@ -563,19 +540,12 @@ updateBookAnyEstimate estimates =
     map
       ( \estimate -> 
           if estimate.vehicleVariant == "BOOK_ANY" then
-            let availableServices = foldl
-                                      ( \acc item -> case item.serviceTierName of
-                                          Just service -> acc <> [ service ]
-                                          Nothing -> acc
-                                      )
-                                      []
-                                      estimates
-                allSelectedServices = getSelectedServices FunctionCall
-                selectedServices = intersection allSelectedServices availableServices
-                headEstimateId = (fromMaybe ChooseVehicle.config (DA.find (\item -> DA.any (_ == fromMaybe "" item.serviceTierName) selectedServices) estimates)).id
-                validTill = (fromMaybe ChooseVehicle.config (DA.find (\item -> item.id == headEstimateId) estimates)).validTill
-            in estimate { availableServices = availableServices
-                        , selectedServices = selectedServices
+              let availableServices = foldl ( \acc item -> acc) [] estimates
+                  allSelectedServices = getSelectedServices FunctionCall
+                  selectedServices = intersection allSelectedServices availableServices
+                  headEstimateId = (fromMaybe ChooseVehicle.config (DA.find (\item -> DA.any (_ == fromMaybe "" item.serviceTierName) selectedServices) estimates)).id
+                  validTill = (fromMaybe ChooseVehicle.config (DA.find (\item -> item.id == headEstimateId) estimates)).validTill
+              in estimate { selectedServices = selectedServices
                         , validTill = validTill
                         , id = headEstimateId
                         }
@@ -678,59 +648,6 @@ getNearByDrivers estimates = DA.nub (getCoordinatesFromEstimates [] estimates)
       in
         map (\(LatLong item) -> { lat : item.lat, lng : item.lon }) latLngs
 
--- getEstimatesInfo :: Array EstimateAPIEntity -> String -> HomeScreenState -> EstimateInfo
--- getEstimatesInfo estimates vehicleVariant state =
---   { additionalFare: additionalFare
---   , estimatedPrice: estimatedPrice
---   , quoteList: quoteList
---   , defaultQuote: defaultQuote
---   , estimateId: estimateId
---   , pickUpCharges: pickUpCharges
---   , estimatedVarient: estimatedVariant
---   , nightShiftMultiplier: nightShiftMultiplier
---   , nightCharges: nightCharges
---   , baseFare: baseFare
---   , extraFare: extraFare
---   , showRateCardIcon: showRateCardIcon
---   , zoneType: zoneType
---   }
---   where
---     estimatedVariant = 
---       if null vehicleVariant 
---       then estimates 
---       else filter (\estimate -> estimate ^. _vehicleVariant == vehicleVariant) estimates
-
---     estimatedPrice = maybe 0 (view _estimatedFare) (head estimatedVariant)
---     quoteList = getEstimateList estimates state.data.config.estimateAndQuoteConfig
---     defaultQuote = fromMaybe ChooseVehicle.config (head quoteList)
---     estimateId = maybe "" (view _estimateId) (head estimatedVariant)
---     estimateFareBreakup = maybe [] identity (head estimatedVariant >>= view _estimateFareBreakup)
---     pickUpCharges = fetchPickupCharges estimateFareBreakup 
-
---     additionalFare = maybe 20 calculateFareRangeDifference (head estimatedVariant >>= view _totalFareRange)
---     calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
-
---     nightShiftRate = head estimates >>= view _nightShiftRate
---     nightShiftStart = maybe "" (view _nightShiftStart >>> fromMaybe "") nightShiftRate
---     nightShiftEnd = maybe "" (view _nightShiftEnd >>> fromMaybe "") nightShiftRate
---     nightShiftMultiplier = maybe 0.0 (view _nightShiftMultiplier >>> fromMaybe 0.0) nightShiftRate
---     nightCharges = withinTimeRange nightShiftStart nightShiftEnd (convertUTCtoISC(getCurrentUTC "") "HH:mm:ss")
-
---     baseFare = maybe 0 calculateBaseFare (find hasBaseDistanceFare estimateFareBreakup)
---     hasBaseDistanceFare item = item ^. _title == "BASE_DISTANCE_FARE"
---     calculateBaseFare baseDistFare = round $ (toNumber $ baseDistFare ^. _price) * fareMultiplier
---     fareMultiplier = if nightCharges then nightShiftMultiplier else 1.0
-
---     extraFare = maybe 0 calculateExtraFare (find hasExtraPerKmFare estimateFareBreakup)
---     hasExtraPerKmFare item = item ^. _title == "EXTRA_PER_KM_FARE"
---     calculateExtraFare extraPerKmFare = round $ (toNumber $ extraPerKmFare ^. _price) * fareMultiplier
-
---     showRateCardIcon = not (DA.null estimateFareBreakup)
---     zoneType = getSpecialTag $ case head estimatedVariant of
---                   Just entity -> view _specialLocationTag entity
---                   Nothing -> Nothing
-
-
 dummyEstimateEntity :: EstimateAPIEntity
 dummyEstimateEntity =
   EstimateAPIEntity
@@ -775,40 +692,6 @@ getZoneType tag =
     Just "SureMetro" -> METRO
     Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     _                -> NOZONE
-    
-createEstimateForBookAny :: Array EstimateAPIEntity -> Array EstimateAPIEntity
-createEstimateForBookAny estimates = []
-  -- let config = getAppConfig appConfig
-  --     selectedServices = getSelectedServices FunctionCall
-  --     filteredEstimates = filter (\(EstimateAPIEntity item) -> ((DA.elem (fromMaybe "" item.serviceTierName) selectedServices) && (fromMaybe false item.isValueAddNP))) estimates
-  -- in  if DA.length estimates > 1 && not ( DA.null filteredEstimates) then
-  --       let bookAnyEstimate =
-  --             EstimateAPIEntity
-  --               { agencyNumber: ""
-  --               , createdAt: "2024-04-18T09:46:37.579497Z"
-  --               , discount: Nothing
-  --               , estimatedTotalFare: 0
-  --               , agencyName: "NAMMA_YATRI"
-  --               , vehicleVariant: "BOOK_ANY"
-  --               , estimatedFare: 0
-  --               , tripTerms: []
-  --               , id: ""
-  --               , providerName : Nothing
-  --               , providerId : Nothing
-  --               , agencyCompletedRidesCount: 0
-  --               , estimateFareBreakup: Just []
-  --               , totalFareRange: Nothing
-  --               , nightShiftRate: Nothing
-  --               , specialLocationTag: Nothing
-  --               , driversLatLong: []
-  --               , serviceTierShortDesc: Just "Get Instantly"
-  --               , serviceTierName: Just "Book Any"
-  --               , airConditioned: Nothing
-  --               , isValueAddNP: Just true
-  --               , validTill : ""
-  --               }
-  --       in DA.singleton bookAnyEstimate
-  --     else []
 
 getTripFromRideHistory :: MyRidesScreenState -> Trip
 getTripFromRideHistory state = {

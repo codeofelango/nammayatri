@@ -36,19 +36,10 @@ type Config
     , pickUpCharges :: Int 
     , layoutMargin :: Margin 
     , showStroke :: Boolean
-    , providerName :: String
-    , providerId :: String
-    , providerType :: CT.ProviderType
-    , singleVehicle :: Boolean
-    , priceShimmer :: Boolean
-    , availableServices :: Array String
-    , services :: Array String
-    , selectedServices :: Array String
-    , currentEstimateHeight :: Int
-    , selectedEstimateHeight :: Int
+    , serviceTierName :: Maybe String
     , validTill :: String
     , specialLocationTag :: Maybe String
-    , serviceTierName :: Maybe String
+    , selectedServices :: Array String
     }
 
 
@@ -73,29 +64,8 @@ config =
   , pickUpCharges : 0
   , layoutMargin : MarginHorizontal 12 12
   , showStroke : true
-  -- , tollCharge : 0.0
-  -- , serviceTierShortDesc : Nothing
   , serviceTierName : Nothing
-  -- , extraFare: []
-  -- , additionalFare: 0
-  -- , fareInfoDescription: []
-  -- , driverAdditions: []
-  -- , isNightShift : false
-  -- , nightChargeTill : ""
-  -- , nightChargeFrom : ""
-  -- , airConditioned : Nothing
-  -- , showEditButton : false
-  -- , editBtnText : ""
-  , providerName : ""
-  , providerId : ""
-  , providerType : CT.ONUS
-  , singleVehicle : false
-  , priceShimmer : true
-  , availableServices : []
-  , services : [] 
-  , selectedServices : []
-  , currentEstimateHeight : 184 
-  , selectedEstimateHeight : 0
   , validTill : ""
   , specialLocationTag : Nothing
+  , selectedServices : []
   }

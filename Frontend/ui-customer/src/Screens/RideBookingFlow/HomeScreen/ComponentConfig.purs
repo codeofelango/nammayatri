@@ -1770,12 +1770,6 @@ safetyIssueOptions forceEnglish =
 setSelectedEstimatesObject :: Encode ChooseVehicle.Config => ChooseVehicle.Config -> Effect Unit
 setSelectedEstimatesObject object = void $ pure $ setValueToLocalStore ESTIMATE_DATA (encodeJSON object)
 
--- getSelectedEstimatesObject :: String -> Maybe ChooseVehicle.Config
--- getSelectedEstimatesObject dummy =
---   case runExcept (decodeJSON (getValueToLocalStore ESTIMATE_DATA) :: _ ChooseVehicle.Config) of
---     Right res -> Just res
---     Left err -> Nothing
-
 getChatSuggestions :: ST.HomeScreenState -> Array String
 getChatSuggestions state = do 
   let didDriverMessage = HU.didDriverMessage FunctionCall

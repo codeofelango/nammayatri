@@ -39,7 +39,7 @@ import Screens.Types (Stage(..), PopupType(..), FlowStatusData(..), TipViewData(
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
-import Helpers.Utils (getCurrentDate, getCityNameFromCode, getFareProductType)
+import Helpers.Utils (getCurrentDate, getCityNameFromCode)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
@@ -67,7 +67,6 @@ checkRideStatus rideAssigned = do
                                 else if fareProductType == "INTER_CITY" then Common.QUOTES Common.INTER_CITY
                                 else if (fareProductType == "RENTAL") then Common.QUOTES Common.RENTAL
                                 else Common.ESTIMATES
-            -- dropLocation = if (fareProductType == "RENTAL") then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
             newState = 
               state

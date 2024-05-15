@@ -160,19 +160,10 @@ screen initialState =
                       pure unit
                     Nothing -> pure unit
               FindingEstimate -> do
-                -- logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
-              
-                -- if initialState.data.currentCityConfig.iopConfig.enable then do 
-                --   when (not $ getValueToLocalStore STARTED_ESTIMATE_SEARCH == "TRUE") do -- Check if estimate search is already started
-                --     void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "TRUE"
-                --     void $ launchAff $ flowRunner defaultGlobalState $ getEstimatePolling (getValueToLocalStore TRACKING_ID) GetEstimates CheckFlowStatusAction 3 2000.0 push initialState
-                -- when (estimatesPolling.shouldPush) $
                 void $ launchAff $ flowRunner defaultGlobalState $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
-                -- pure unit
               TryAgain -> do
-                -- logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
                 when estimatesPolling.shouldPush $ void $ launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState estimatesPolling.id
                 pure unit
@@ -242,8 +233,6 @@ screen initialState =
                 else pure unit
                 push LoadMessages
                 if (not initialState.props.chatcallbackInitiated && initialState.data.currentSearchResultType /= CTP.QUOTES CTP.OneWaySpecialZoneAPIDetails) then do
-                  -- @TODO need to revert once apk update is done
-                  --when (initialState.data.driverInfoCardState.providerType == CTP.ONUS) $ void $ JB.showInAppNotification JB.inAppNotificationPayload{title = "Showing Approximate Location", message = "Driver locations of other providers are only approximate", channelId = "ApproxLoc", showLoader = true}
                   _ <- clearChatMessages
                   _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
                   _ <- storeCallBackOpenChatScreen push OpenChatScreen
