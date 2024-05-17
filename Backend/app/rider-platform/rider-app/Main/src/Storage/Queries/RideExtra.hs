@@ -23,10 +23,9 @@ import EulerHS.Types (KVDBAnswer)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common (distanceToHighPrecDistance, distanceToHighPrecMeters)
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime, logTagDebug, logTagError)
+import Kernel.Utils.Common (KvDbFlow, getCurrentTime, logTagDebug, logTagError)
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -39,10 +38,10 @@ import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.Person ()
 import Tools.Metrics (CoreMetrics)
 
-createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
+createRide' :: KvDbFlow m r => Ride -> m ()
 createRide' ride = createWithKV ride >> appendByDriverPhoneNumber ride
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
+create :: KvDbFlow m r => Ride -> m ()
 create ride = do
   _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
   _ <- whenJust ride.toLocation $ \location -> processLocation location
@@ -50,7 +49,7 @@ create ride = do
   where
     processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
 
-createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Ride -> m ()
+createRide :: KvDbFlow m r => Ride -> m ()
 createRide ride = do
   fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
   mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId) ride.toLocation
@@ -65,7 +64,7 @@ data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   }
   deriving (Generic, B.Database be)
 
-updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> RideStatus -> m ()
+updateStatus :: KvDbFlow m r => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
   now <- getCurrentTime
   updateOneWithKV
@@ -74,7 +73,7 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateTrackingUrl :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> BaseUrl -> m ()
+updateTrackingUrl :: KvDbFlow m r => Id Ride -> BaseUrl -> m ()
 updateTrackingUrl rideId url = do
   now <- getCurrentTime
   updateOneWithKV
@@ -83,7 +82,7 @@ updateTrackingUrl rideId url = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateRideRating :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Int -> m ()
+updateRideRating :: KvDbFlow m r => Id Ride -> Int -> m ()
 updateRideRating rideId rideRating = do
   now <- getCurrentTime
   updateOneWithKV
@@ -92,7 +91,7 @@ updateRideRating rideId rideRating = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateMultiple :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Ride -> m ()
+updateMultiple :: KvDbFlow m r => Id Ride -> Ride -> m ()
 updateMultiple rideId ride = do
   let distanceUnit = ride.chargeableDistance <&> (.unit) -- should be the same for all fields
   now <- getCurrentTime
@@ -113,15 +112,15 @@ updateMultiple rideId ride = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-findActiveByRBId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Ride)
+findActiveByRBId :: KvDbFlow m r => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
 
-findLatestCompletedRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Ride)
+findLatestCompletedRide :: KvDbFlow m r => Id Person -> m (Maybe Ride)
 findLatestCompletedRide riderId = do
   booking <- findAllWithOptionsKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId] (Se.Desc BeamB.createdAt) Nothing Nothing
   findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
 
-updateDriverArrival :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe UTCTime -> m ()
+updateDriverArrival :: KvDbFlow m r => Id Ride -> Maybe UTCTime -> m ()
 updateDriverArrival rideId arrivalTime = do
   now <- getCurrentTime
   updateOneWithKV
@@ -130,7 +129,7 @@ updateDriverArrival rideId arrivalTime = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateSafetyCheckStatus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe Bool -> m ()
+updateSafetyCheckStatus :: KvDbFlow m r => Id Ride -> Maybe Bool -> m ()
 updateSafetyCheckStatus rideId status = do
   updateOneWithKV
     [ Se.Set BeamR.safetyCheckStatus status
@@ -143,7 +142,7 @@ data StuckRideItem = StuckRideItem
     riderId :: Id Person
   }
 
-findStuckRideItems :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems :: KvDbFlow m r => Merchant -> DMOC.MerchantOperatingCity -> [Id Booking] -> UTCTime -> m [StuckRideItem]
 findStuckRideItems merchant moCity bookingIds now = do
   let now6HrBefore = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
   bookings <-
@@ -176,7 +175,7 @@ findStuckRideItems merchant moCity bookingIds now = do
 
     mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
 
-cancelRides :: (MonadFlow m, EsqDBFlow m r) => [Id Ride] -> UTCTime -> m ()
+cancelRides :: KvDbFlow m r => [Id Ride] -> UTCTime -> m ()
 cancelRides rideIds now =
   updateWithKV
     [ Se.Set BeamR.status Ride.CANCELLED,
@@ -204,7 +203,7 @@ roundToMidnightUTCToDate :: UTCTime -> UTCTime
 roundToMidnightUTCToDate (UTCTime day _) = UTCTime (addDays 1 day) 0
 
 findAllRideItems ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id Merchant ->
   Int ->
   Int ->
@@ -274,13 +273,13 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
           ..
         }
 
-findRiderIdByRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe (Id Person))
+findRiderIdByRideId :: KvDbFlow m r => Id Ride -> m (Maybe (Id Person))
 findRiderIdByRideId rideId = do
   ride <- findOneWithKV [Se.Is BeamR.id $ Se.Eq $ getId rideId]
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   pure $ Booking.riderId <$> booking
 
-findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> m [Booking]
+findAllByRiderIdAndRide :: KvDbFlow m r => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> m [Booking]
 findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
@@ -326,17 +325,17 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                 _ -> False
            in isJust maybeRide || isJust otpCode || isconfirmedRentalRideOrIntercityBooking
 
-countRidesByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m Int
+countRidesByRiderId :: KvDbFlow m r => Id Person -> m Int
 countRidesByRiderId riderId = do
   booking <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId]
   findAllWithKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED]] <&> length
 
-countRidesFromDateToNowByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> UTCTime -> m Int
+countRidesFromDateToNowByRiderId :: KvDbFlow m r => Id Person -> UTCTime -> m Int
 countRidesFromDateToNowByRiderId riderId date = do
   booking <- findAllWithKV [Se.Is BeamB.riderId $ Se.Eq $ getId riderId]
   findAllWithKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId <$> (DRB.id <$> booking), Se.Is BeamR.status $ Se.Eq Ride.COMPLETED, Se.Is BeamR.createdAt $ Se.GreaterThan date]] <&> length
 
-updateEditLocationAttempts :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe Int -> m ()
+updateEditLocationAttempts :: KvDbFlow m r => Id Ride -> Maybe Int -> m ()
 updateEditLocationAttempts rideId attempts = do
   now <- getCurrentTime
   updateOneWithKV
@@ -352,7 +351,7 @@ extractRideIds :: KVDBAnswer [ByteString] -> [Text]
 extractRideIds (Right value) = TE.decodeUtf8 <$> value
 extractRideIds _ = []
 
-findLatestByDriverPhoneNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
+findLatestByDriverPhoneNumber :: KvDbFlow m r => Text -> m (Maybe Ride)
 findLatestByDriverPhoneNumber driverMobileNumber = do
   let lookupKey = driverMobileNumberKey driverMobileNumber
   rideIds_ <- L.runKVDB meshConfig.kvRedis $ L.smembers lookupKey
@@ -364,7 +363,7 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
       findLatestActiveByDriverNumber driverMobileNumber
     _ -> findLatestActiveByRideIds rideIds
   where
-    findLatestActiveByRideIds :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => [Text] -> m (Maybe Ride)
+    findLatestActiveByRideIds :: (CoreMetrics m, KvDbFlow m r) => [Text] -> m (Maybe Ride)
     findLatestActiveByRideIds rideIds =
       do
         findAllWithKVAndConditionalDB
@@ -376,7 +375,7 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
           (Just (Se.Desc BeamR.createdAt))
         <&> listToMaybe
 
-    findLatestActiveByDriverNumber :: (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Ride)
+    findLatestActiveByDriverNumber :: KvDbFlow m r => Text -> m (Maybe Ride)
     findLatestActiveByDriverNumber driverNum =
       do
         let limit = 1
@@ -391,7 +390,7 @@ findLatestByDriverPhoneNumber driverMobileNumber = do
           Nothing
         <&> listToMaybe
 
-appendByDriverPhoneNumber :: (MonadFlow m, Hedis.HedisFlow m r) => Ride -> m ()
+appendByDriverPhoneNumber :: KvDbFlow m r => Ride -> m ()
 appendByDriverPhoneNumber ride = do
   let lookupKey = driverMobileNumberKey ride.driverMobileNumber
       rideId = [TE.encodeUtf8 $ getId ride.id]

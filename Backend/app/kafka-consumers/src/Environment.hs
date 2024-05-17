@@ -17,6 +17,8 @@ module Environment where
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
+import Kernel.Beam.Functions
+import Kernel.Beam.Lib.Utils (DbFunctions)
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -127,6 +129,8 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool,
+    dbFunctions :: DbFunctions,
     cacConfig :: CacConfig
   }
   deriving (Generic)
@@ -138,8 +142,10 @@ buildAppEnv AppCfg {..} consumerType = do
   hedisEnv <- connectHedis hedisCfg id
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Nothing
+  let isArtReplayerEnabled = False
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

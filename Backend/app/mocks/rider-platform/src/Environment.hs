@@ -16,6 +16,8 @@ module Environment where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
+import Kernel.Beam.Functions
+import Kernel.Beam.Lib.Utils (DbFunctions)
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
@@ -30,7 +32,6 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
-import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -69,7 +70,9 @@ data AppEnv = AppEnv
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool,
+    dbFunctions :: DbFunctions
   }
   deriving (Generic)
 
@@ -81,8 +84,10 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Nothing
+  let isArtReplayerEnabled = False
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   return AppEnv {..}
 

@@ -26,21 +26,20 @@ import Data.Text as Text
 import qualified Domain.Types.Cac as DTC
 import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Kernel.Beam.Lib.Utils (KvDbFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Cac
-import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.GoHomeConfig as Queries
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => GoHomeConfig -> m ()
+create :: KvDbFlow m r => GoHomeConfig -> m ()
 create = Queries.create
 
-getGoHomeConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
+getGoHomeConfigFromDB :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
 getGoHomeConfigFromDB id = do
   Hedis.safeGet (makeGoHomeKey id) >>= \case
     Just cfg -> return cfg
@@ -50,12 +49,12 @@ getGoHomeConfigFromDB id = do
       Hedis.setExp (makeGoHomeKey id) cfg expTime
       return (Just cfg)
 
-getConfigsFromMemory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
+getConfigsFromMemory :: KvDbFlow m r => Id MerchantOperatingCity -> m (Maybe GoHomeConfig)
 getConfigsFromMemory id = do
   isExpired <- DTC.updateConfig DTC.LastUpdatedGoHomeConfig
   getConfigFromMemoryCommon (DTC.GoHomeConfig id.getId) isExpired CM.isExperimentsRunning
 
-findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
+findByMerchantOpCityId :: KvDbFlow m r => Id MerchantOperatingCity -> m GoHomeConfig
 findByMerchantOpCityId id = getGoHomeConfigFromDB id <&> fromJust
 
 makeGoHomeKey :: Id MerchantOperatingCity -> Text

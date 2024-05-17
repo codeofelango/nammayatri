@@ -6,12 +6,12 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/ART-function-switch-implementation";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     namma-dsl = {
-      url = "github:nammayatri/namma-dsl";
+      url = "github:nammayatri/namma-dsl/backend/KVDbFlow-in-dsl";
     };
 
     haskell-cac = {
@@ -23,7 +23,7 @@
     };
 
     beckn-gateway = {
-      url = "github:nammayatri/beckn-gateway";
+      url = "github:nammayatri/beckn-gateway/1b8a4d750e7188e16f532986c7fc2ff9adc9cbec";
       inputs = {
         common.follows = "common";
         haskell-flake.follows = "haskell-flake";

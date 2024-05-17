@@ -27,9 +27,7 @@ import Storage.CachedQueries.FollowRide
 import qualified Tools.SMS as Sms
 
 checkPNAndSendSMS ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    MonadFlow m,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig]
   ) =>
@@ -45,9 +43,7 @@ checkPNAndSendSMS Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       return Complete
 
 sendSMS ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    MonadFlow m,
+  ( KvDbFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig]
   ) =>

@@ -17,6 +17,7 @@ module Environment where
 
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
+import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
 import Kernel.Streaming.Kafka.Producer.Types
@@ -25,6 +26,7 @@ import Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.App (lookupDeploymentVersion)
+import Kernel.Utils.Common (DbFunctions)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Lib.Scheduler (SchedulerType)
@@ -93,7 +95,9 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool,
+    dbFunctions :: DbFunctions
   }
   deriving (Generic)
 
@@ -107,8 +111,10 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Just kafkaProducerTools
+  let isArtReplayerEnabled = False
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

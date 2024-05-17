@@ -83,8 +83,7 @@ initiateDriverSearchBatch ::
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    KvDbFlow m r,
     Log m,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
@@ -170,10 +169,8 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           return searchTry
 
 buildSearchTry ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    Metrics.CoreMetrics m,
-    EsqDBFlow m r
+  ( Metrics.CoreMetrics m,
+    KvDbFlow m r
   ) =>
   Id DM.Merchant ->
   DSR.SearchRequest ->
@@ -213,8 +210,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
       }
 
 buildTripQuoteDetail ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
+  ( KvDbFlow m r,
     EsqDBReplicaFlow m r
   ) =>
   DSR.SearchRequest ->

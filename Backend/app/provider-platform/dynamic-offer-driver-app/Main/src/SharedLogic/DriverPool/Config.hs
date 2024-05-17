@@ -32,14 +32,14 @@ import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import Kernel.Utils.Error
 import qualified Lib.Types.SpecialLocation as SL
 import Storage.Beam.SystemConfigs ()
 import Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 
 getDriverPoolConfigFromDB ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  KvDbFlow m r =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
@@ -69,7 +69,7 @@ filterByDistAndDvehAndArea :: Maybe DVST.ServiceTierType -> Text -> Meters -> SL
 filterByDistAndDvehAndArea serviceTier tripCategory dist area cfg =
   dist >= cfg.tripDistance && cfg.vehicleVariant == serviceTier && cfg.tripCategory == tripCategory && cfg.area == area
 
-findDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> m DriverPoolConfig
+findDriverPoolConfig :: (KvDbFlow m r) => [DriverPoolConfig] -> Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> m DriverPoolConfig
 findDriverPoolConfig configs serviceTier tripCategory dist area = do
   find (filterByDistAndDvehAndArea serviceTier tripCategory dist area) configs
     <|> find (filterByDistAndDvehAndArea serviceTier tripCategory dist SL.Default) configs

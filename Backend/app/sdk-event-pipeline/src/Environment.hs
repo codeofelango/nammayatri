@@ -26,7 +26,6 @@ import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
-import qualified System.Environment as SE
 
 data DriverAppConfig = DriverAppConfig
   { url :: BaseUrl,
@@ -72,7 +71,8 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool
   }
   deriving (Generic)
 
@@ -85,9 +85,10 @@ buildAppEnv AppCfg {..} = do
   version <- lookupDeploymentVersion
   isShuttingDown <- mkShutdown
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "SHOULD_LOG_REQUEST_ID"
-  let kafkaProducerForART = Just kafkaProducerTools
-  let modifierFunc = ("sdk-event:" <>)
+      shouldLogRequestId = False
+      kafkaProducerForART = Just kafkaProducerTools
+      isArtReplayerEnabled = False
+      modifierFunc = ("sdk-event:" <>)
   hedisEnv <- connectHedisCluster hedisClusterCfg modifierFunc
   hedisClusterEnv <- connectHedisCluster hedisClusterCfg modifierFunc
   hedisNonCriticalEnv <- connectHedisCluster hedisClusterCfg modifierFunc

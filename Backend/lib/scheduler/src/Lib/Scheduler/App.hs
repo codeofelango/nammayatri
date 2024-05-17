@@ -17,6 +17,7 @@ module Lib.Scheduler.App
   )
 where
 
+import Kernel.Beam.Functions
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Randomizer
@@ -58,6 +59,10 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let kafkaProducerForART = Just kafkaProducerTools
+      requestId = Nothing
+  let shouldLogRequestId = False
+  let isArtReplayerEnabled = False
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalClusterEnv <-
@@ -71,8 +76,6 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
   consumerId <- G.generateGUIDTextIO
-  let requestId = Nothing
-      shouldLogRequestId = False
   let cacheConfig = CacheConfig {configsExpTime = 0}
   let schedulerEnv = SchedulerEnv {cacheConfig, ..}
   when (tasksPerIteration <= 0) $ do

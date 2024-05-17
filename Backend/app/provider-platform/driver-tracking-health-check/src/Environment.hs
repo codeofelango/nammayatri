@@ -15,6 +15,7 @@
 module Environment where
 
 import EulerHS.Prelude
+import Kernel.Beam.Functions
 import Kernel.External.Encryption (EncTools)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
@@ -23,12 +24,11 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Flow (FlowR)
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacConfig, CacheConfig)
+import Kernel.Utils.Common (CacConfig, CacheConfig, DbFunctions)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Shutdown
-import System.Environment (lookupEnv)
 import Tools.Metrics
 
 type Flow = FlowR AppEnv
@@ -94,6 +94,8 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
+    isArtReplayerEnabled :: Bool,
+    dbFunctions :: DbFunctions,
     cacConfig :: CacConfig
   }
   deriving (Generic)
@@ -108,8 +110,10 @@ buildAppEnv AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   let modifierFunc = (driverAppName <>)
   let requestId = Nothing
-  shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
+  let shouldLogRequestId = False
   let kafkaProducerForART = Nothing
+  let isArtReplayerEnabled = False
+  let dbFunctions = if isArtReplayerEnabled then getArtDbFunctions else getDbFunctions
   hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
   hedisNonCriticalEnv <- Redis.connectHedis hedisNonCriticalCfg modifierFunc
   hedisClusterEnv <-

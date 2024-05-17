@@ -35,7 +35,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Common (KvDbFlow)
 import Kernel.Utils.Error
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.Queries.Person as QPerson
@@ -58,7 +58,7 @@ data LeaderBoardRes = LeaderBoardRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 getDailyDriverLeaderBoard ::
-  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r) =>
+  (KvDbFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r) =>
   (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
   m LeaderBoardRes
@@ -80,7 +80,7 @@ getLastDayOfYear :: Integer -> Day
 getLastDayOfYear year = fromGregorian year 12 31
 
 getWeeklyDriverLeaderBoard ::
-  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) =>
+  (KvDbFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r) =>
   (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Day ->
   Day ->
@@ -99,7 +99,7 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
   when (diffDays toDate fromDate /= 6 || reqDayIndex /= 0) $ throwError $ InvalidRequest "Invalid Input"
   getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toDate weekDiff weeklyLeaderBoardConfig
 
-getMonthlyDriverLeaderBoard :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Int -> m LeaderBoardRes
+getMonthlyDriverLeaderBoard :: (KvDbFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r) => (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Int -> m LeaderBoardRes
 getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month = do
   now <- getCurrentTime
   let currentDay = RideEndInt.getCurrentDate now
@@ -110,7 +110,7 @@ getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month = do
   when ((monthDiff < 0 && 12 + monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) || monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) $ throwError $ InvalidRequest "Month outside Range"
   getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate fromDate monthDiff monthlyLeaderBoardConfig
 
-getDriverListFromLeaderBoard :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) => (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> Int -> LConfig.LeaderBoardConfigs -> m LeaderBoardRes
+getDriverListFromLeaderBoard :: (KvDbFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r) => (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> Int -> LConfig.LeaderBoardConfigs -> m LeaderBoardRes
 getDriverListFromLeaderBoard (personId, _, merchantOpCityId) fromDate toDate dateDiff leaderBoardConfig = do
   now <- getCurrentTime
   let leaderBoardType = leaderBoardConfig.leaderBoardType

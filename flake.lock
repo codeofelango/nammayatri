@@ -100,16 +100,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1712070079,
-        "narHash": "sha256-86RYnQ2H/hMFaeUBGJEiRqjsEXgp5EUIc9o4zrVO9CQ=",
+        "lastModified": 1715835579,
+        "narHash": "sha256-5xPpdTmoXKhCy38NeaGZ650wSg6NaeEtf2elnokOi2Y=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "5602bec438b89047a6182403a103632a1c9686bb",
+        "rev": "1b8a4d750e7188e16f532986c7fc2ff9adc9cbec",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
         "repo": "beckn-gateway",
+        "rev": "1b8a4d750e7188e16f532986c7fc2ff9adc9cbec",
         "type": "github"
       }
     },
@@ -2071,15 +2072,16 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1715240327,
-        "narHash": "sha256-tt6OxCR1/6RgPyLXICP4bieKLVQZ7YeOE1EwWxtT66M=",
+        "lastModified": 1715859099,
+        "narHash": "sha256-EoL9gJ2zps3Ppy8iW9mOf7GFJEauhiLV42YAqmOiXvM=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "7ca566f124975c88e8b09c738c14f9923da81075",
+        "rev": "f754722781e0dde5f44ce466d84ceeadf93ef78a",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/KVDbFlow-in-dsl",
         "repo": "namma-dsl",
         "type": "github"
       }
@@ -3945,15 +3947,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1715770933,
-        "narHash": "sha256-Z6sSfgJkiplTU6HKNxEgwSzkyxGVcd8Gc93yiNb2Gls=",
+        "lastModified": 1715856690,
+        "narHash": "sha256-DcmHqP2o+iZAmulFEuvyEFEYw/djUrl8kvfYHfPr7Gc=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "4c87c8626cd91f84e3ce6d1636da159b2c2903a7",
+        "rev": "a004817ea080ebfa7ce1a83abfb91f71b60a8612",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/ART-function-switch-implementation",
         "repo": "shared-kernel",
         "type": "github"
       }
