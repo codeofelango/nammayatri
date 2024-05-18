@@ -5,7 +5,7 @@ import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import ConfigProvider
 import MerchantConfig.Types
-import Screens.Types(TipViewProps, TipViewStage(..), ZoneType(..))
+import Screens.Types(TipViewProps, TipViewStage(..), ZoneType(..), FareProductType(..))
 import Prelude (negate)
 import Resources.Constants (intMin, intMax)
 
@@ -25,6 +25,7 @@ data Action
 type Config
   = { rideDistance :: String
     , rideDuration :: String
+    , rideTime :: String
     , activeIndex :: Int
     , quoteList :: Array ChooseVehicleController.Config
     , showTollExtraCharges :: Boolean
@@ -41,6 +42,8 @@ type Config
     , enableTips :: Boolean
     , showMultiProvider :: Boolean
     , currentEstimateHeight :: Int
+    , intercity :: Boolean
+    , fareProductType :: FareProductType 
     }
 
 type BookAnyProps 
@@ -54,6 +57,7 @@ config :: Config
 config =
   { rideDistance: ""
   , rideDuration: ""
+  , rideTime: ""
   , activeIndex: 0
   , quoteList: []
   , showTollExtraCharges : (getAppConfig appConfig).searchLocationConfig.showAdditionalChargesText
@@ -81,6 +85,8 @@ config =
   , tipForDriver : 0
   , enableTips : true
   , showMultiProvider : false
+  , intercity : false
+  , fareProductType : ONE_WAY
   }
 
 bookAnyProps :: BookAnyProps

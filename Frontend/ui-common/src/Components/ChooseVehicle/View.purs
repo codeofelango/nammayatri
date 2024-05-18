@@ -32,7 +32,7 @@ view push config =
     isActiveIndex = config.index == config.activeIndex
     stroke' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then "2," <> Color.blue800 else "1," <> Color.white900
     background' = if isActiveIndex && (not config.showEditButton) && (not config.singleVehicle) then Color.blue600 else Color.white900
-    padding' = PaddingVertical 16 16
+    padding' = Padding 16 16 16 16
     isBookAny = config.vehicleVariant == "BOOK_ANY" && config.activeIndex == config.index
     selectedEstimateHeight = if config.selectedEstimateHeight == 0 then 80 else config.selectedEstimateHeight
     currentEstimateHeight = if config.currentEstimateHeight == 0 then 184 else config.currentEstimateHeight

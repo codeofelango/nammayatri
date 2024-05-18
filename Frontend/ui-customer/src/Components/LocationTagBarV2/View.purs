@@ -17,7 +17,7 @@ module Components.LocationTagBarV2.View where
 
 import Components.LocationTagBarV2.Controller(Action(..), LocationTagBarConfig, TagConfig )
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity)
+import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..),  alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility, singleLine, maxLines)
 import PrestoDOM.Properties (cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import Prelude(Unit, map, unit, ($), (<>), (-), (==), const)
@@ -26,6 +26,9 @@ import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
+import Mobility.Prelude (boolToVisibility)
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarConfig -> PrestoDOM (Effect Unit) w 
 view push state = let 
@@ -47,7 +50,7 @@ tagView item isLast push =
     imageConfig = item.imageConfig
     rightMargin = if isLast then 0 else 8
   in linearLayout
-      [ height item.height 
+      ([ height item.height 
       , weight 1.0
       , background item.background
       , stroke item.stroke 
@@ -56,16 +59,39 @@ tagView item isLast push =
       , onClick push $ const $ TagClicked item.id
       , padding item.padding
       , margin $ MarginRight rightMargin
-      ][  imageView 
+      ] <> (if item.enableRipple then [rippleColor item.rippleColor] else []))[
+        linearLayout[
+          height MATCH_PARENT
+        , width MATCH_PARENT
+        , gravity CENTER
+        , orientation item.orientation
+        ][
+          linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , background item.bannerConfig.background
+            , cornerRadii item.bannerConfig.cornerRadii
+            , visibility $ item.showBanner
+            , margin $ MarginHorizontal 8 8
+            , gravity CENTER
+            ][  textView $
+                [ text item.bannerConfig.text
+                , textSize item.bannerConfig.textSize 
+                , color item.bannerConfig.color
+                , padding $ Padding 4 0 4 2
+                , singleLine true
+                , maxLines 1
+                ] <> (FontStyle.getFontStyle item.bannerConfig.fontStyle LanguageStyle)
+              ]
+        , imageView 
             [ height imageConfig.height
             , width imageConfig.width
             , imageWithFallback imageConfig.imageWithFallback
-            , margin $ MarginRight 5
+            , margin $ imageConfig.margin
             ]
         , textView $
             [ text textConfig.text
             , textSize textConfig.fontSize
             , color textConfig.color 
-            , padding $ PaddingBottom 3
             ] <> (FontStyle.getFontStyle textConfig.fontStyle LanguageStyle)
-      ]
+      ]]

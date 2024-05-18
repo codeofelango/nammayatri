@@ -8,7 +8,7 @@ import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
 import Components.ChooseYourRide.Controller (Action(..), Config, BookAnyProps, bookAnyProps)
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (mapWithIndex, length, (!!), filter, nubBy, any, foldl, filter, elem)
+import Data.Array (mapWithIndex, length, (!!), filter, nubBy, any, foldl, filter, elem, null)
 import Data.Function.Uncurried (runFn1)
 import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Effect (Effect)
@@ -21,7 +21,7 @@ import JBridge (getLayoutBounds, getHeightFromPercent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, bind, not, show, bind, negate, (<<<), (==), (>=), (*), (+), (<=), (&&), (/), (>), (||), (-), map, (/=), (<), (<>))
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), Shadow(..), Gradient(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback, accessibility, peakHeight, halfExpandedRatio, relativeLayout, topShift, bottomShift, alignParentBottom, imageWithFallback, shadow, clipChildren, layoutGravity, accessibilityHint, horizontalScrollView, scrollBarX, disableKeyboardAvoidance, singleLine, maxLines, textFromHtml, gradient, frameLayout, enableShift, nestedScrollView, shimmerFrameLayout)
 import PrestoDOM.Properties (cornerRadii)
 import Data.Tuple (Tuple(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -31,7 +31,7 @@ import PrestoDOM.Properties (sheetState)
 import Data.Int (toNumber,ceil, fromString)
 import MerchantConfig.Types(AppConfig(..))
 import Mobility.Prelude
-import Screens.Types (ZoneType(..), TipViewStage(..))
+import Screens.Types (ZoneType(..), TipViewStage(..), FareProductType(..))
 import Data.Ord(min, max)
 import Resources.Constants (intMin, intMax)
 import Helpers.SpecialZoneAndHotSpots as HS
@@ -67,7 +67,7 @@ view push config =
           , width MATCH_PARENT
           , accessibility DISABLE
           , enableShift false
-          , peakHeight $ getPeekHeight config 
+          , peakHeight $ if null config.quoteList then 300 else getPeekHeight config 
           , sheetState COLLAPSED
           , orientation VERTICAL
           ][linearLayout
@@ -577,43 +577,57 @@ quoteListView push config =
     [scrollView
       [ nestedScrollView $ length config.quoteList > 3
       , width MATCH_PARENT
-      , height $ V viewHeight
+      , height $ V if null config.quoteList then 200 else viewHeight
       ]
-      [  Keyed.linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , padding $ PaddingVertical 16 10
-          , margin $ MarginHorizontal 16 16
-          , orientation VERTICAL
-          ][  
-            (if config.showMultiProvider  then 
-                Tuple "MultiProvider" $ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
+      [  if null (config.quoteList) then 
+            shimmerFrameLayout 
+            [ width MATCH_PARENT
+            , height $ V 200
+            , orientation VERTICAL
+            , background Color.transparent
+            ][ linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , padding $ PaddingHorizontal 16 16
                 , orientation VERTICAL
-                ] $ mapWithIndex
-                    ( \index item -> do
-                        let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) variantBasedList else []
-                            services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
-                            bookAnyConfig = getBookAnyProps item estimates
-                            price = getMinMaxPrice bookAnyConfig item estimates
-                            capacity = getMinMaxCapacity bookAnyConfig item estimates
-                        ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
-                    ) variantBasedList
-              else 
-                Tuple "TopProvider" $ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                ] $ mapWithIndex
-                    ( \index item -> do
-                        let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) topProviderList else []
-                            services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
-                            bookAnyConfig = getBookAnyProps item estimates
-                            price = getMinMaxPrice bookAnyConfig item estimates
-                            capacity = getMinMaxCapacity bookAnyConfig item estimates
-                        ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
-                    ) topProviderList)
+                ] (mapWithIndex (\index _ -> 
+                      shimmerItemView (index == 0)) [1,2,3] )]
+            else 
+              Keyed.linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , padding $ PaddingVertical 16 10
+              , margin $ MarginHorizontal 16 16
+              , orientation VERTICAL
+              ][  
+                (if config.showMultiProvider  then 
+                    Tuple "MultiProvider" $ linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    ] $ mapWithIndex
+                        ( \index item -> do
+                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) variantBasedList else []
+                                services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
+                                bookAnyConfig = getBookAnyProps item estimates
+                                price = getMinMaxPrice bookAnyConfig item estimates
+                                capacity = getMinMaxCapacity bookAnyConfig item estimates
+                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                        ) variantBasedList
+                  else 
+                    Tuple "TopProvider" $ linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    ] $ mapWithIndex
+                        ( \index item -> do
+                            let estimates = if item.vehicleVariant == "BOOK_ANY" then filter (\quote -> elem (fromMaybe "" quote.serviceTierName) item.selectedServices) topProviderList else []
+                                services = if item.vehicleVariant == "BOOK_ANY" then HU.getAllServices FunctionCall else []
+                                bookAnyConfig = getBookAnyProps item estimates
+                                price = getMinMaxPrice bookAnyConfig item estimates
+                                capacity = getMinMaxCapacity bookAnyConfig item estimates
+                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                        ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]
       ]
@@ -661,6 +675,17 @@ quoteListView push config =
       ][ addTipView push config
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "KeyedButtonPrimary") 
       ]
+
+    shimmerItemView :: forall w. Boolean -> PrestoDOM (Effect Unit) w
+    shimmerItemView hasTopMargin = 
+      linearLayout
+        [ width MATCH_PARENT
+        , height $ V 80
+        , margin $ MarginVertical (if hasTopMargin then 16 else 0)  16 
+        , cornerRadius 8.0
+        , background Color.greyDark
+        ]
+        []
 
 getBookAnyProps :: ChooseVehicle.Config -> Array ChooseVehicle.Config -> BookAnyProps
 getBookAnyProps quote estimates = foldl (\acc item -> getMinMax acc item) bookAnyProps estimates
@@ -732,7 +757,8 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
               Nothing -> ChooseVehicle.config
     disableButton = (selectedItem.selectedServices == []) && selectedItem.vehicleVariant == "BOOK_ANY"
     name = fromMaybe "" selectedItem.serviceTierName
-    title = if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK name 
+    additionalString = if config.fareProductType == RENTAL then "Rental" else ""
+    title = if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( additionalString <> " " <> name )
 
 filterVariantAndEstimate :: Array ChooseVehicle.Config -> Array ChooseVehicle.Config -- showing unique quotes based on variant and arrange price range (In case of multiple provider)
 filterVariantAndEstimate configArray = fromMaybe [] $ do

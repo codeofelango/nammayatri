@@ -63,6 +63,7 @@ type Config
     , currentEstimateHeight :: Int
     , selectedEstimateHeight :: Int
     , validTill :: String
+    , showStroke :: Boolean
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -94,7 +95,7 @@ config =
   , searchResultType : QUOTES
   , isBookingOption : false
   , pickUpCharges : 0.0
-  , layoutMargin : MarginHorizontal 12 12
+  , layoutMargin : MarginHorizontal 0 0
   , tollCharge : 0.0
   , serviceTierShortDesc : Nothing
   , serviceTierName : Nothing
@@ -119,4 +120,5 @@ config =
   , currentEstimateHeight : 184 
   , selectedEstimateHeight : 0
   , validTill : ""
+  , showStroke : true
   }
