@@ -736,12 +736,14 @@ validateImage payload = do
     where
         unwrapResponse (x) = x
 
-makeValidateImageReq :: String -> String -> Maybe String -> Maybe ST.VehicleCategory ->ValidateImageReq
-makeValidateImageReq image imageType rcNumber category = ValidateImageReq
+makeValidateImageReq :: String -> String -> Maybe String -> Maybe ValidationStatus -> Maybe String -> Maybe ST.VehicleCategory -> ValidateImageReq
+makeValidateImageReq image imageType rcNumber status transactionId category = ValidateImageReq
     {
       "image" : image,
       "imageType" : imageType,
       "rcNumber" : rcNumber,
+      "validationStatus" : status,
+      "workflowTransactionId" : transactionId,
       "vehicleCategory" : mkCategory category
     }
 
@@ -1493,3 +1495,65 @@ mkUpdateDriverVehiclesServiceTier ridePreferences =
             tiers : tierArray,
             airConditioned : Nothing
         }
+
+
+------------------------------------------------------------------------ Get Sdk Token -------------------------------------------------------------------------------
+getSdkTokenBT :: String -> ServiceName -> FlowBT String GetSdkTokenResp
+getSdkTokenBT expiry serviceName = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getSdkToken expiry (show serviceName)) identity errorHandler (lift $ lift $ callAPI headers (GetSdkTokenReq expiry serviceName))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+----------------------------------------------------------------------- Onboarding Live selfie, aadhaar, and PAN APIs --------------------------------------------------
+
+getLiveSelfie :: String -> Flow GlobalState (Either ErrorResponse GetLiveSelfieResp)
+getLiveSelfie status = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getLiveSelfie status)  unwrapResponse $ callAPI headers (GetLiveSelfieReq status)
+    where
+        unwrapResponse x = x
+
+registerDriverPAN :: PanCardReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
+registerDriverPAN req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerPAN "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makePANCardReq :: Boolean -> String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> ValidationStatus -> PanCardReq
+makePANCardReq consent consentTimestamp dateOfBirth nameOnCard panImageId panNumber validationStatus = PanCardReq
+    {
+       "consent" : consent,
+       "consentTimestamp" : consentTimestamp,
+       "dateOfBirth" : dateOfBirth,
+       "nameOnCard" : nameOnCard,
+       "panImageId" : panImageId,
+       "panNumber" : panNumber,
+       "validationStatus" : validationStatus
+    }
+
+
+registerDriverAadhaar :: AadhaarCardReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
+registerDriverAadhaar req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerAadhaar "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makeAadhaarCardReq :: Maybe String -> Maybe String -> Maybe String -> Boolean -> String -> Maybe String ->  Maybe String -> Maybe String -> ValidationStatus -> AadhaarCardReq
+makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consentTimestamp dateOfBirth maskedAadhaarNumber nameOnCard validationStatus = AadhaarCardReq
+    {
+       "aadhaarBackImageId" : aadhaarBackImageId,
+       "aadhaarFrontImageId" : aadhaarFrontImageId,
+       "address" : address,
+       "consent" : consent,
+       "consentTimestamp" : consentTimestamp,
+       "dateOfBirth" : dateOfBirth,
+       "maskedAadhaarNumber" : maskedAadhaarNumber,
+       "nameOnCard" : nameOnCard,
+       "validationStatus" : validationStatus
+    }

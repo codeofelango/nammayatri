@@ -39,7 +39,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
 import Data.Array as DA
 import Data.Either (Either(..), either, isRight)
-import Data.Function (on)
+import Data.Function (on, flip)
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
@@ -63,7 +63,7 @@ import Domain.Payments (PaymentStatus(..))
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff, launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2, runEffectFn9)
+import Effect.Uncurried (runEffectFn1, runEffectFn5, runEffectFn2, runEffectFn9, runEffectFn6)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner, liftFlow, getNewIDWithTag, getVersionByKey, os, getExpiryTime, stringToVersion, setText, convertUTCtoISC, getCurrentUTC, markPerformance, setEventTimestamp, getTimeStampObject)
 import Engineering.Helpers.Commons as EHC
@@ -125,7 +125,7 @@ import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDriving
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), UploadOdometerImageResp(UploadOdometerImageResp))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
-import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
+import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates, getSdkTokenBT)
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
@@ -145,6 +145,7 @@ import Helpers.API as HelpersAPI
 import Engineering.Helpers.API as EHA
 import LocalStorage.Cache (getValueFromCache)
 import Effect.Unsafe (unsafePerformEffect)
+import Data.Either(Either(..))
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -613,9 +614,38 @@ stopGrpcService =
   if grpcServiceRunning then void $ pure $ JB.stopService "in.juspay.mobility.app.GRPCNotificationService"
   else pure unit
 
+convertToRequestStatus :: String -> API.ValidationStatus
+convertToRequestStatus status =
+  case status of 
+    "auto_approved" -> API.AUTO_APPROVED
+    "auto_declined" -> API.AUTO_DECLINED
+    "needs_review" -> API.NEEDS_REVIEW
+    _ -> API.NEEDS_REVIEW
+
+getSdkTokenFromCache :: FlowBT String String
+getSdkTokenFromCache = do
+  let cachedData = getValueToLocalStore CACHED_SDK_TOKEN_DATA
+  if cachedData /= "__failed"
+    then do
+      let splitData = split (Pattern ":") cachedData
+      case splitData of
+        [token, expiry] -> do 
+          let isExpired = runFn1 JB.isSdkTokenExpired expiry
+          if isExpired
+            then cacheNewToken
+          else pure token
+        _ -> cacheNewToken
+  else cacheNewToken
+  where
+    cacheNewToken = do
+      (API.GetSdkTokenResp tokenResp) <- Remote.getSdkTokenBT "86400" API.HyperVerge 
+      let expiry = runFn1 JB.makeSdkTokenExpiry 86400
+      setValueToLocalStore CACHED_SDK_TOKEN_DATA (tokenResp.token <> ":" <> expiry)
+      pure tokenResp.token
 
 onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
+  token <- getSdkTokenFromCache
   logField_ <- lift $ lift $ getLogFields
   void $ pure $ hideKeyboardOnNavigation true
   config <- getAppConfigFlowBT Constants.appConfig
@@ -674,7 +704,8 @@ onBoardingFlow = do
                       vehicleTypeMismatch = vehicleTypeMismatch,
                       permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
                       cityConfig = cityConfig,
-                      vehicleCategory = uiCurrentCategory
+                      vehicleCategory = uiCurrentCategory,
+                      accessToken = token
                   }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled}})
   liftFlowBT hideSplash
   flow <- UI.registration
@@ -697,6 +728,46 @@ onBoardingFlow = do
     PERMISSION_SCREEN state -> do
       modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
       permissionsScreenFlow Nothing Nothing Nothing
+    AADHAAR_PAN_SELFIE_UPLOAD state (ST.HyperVergeKycResult result) -> do 
+      let currentTime = getCurrentUTC ""
+      let status = fromMaybe "needs_review" result.status
+      let convertedStatus = convertToRequestStatus status
+      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      case result.details of 
+        Just (ST.LIVE_SELFIE (ST.LiveSelfie detail)) | (isJust detail.selfieURL) -> do
+          image <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.selfieURL)
+          resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "ProfilePhoto" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+          case resp of
+            Left _ -> void $ pure $ toast "Some Error Occurred. Please try again."
+            Right response -> pure unit
+        Just (ST.PAN_DETAILS (ST.PanDetails detail)) | (isJust detail.panURL) -> do
+          image <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.panURL)
+          resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "PanCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+          case resp of
+            Right (ValidateImageRes response)-> do
+              resp <- lift $ lift $ Remote.registerDriverPAN (Remote.makePANCardReq true currentTime detail.dob detail.name (Just response.imageId) detail.pan (convertedStatus))
+              case resp of
+                Left _ -> void $ pure $ toast "Some Error Occurred. Please try again."
+                Right response -> pure unit
+            _ -> void $ pure $ toast "Some Error Occurred. Please try again."
+        Just (ST.AADHAAR_DETAILS (ST.AadhaarCardDetails detail)) | (isJust detail.aadhaarFrontURL && isJust detail.aadhaarBackURL)-> do
+          imageFront <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.aadhaarFrontURL)
+          imageBack <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.aadhaarBackURL)
+          respFrontImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageFront "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+          respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageBack "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+          case respFrontImage, respBackImage of
+            Right (ValidateImageRes frontResp), Right (ValidateImageRes backResp) -> do
+              resp <- lift $ lift $ Remote.registerDriverAadhaar (Remote.makeAadhaarCardReq (Just backResp.imageId) (Just frontResp.imageId) detail.address true currentTime detail.dob detail.idNumber detail.fullName (convertedStatus))
+              case resp of
+                Left _ ->void $ pure $ toast "Some Error Occurred. Please try again."
+                Right response -> pure unit
+            _ , _ -> pure unit
+        _ -> pure unit
+      void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
+      void $ lift $ lift $ toggleLoader false
+      onBoardingFlow
+    AADHAAR_PAN_SELFIE_UPLOAD state _ -> onBoardingFlow
     LOGOUT_FROM_REGISTERATION_SCREEN -> logoutFlow
     GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN state -> 
       if state.props.manageVehicle then driverProfileFlow
@@ -872,7 +943,7 @@ uploadDrivingLicenseFlow = do
   flow <- UI.uploadDrivingLicense
   case flow of
     VALIDATE_DL_DETAILS state -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.imageFront "DriverLicense" Nothing state.data.vehicleCategory)
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.imageFront "DriverLicense" Nothing Nothing Nothing state.data.vehicleCategory)
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
         liftFlowBT $ logEvent logField_ "ny_driver_dl_photo_confirmed"
@@ -956,7 +1027,7 @@ addVehicleDetailsflow addRcFromProf = do
   flow <- UI.addVehicleDetails
   case flow of
     VALIDATE_DETAILS state -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate" Nothing state.data.vehicleCategory)
+      validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate" Nothing Nothing Nothing state.data.vehicleCategory)
       void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
       case validateImageResp of
        Right (ValidateImageRes resp) -> do
@@ -3873,7 +3944,7 @@ documentcaptureScreenFlow = do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
     TA.UPLOAD_DOC_API state imageType -> do
-      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc state.data.vehicleCategory
+      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc Nothing Nothing state.data.vehicleCategory
       case validateImageResp of
         Right (ValidateImageRes resp) -> do
           void $ pure $ toast $ getString DOCUMENT_UPLOADED_SUCCESSFULLY

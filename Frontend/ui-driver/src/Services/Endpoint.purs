@@ -333,3 +333,17 @@ uploadOdometerImage rideId = (getBaseUrl "") <> "/driver/ride/"<>rideId<>"/uploa
 
 updateAirConditioned :: String -> String
 updateAirConditioned _ = (getBaseUrl "") <> "/driver/updateAirCondition"
+
+getSdkToken :: String -> String -> String
+getSdkToken expiry serviceName = (getBaseUrl "") <> "/driver/sdkToken?expiry=" <> expiry <> "&service=" <> serviceName
+
+getLiveSelfie :: String -> String
+getLiveSelfie status = (getBaseUrl "") <> "/driver/register/getLiveSelfie?status=" <> status
+
+registerPAN :: String -> String
+registerPAN _ = (getBaseUrl "") <> "/driver/register/panCard"
+
+registerAadhaar ::  String -> String 
+registerAadhaar _ = (getBaseUrl "") <> "/driver/register/aadhaarCard"
+
+
