@@ -1474,4 +1474,12 @@ getBN stringKey =
         BIKE_TAXI -> "বাইক ট্যাক্সি"
         FIRST_RIDE_FREE count -> "প্রথম " <> count <> " রাইড ফ্রি"
         FIRST_RIDES_FREE count -> "প্রথম " <> count <> " রাইড ফ্রি"
-
+        CANNOT_DETECT_PAN_CARD -> "প্যান কার্ড সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
+        CANNOT_DETECT_AADHAAR -> "আধার কার্ড সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
+        DOCUMENT_UNDER_MANUAL_REVIEW -> "ম্যানুয়াল পর্যালোচনা অধীনে নথি।"
+        DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER -> "ডকুমেন্টটি ইতিমধ্যেই অন্য ড্রাইভারের সাথে লিঙ্ক করা আছে।"
+        DOCUMENT_ALREADY_VALIDATED -> "নথি যাচাই করা হয়েছে।"
+        PAN_ALREADY_LINKED -> "প্যান ইতিমধ্যে লিঙ্ক করা হয়েছে।"
+        EXITED_BY_USER -> "ব্যবহারকারীর দ্বারা প্রস্থান করা হয়েছে।৷"
+        APP_UPDATE ->  "অ্যাপ আপডেট"
+        APP_UPDATE_MESSAGE -> "অনুগ্রহ করে এগিয়ে যেতে আপনার অ্যাপ আপডেট করুন"

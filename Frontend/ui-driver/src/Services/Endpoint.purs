@@ -351,3 +351,17 @@ getDriverRateCard mbServiceTier mbDist =
         Just serviceTier, Nothing -> "?vehicleServiceTier=" <> serviceTier
         Nothing, Just dist -> "?distance=" <> show (dist*1000)
         _ , _ -> ""
+
+getSdkToken :: String -> String -> String
+getSdkToken expiry serviceName = (getBaseUrl "") <> "/driver/sdkToken?expiry=" <> expiry <> "&service=" <> serviceName
+
+getLiveSelfie :: String -> String
+getLiveSelfie status = (getBaseUrl "") <> "/driver/register/getLiveSelfie?status=" <> status
+
+registerPAN :: String -> String
+registerPAN _ = (getBaseUrl "") <> "/driver/register/pancard"
+
+registerAadhaar ::  String -> String 
+registerAadhaar _ = (getBaseUrl "") <> "/driver/register/aadhaarCard"
+
+

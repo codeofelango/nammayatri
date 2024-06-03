@@ -1473,4 +1473,12 @@ getEN stringKey =
         BIKE_TAXI -> "Bike Taxi"
         FIRST_RIDE_FREE count -> "First " <> count <> " ride free"
         FIRST_RIDES_FREE count -> "First " <> count <> " rides free"
-
+        CANNOT_DETECT_PAN_CARD -> "Cannot detect PAN card. Please Try Again."
+        CANNOT_DETECT_AADHAAR -> "Cannot detect Aadhaar Card. Please Try Again."
+        DOCUMENT_ALREADY_VALIDATED -> "Document already Validated."
+        DOCUMENT_UNDER_MANUAL_REVIEW -> "Document Under Manual review."
+        DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER -> "Document already linked to another driver."
+        PAN_ALREADY_LINKED -> "Pan Card Already Linked."
+        EXITED_BY_USER -> "Exited by user."
+        APP_UPDATE ->  "App Update"
+        APP_UPDATE_MESSAGE -> "Please Update Your App to proceed"

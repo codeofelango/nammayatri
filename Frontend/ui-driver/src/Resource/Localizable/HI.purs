@@ -1473,4 +1473,12 @@ getHI stringKey =
         BIKE_TAXI -> "बाइक टैक्सी"
         FIRST_RIDE_FREE count -> "पहली " <> count <> " राइड फ्री"
         FIRST_RIDES_FREE count -> "पहले " <> count <> " राइड्स फ्री"
-
+        CANNOT_DETECT_PAN_CARD -> "पैन कार्ड का पता नहीं चल सका। कृपया पुन: प्रयास करें।"
+        CANNOT_DETECT_AADHAAR -> "आधार कार्ड का पता नहीं चल सका. कृपया पुन: प्रयास करें।"
+        DOCUMENT_ALREADY_VALIDATED -> "दस्तावेज़ पहले से ही मान्य है।"
+        DOCUMENT_UNDER_MANUAL_REVIEW -> "दस्तावेज़ की मैन्युअल समीक्षा की जा रही है।"
+        DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER -> "दस्तावेज़ पहले से ही किसी अन्य ड्राइवर से जुड़ा हुआ है।"
+        PAN_ALREADY_LINKED -> "पैन पहले से ही लिंक है।"
+        EXITED_BY_USER -> "उपयोगकर्ता द्वारा बाहर निकाला गया।"
+        APP_UPDATE ->  "ऐप अपडेट"
+        APP_UPDATE_MESSAGE -> "आगे बढ़ने के लिए कृपया अपना आवेदन अपडेट करें"
