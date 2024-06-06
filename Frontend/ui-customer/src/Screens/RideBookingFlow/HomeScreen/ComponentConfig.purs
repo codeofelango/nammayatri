@@ -16,21 +16,33 @@ module Screens.RideBookingFlow.HomeScreen.Config where
 
 import Common.Types.App
 import ConfigProvider
+import ConfigProvider
+import Debug
+import Helpers.TipConfig
 import Language.Strings
 import Locale.Utils
+import Locale.Utils
+import Mobility.Prelude
 import Mobility.Prelude
 import Prelude
 import PrestoDOM
+import Screens.RideBookingFlow.HomeScreen.BannerConfig
+
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
 import Accessor (_fareBreakup, _description, _rideEndTime, _amount)
+import Accessor (_fareBreakup, _description, _rideEndTime, _amount, _serviceTierName)
 import Animation.Config as AnimConfig
+import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
 import Components.ChooseVehicle.Controller as ChooseVehicle
+import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.ChooseYourRide as ChooseYourRide
+import Components.DateTimeSelector.Controller as DateSelectorController
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
@@ -40,38 +52,49 @@ import Components.MenuButton as MenuButton
 import Components.MessagingView as MessagingView
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
+import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
+import Components.Referral as ReferralComponent
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
+import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
-import Components.Referral as ReferralComponent
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy, mapWithIndex, elem, length)
 import Data.Array as DA
+import Data.Array as DA
+import Data.Either (Either(..))
 import Data.Either (Either(..))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber)
 import Data.Int as INT
 import Data.Lens ((^.))
+import Data.Lens ((^.))
+import Data.Lens ((^.), view)
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
+import Data.String.CodeUnits (stripPrefix, stripSuffix)
 import DecodeUtil (getAnyFromWindow)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
+import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style (Style(..))
+import Font.Style (Style(..))
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
+import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode, getCityFromString, isWeekend, getCityFromString, getCityConfig)
@@ -79,45 +102,24 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
 import LocalStorage.Cache (getValueFromCache)
+import LocalStorage.Cache (getValueFromCache)
 import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..), Orientation(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Resources.Constants (dummyPrice)
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
 import Resources.Localizable.EN (getEN)
+import Resources.Localizable.EN (getEN)
+import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
 import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..), VehicleViewType(..), SearchLocationModelType(..))
 import Screens.Types (FareProductType(..)) as FPT
+import Screens.Types (TicketType(..))
 import Screens.Types as ST
+import Services.API as API
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
-import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
-import Components.ChooseVehicle.Controller as ChooseVehicle
-import Foreign.Generic (decode, encode, Foreign, decodeJSON, encodeJSON, class Decode, class Encode)
-import Data.Either (Either(..))
-import Font.Style (Style(..))
-import Services.API as API
-import Data.Lens ((^.))
-import Accessor (_fareBreakup, _description, _rideEndTime, _amount, _serviceTierName)
-import Resources.Localizable.EN (getEN)
-import Engineering.Helpers.Utils as EHU
-import Mobility.Prelude
-import Locale.Utils
-import Screens.RideBookingFlow.HomeScreen.BannerConfig 
-import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
-import LocalStorage.Cache (getValueFromCache)
-import ConfigProvider
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt)
-import Data.Lens ((^.), view)
-import Components.ServiceTierCard.View as ServiceTierCard
-import Resources.Constants (dummyPrice)
-import Data.String.CodeUnits (stripPrefix, stripSuffix)
-import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig)
-import Helpers.TipConfig
-import Debug
-import Data.Array as DA
-
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -237,8 +239,6 @@ getDistanceString currDistance initDistance zoneType
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
-    isRentalRide = state.data.fareProductType == FPT.RENTAL
-
     config = PrimaryButton.config
     primaryButtonConfig' =
       config
@@ -261,7 +261,8 @@ skipButtonConfig state =
   where 
     issueFlowClickable = (DA.null $ issueReportBannerConfigs state) || state.data.rideCompletedData.issueReportData.respondedValidIssues
     ratingFlowClickable = state.data.ratingViewState.selectedRating > 0
-    clickale = if state.data.rideCompletedData.issueReportData.showIssueBanners then  issueFlowClickable else ratingFlowClickable
+    isRentalRide = state.data.fareProductType == FPT.RENTAL
+    clickale = (if state.data.rideCompletedData.issueReportData.showIssueBanners then  issueFlowClickable else ratingFlowClickable) || isRentalRide
 
 
 
@@ -1235,6 +1236,11 @@ searchLocationModelViewState state =
         }
     , headerText: getString TRIP_DETAILS_
     , currentLocationText: state.props.currentLocation.place
+    , tripType : state.props.searchLocationModelProps.tripType
+    , pickupConfig : pickupConfig state
+    , returnConfig : returnConfig state
+    , totalRideDuration : state.props.searchLocationModelProps.totalRideDuration
+    , totalRideDistance : state.props.searchLocationModelProps.totalRideDistance
     }
   where
   formatDate :: String -> String
@@ -2356,3 +2362,61 @@ scheduledRideExistsPopUpConfig state =
 
   formatDateInHHMM :: String -> String
   formatDateInHHMM timeUTC = EHC.convertUTCtoISC timeUTC "HH" <> ":" <> EHC.convertUTCtoISC timeUTC "mm"
+pickupConfig :: ST.HomeScreenState -> DateSelectorController.DateSelectorConfig
+pickupConfig state = 
+  let pickupConfig' =  {
+  baseWidth: MATCH_PARENT,
+  baseHeight: WRAP_CONTENT,
+  baseOrientation: VERTICAL,
+  baseMargin: MarginBottom 20,
+  titleConfig: (getString PICKUP), --  string needed here 
+  textColor: Color.black900,
+  textMargin: MarginBottom 9,
+  pickerHeight: WRAP_CONTENT,
+  pickerWidth: MATCH_PARENT,
+  pickerCornerRadius: 8.0,
+  pickerBackground: Color.white900,
+  pickerPadding: Padding 20 15 20 15,
+  selectDateText: case state.data.tripTypeDataConfig.tripPickupData of 
+                   Just obj ->  obj.tripDateReadableString
+                   Nothing -> (getString PICKUP_INPUT)
+  , dateHeight: WRAP_CONTENT,
+  dateWidth: WRAP_CONTENT,
+  dateColor: Color.black800,
+  iconHeight: V 22,
+  iconWidth: V 22,
+  iconMargin: MarginLeft 8,
+  iconGravity: BOTTOM,
+  id : "Pickup"
+}
+  in pickupConfig'
+
+returnConfig :: ST.HomeScreenState -> DateSelectorController.DateSelectorConfig
+returnConfig state = 
+  let returnConfig' =  {
+  baseWidth: MATCH_PARENT,
+  baseHeight: WRAP_CONTENT,
+  baseOrientation: VERTICAL,
+  baseMargin: MarginBottom 20,
+  titleConfig: (getString RETURN), -- strings needed here 
+  textColor: Color.black900,
+  textMargin: MarginBottom 9,
+  pickerHeight: WRAP_CONTENT,
+  pickerWidth: MATCH_PARENT,
+  pickerCornerRadius: 8.0,
+  pickerBackground: Color.white900,
+  pickerPadding: Padding 20 15 20 15,
+  selectDateText: case state.data.tripTypeDataConfig.tripReturnData of 
+                  Just obj -> obj.tripDateReadableString
+                  Nothing -> (getString RETURN_INPUT)
+  , dateHeight: WRAP_CONTENT,
+  dateWidth: WRAP_CONTENT,
+  dateColor: Color.black800,
+  iconHeight: V 22,
+  iconWidth: V 22,
+  iconMargin: MarginLeft 8,
+  iconGravity: BOTTOM,
+  id : "Return"
+}
+  in returnConfig'
+

@@ -1275,4 +1275,12 @@ getEN stringKey =
         COLLECT_TOLL_SEP -> "Please collect it separately from customer <b>only if a toll was crossed</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "Final fare excludes toll charges"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "Toll charges may be applicable"
-        
+        ROUND_TRIP_INVALID_MESSAGE -> "Round Trip cannot be scheduled below estimated trip time"
+        PICKUP_TIME_NOT_SELECTED -> "Please Select Pickup Time"
+        BOOKING_DURATION_INVALID -> "booking allowed only upto two days from start date." 
+        RETURN -> "Return"
+        PICKUP_INPUT -> "Enter Pickup Time"
+        RETURN_INPUT -> "Enter Return Time"
+        BOOK_A_ROUND_TRIP -> "Book a round trip to have a cab and driver at your service for the scheduled distance and time, perfect for your intercity travel needs." 
+        TOTAL_RIDE_DURATION -> "Total Ride Duration"
+        TOTAL_RIDE_DISTANCE -> "Total Ride Distance"

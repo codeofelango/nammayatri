@@ -1273,3 +1273,13 @@ getHI stringKey =
         COLLECT_TOLL_SEP -> "कृपया इसे ग्राहक से अलग से वसूल करें <b>केवल तभी जब टोल पार किया गया हो</b>"
         FINAL_FARE_EXCLUDES_TOLL -> "अंतिम किराये में टोल शुल्क शामिल नहीं है"
         TOLL_CHARGES_MAYBE_APPLICABLE -> "टोल शुल्क लागू हो सकता है"
+        ROUND_TRIP_INVALID_MESSAGE -> "राउंड ट्रिप को अनुमानित यात्रा समय से नीचे निर्धारित नहीं किया जा सकता"
+        PICKUP_TIME_NOT_SELECTED -> "कृपया पिकअप समय चुनें"
+        BOOKING_DURATION_INVALID -> "बुकिंग केवल प्रारंभ तिथि से दो दिन तक ही अनुमत है।"
+        RETURN -> "रिटर्न"
+        PICKUP_INPUT -> "पिकअप समय दर्ज करें"
+        RETURN_INPUT -> "रिटर्न समय दर्ज करें"
+        BOOK_A_ROUND_TRIP -> "अपने अंतर-शहर यात्रा आवश्यकताओं के लिए निर्धारित दूरी और समय के लिए एक कैब और ड्राइवर को आपकी सेवा में रखने के लिए एक राउंड ट्रिप बुक करें।"
+        TOTAL_RIDE_DURATION -> "कुल यात्रा अवधि"
+        TOTAL_RIDE_DISTANCE -> "कुल यात्रा दूरी"
+

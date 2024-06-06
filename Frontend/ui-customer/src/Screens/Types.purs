@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), DeadKmFare(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -557,12 +557,13 @@ data Stage = HomeScreen
            | ChangeToRideAccepted
            | ChangeToRideStarted
            | ConfirmingQuotes
+           | GoToTripSelect
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
 instance showStage :: Show Stage where show = genericShow
 
-data SearchLocationModelType = SearchLocation | LocateOnMap | NoView
+data SearchLocationModelType = SearchLocation | LocateOnMap | NoView | SelectTripType
 
 data PopupType = Logout | ConfirmBack | NoPopUp | ActiveQuotePopUp | TipsPopUp | CancelConfirmingQuotes
 
@@ -648,6 +649,8 @@ type HomeScreenStateData =
   , vehicleVariant :: String
   , hotSpotInfo :: Array HotSpotData
   , startTimeUTC :: String
+  , returnTimeUTC :: String
+  , estReturnTimeUTC :: String
   , selectedDateTimeConfig :: DateTimeConfig
   , fareProductType :: FareProductType
   , invalidBookingId :: Maybe String
@@ -658,6 +661,10 @@ type HomeScreenStateData =
   , maxEstimatedDuration :: Int
   , invalidBookingPopUpConfig :: Maybe InvalidBookingPopUpConfig
   , rideCompletedData :: RideCompletedData -- put necesssary data which is required in ride completed screen
+  , tripTypeDataConfig :: TripTypeConfig
+  , destCity :: Maybe String 
+  , srcCity :: Maybe String
+  , tripEstDuration :: Int
   }
 
 type InteroperabilityState = {
@@ -962,6 +969,20 @@ type SearchLocationModelProps = {
   , showLoader :: Boolean
   , crossBtnSrcVisibility :: Boolean
   , crossBtnDestVisibility :: Boolean
+  , tripType :: TicketType
+  , totalRideDistance :: Number
+  , totalRideDuration :: Int
+}
+
+type TripTypeConfig = {
+  tripPickupData :: Maybe TripTypeData,
+  tripReturnData :: Maybe TripTypeData
+}
+
+type TripTypeData =  {
+  tripDateTimeConfig :: DateTimeConfig,
+  tripDateUTC :: String,
+  tripDateReadableString :: String 
 }
 
 type SearchLocationModelData = {
@@ -2509,7 +2530,7 @@ type FareDetails = {
   perHourCharge :: Int,
   nightShiftCharge :: Int,
   tollCharges :: Maybe Number,
-  deadKmFare :: Maybe Number
+  deadKmFare :: Maybe DeadKmFare
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION
