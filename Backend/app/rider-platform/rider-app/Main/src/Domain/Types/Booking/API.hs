@@ -25,7 +25,7 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.FareBreakup
 import qualified Domain.Types.FareBreakup as DFareBreakup
-import Domain.Types.Location (LocationAPIEntity)
+import Domain.Types.Location (Location, LocationAPIEntity)
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as Person
 import Domain.Types.Ride (Ride (..), RideAPIEntity (..))
@@ -40,6 +40,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Sequelize as Se
+import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -96,6 +98,16 @@ data BookingAPIEntity = BookingAPIEntity
     vehicleServiceTierAirConditioned :: Maybe Double,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data FavouriteBookingAPIEntity = FavouriteBookingAPIEntity
+  { id :: Id Booking,
+    rideRating :: Maybe Int,
+    fromLocation :: Location,
+    toLocation :: Maybe Location,
+    totalFare :: Maybe Money,
+    startTime :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -247,6 +259,19 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
               estimatedDistanceWithUnit = distance
             }
 
+makeFavouriteBookingAPIEntity :: Booking -> Ride -> FavouriteBookingAPIEntity
+makeFavouriteBookingAPIEntity booking ride = do
+  let money = (fromJust ride.totalFare)
+
+  FavouriteBookingAPIEntity
+    { id = booking.id,
+      rideRating = ride.rideRating,
+      fromLocation = ride.fromLocation,
+      toLocation = ride.toLocation,
+      totalFare = Just money.amountInt,
+      startTime = ride.rideStartTime
+    }
+
 getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> Id Person.Person -> m (Maybe DSos.SosStatus)
 getActiveSos mbRide personId = do
   case mbRide of
@@ -279,6 +304,11 @@ buildBookingAPIEntity booking personId = do
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbRide
   return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone mbPaymentMethod person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon
+
+favouritebuildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m (Maybe FavouriteBookingAPIEntity)
+favouritebuildBookingAPIEntity booking = do
+  ride <- findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq $ booking.id.getId]]
+  pure $ makeFavouriteBookingAPIEntity booking <$> ride
 
 -- TODO move to Domain.Types.Ride.Extra
 makeRideAPIEntity :: Ride -> RideAPIEntity
