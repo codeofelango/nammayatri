@@ -41,8 +41,7 @@ updateByPrimaryKey (Domain.Types.DriverOffer.DriverOffer {..}) = do
   updateWithKV
     [ Se.Set Beam.bppQuoteId bppQuoteId,
       Se.Set Beam.createdAt (Kernel.Prelude.Just createdAt),
-      Se.Set Beam.distanceToPickup (Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup),
-      Se.Set Beam.distanceToPickupValue (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup),
+      Se.Set Beam.distanceToPickup distanceToPickup,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverName driverName,
       Se.Set Beam.durationToPickup durationToPickup,
@@ -63,7 +62,7 @@ instance FromTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
         Domain.Types.DriverOffer.DriverOffer
           { bppQuoteId = bppQuoteId,
             createdAt = Kernel.Prelude.fromMaybe updatedAt createdAt,
-            distanceToPickup = Kernel.Types.Common.mkDistanceWithDefault distanceUnit distanceToPickupValue <$> distanceToPickup,
+            distanceToPickup = distanceToPickup,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             driverName = driverName,
             durationToPickup = durationToPickup,
@@ -82,8 +81,7 @@ instance ToTType' Beam.DriverOffer Domain.Types.DriverOffer.DriverOffer where
     Beam.DriverOfferT
       { Beam.bppQuoteId = bppQuoteId,
         Beam.createdAt = Kernel.Prelude.Just createdAt,
-        Beam.distanceToPickup = Kernel.Types.Common.distanceToHighPrecMeters <$> distanceToPickup,
-        Beam.distanceToPickupValue = Kernel.Types.Common.distanceToHighPrecDistance distanceUnit <$> distanceToPickup,
+        Beam.distanceToPickup = distanceToPickup,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.driverName = driverName,
         Beam.durationToPickup = durationToPickup,
