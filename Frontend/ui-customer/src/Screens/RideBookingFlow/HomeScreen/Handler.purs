@@ -245,3 +245,6 @@ homeScreen = do
     GoToIssueReportChatScreenWithIssue updatedState issueType-> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_ISSUE_REPORT_CHAT_SCREEN_WITH_ISSUE updatedState issueType)
+    GoToTripSelectionScreen state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_TRIP_TYPE_SELECTION state)

@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..) , TicketType(..), TripTypeData)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -35,6 +35,8 @@ import Data.HashMap as DHM
 import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
 import Screens.Types (FareProductType(..)) as FPT
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 initData :: HomeScreenState
 initData = {
@@ -170,10 +172,16 @@ initData = {
     , rateCardCache : Nothing
     , rentalsInfo : Nothing 
     , startTimeUTC : ""
+    , returnTimeUTC : ""
+    , estReturnTimeUTC : ""
     , invalidBookingId : Nothing
     , maxEstimatedDuration : 0
     , invalidBookingPopUpConfig : Nothing
     , rideCompletedData : initialRideCompletedData
+    , tripTypeDataConfig : tripTypeDataConfig
+    , srcCity : Nothing
+    , destCity : Nothing
+    , tripEstDuration : 0
     },
     props: {
       rideRequestFlow : false
@@ -362,11 +370,31 @@ initData = {
   }
 }
 
+
+tripTypeDataConfig =  {
+      tripPickupData : Just dummyTripTypeData,
+      tripReturnData : Just dummyTripTypeData
+    }
+dummyTripTypeData :: TripTypeData
+dummyTripTypeData = {
+  tripDateTimeConfig : {
+    year : 0
+  , month : 0
+  , day : 0
+  , hour : 0
+  , minute : 0
+  },
+  tripDateUTC : "",
+  tripDateReadableString : (getString NOW)
+}
 dummySearchLocationModelProps = {
     isAutoComplete : false
   , showLoader : false
   , crossBtnSrcVisibility : false
   , crossBtnDestVisibility : false
+  , tripType : ONE_WAY_TRIP
+  , totalRideDistance : 0.0
+  , totalRideDuration : 0
 }
 
 dummySearchLocationModelData = {
