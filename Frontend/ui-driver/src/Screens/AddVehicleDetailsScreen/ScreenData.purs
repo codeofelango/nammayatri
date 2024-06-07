@@ -28,6 +28,7 @@ import Common.Types.Config (CityConfig)
 import Common.Types.App as CTA
 import MerchantConfig.Types (AppConfig)
 import Prelude (class Eq)
+import Services.API as API
 
 initData :: AddVehicleDetailsScreenState
 initData = {
@@ -50,11 +51,47 @@ initData = {
       vehicleCategory : Nothing,
       rcNumberPrefixList : [],
       config : getAppConfig appConfig,
-      dropDownList : [],
+      dropDownList :         [ { isExpanded: false
+          , "type": MAKE
+          , options: []
+          , selected: "Select"
+          , title: "Make"
+          , showEditText :false
+          }
+        , { isExpanded: false
+          , "type": MODEL
+          , options: []
+          , selected: "Select"
+          , title: "Model"
+          , showEditText :false
+          }
+        , { isExpanded: false
+          , "type": COLOR
+          , options: getColors
+          , selected: "Select"
+          , title: "Color"
+          , showEditText :false
+          }
+        , { isExpanded: false
+          , "type": DOORS
+          , options: ["2", "4"]
+          , selected: "Select"
+          , title : "Doors"
+          , showEditText :false
+          }
+        , { isExpanded: false
+          , "type": SEATBELTS
+          , options: [ "4" , "5", "6", "7"]
+          , selected: "Select"
+          , title : "Seatbelts"
+          , showEditText :false
+          }
+        ],
       registrationDate: Nothing,
       registrationDateActual: "",
       selectedVehicleDetails : Nothing,
-      variantList : []
+      variantList : [],
+      preFillData : Nothing
     },
     props: {
       rcAvailable : false,
@@ -121,7 +158,8 @@ type AddVehicleDetailsScreenData =  {
   registrationDate :: Maybe String,
   registrationDateActual :: String,
   selectedVehicleDetails :: Maybe VehicleDetailsEntity,
-  variantList :: Array CTA.VehicleCategory
+  variantList :: Array CTA.VehicleCategory,
+  preFillData :: Maybe API.RCDetails
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -192,3 +230,24 @@ type VehicleDetailsEntity = {
 , id :: String
 , make :: String
 }
+
+getColors :: Array String
+getColors =
+  [ "Black"
+  , "White"
+  , "Silver"
+  , "Grey"
+  , "Blue"
+  , "Red"
+  , "Green"
+  , "Yellow"
+  , "Orange"
+  , "Brown"
+  , "Beige"
+  , "Dark Blue"
+  , "Light Blue"
+  , "Dark Red"
+  , "Dark Green"
+  , "Dark Brown"
+  , "Maroon"
+  ]

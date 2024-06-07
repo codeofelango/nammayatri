@@ -22,6 +22,7 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
+import Data.Newtype (class Newtype, unwrap)
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Array as DA
@@ -851,4 +852,4 @@ getChargesOb cityConfig driverVehicle =
     _ -> cityConfig.waitingChargesConfig.cab
 
 sortListBasedOnCreatedAt :: forall a t. Newtype t (Record (createdAt:: String | a)) => Array t -> Array t
-sortListBasedOnCreatedAt = DA.sortBy (\a b -> compare ((unwrap a).createdAt) ((unwrap b).createdAt))
+sortListBasedOnCreatedAt = DA.sortBy (\a b -> compare ((unwrap b).createdAt) ((unwrap a).createdAt))

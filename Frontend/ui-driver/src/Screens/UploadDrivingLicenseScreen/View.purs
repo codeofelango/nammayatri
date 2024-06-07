@@ -449,7 +449,7 @@ dateOfBirth push state =
         , orientation HORIZONTAL
         , onClick (\action -> do
                         _ <- push action
-                        JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
+                        JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push (DatePicker "DATE_OF_BIRTH") "631195200"
                       ) (const SelectDateOfBirthAction)
         , clickable state.props.isDateClickable 
       ][ textView
@@ -492,7 +492,7 @@ dateOfIssue push state =
         , orientation HORIZONTAL
         , onClick (\action -> do
                         _ <- push action 
-                        JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_ISSUE"
+                        JB.datePicker "MAXIMUM_PRESENT_DATE" push (DatePicker "DATE_OF_ISSUE") ""
                       ) $ const SelectDateOfIssueAction
         , clickable state.props.isDateClickable
       ][ textView $

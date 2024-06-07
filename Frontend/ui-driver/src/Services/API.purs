@@ -1170,6 +1170,7 @@ instance decodeVehicleDocumentItem :: Decode VehicleDocumentItem where decode = 
 instance encodeVehicleDocumentItem  :: Encode VehicleDocumentItem where encode = defaultEncode
 
 derive instance genericRCDetails :: Generic RCDetails _
+derive instance newtypeRCDetails :: Newtype RCDetails _
 instance standardEncodeRCDetails :: StandardEncode RCDetails where standardEncode (RCDetails res) = standardEncode res
 instance showRCDetails :: Show RCDetails where show = genericShow
 instance decodeRCDetails :: Decode RCDetails where decode = defaultDecode

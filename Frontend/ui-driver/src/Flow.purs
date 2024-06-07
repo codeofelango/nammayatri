@@ -92,7 +92,7 @@ import RemoteConfig as RC
 import Resource.Constants (decodeAddress)
 import Resource.Constants as RC
 import Screens as ScreenNames
-import Screens.AddVehicleDetailsScreen.ScreenData (initData) as AddVehicleDetailsScreenData
+import Screens.AddVehicleDetailsScreen.ScreenData (initData, VehicleDetails(..)) as AddVehicleDetailsScreenData
 import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.DriverDetailsScreen.Controller (getGenderValue, genders, getGenderState)
@@ -721,14 +721,18 @@ onBoardingFlow = do
         Nothing -> pure unit
         Just statusItem -> when (statusItem.status == ST.FAILED) $ updateStateWithPrefillDLDatata
       uploadDrivingLicenseFlow
-    UPLOAD_VEHICLE_DETAILS state rcNumberPrefixList -> do
+    UPLOAD_VEHICLE_DETAILS state step -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \_ -> AddVehicleDetailsScreenData.initData { data {
         driverMobileNumber = state.data.phoneNumber, 
         cityConfig = state.data.cityConfig,
         vehicleCategory = state.data.vehicleCategory,
-        rcNumberPrefixList = rcNumberPrefixList,
+        rcNumberPrefixList = step.rcNumberPrefixList,
         variantList = state.data.variantList
         }}
+      let mbStatus = DA.head $ filter (\item -> item.docType == step.stage) state.data.documentStatusList
+      case mbStatus of
+        Nothing -> pure unit
+        Just statusItem -> when (statusItem.status == ST.FAILED) $ updateVehiclePrefillData
       addVehicleDetailsflow false
     PERMISSION_SCREEN state -> do
       modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
@@ -778,7 +782,7 @@ onBoardingFlow = do
     updateStateWithPrefillDLDatata = do
       DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq "true"
       let dlDetailsList = driverRegistrationResp.driverLicenseDetails
-          sortedListForDLDetails = DA.reverse $ sortListBasedOnCreatedAt $ fromMaybe [] dlDetailsList
+          sortedListForDLDetails = sortListBasedOnCreatedAt $ fromMaybe [] dlDetailsList
           dummyDLDetails = DLDetails {classOfVehicles : [], createdAt :"", driverDateOfBirth : Nothing, imageId1 : "", operatingCity : "",driverLicenseNumber : "", dateOfIssue : Nothing}
           (DLDetails latestDLDetails) = if DA.length sortedListForDLDetails > 0 
                                           then fromMaybe dummyDLDetails (sortedListForDLDetails DA.!! 0) 
@@ -834,6 +838,27 @@ onBoardingFlow = do
       case resp of
         Right docs -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Just docs }
         Left err -> pure unit -- handle error
+
+updateVehiclePrefillData = do
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq "true"
+  case driverRegistrationResp.vehicleRegistrationCertificateDetails of 
+    Nothing -> pure unit
+    Just list -> do
+      let mbList = DA.head $ HU.sortListBasedOnCreatedAt list
+      case mbList of
+        Nothing -> pure unit
+        Just (API.RCDetails prefillData) -> do
+          (GlobalState state) <- getState
+          let updatedList = map (\item -> case item.type of 
+                                    AddVehicleDetailsScreenData.MAKE -> if isJust prefillData.vehicleManufacturer then item{selected = fromMaybe "" prefillData.vehicleManufacturer} else item
+                                    AddVehicleDetailsScreenData.MODEL -> if isJust prefillData.vehicleModel then item{selected = fromMaybe "" prefillData.vehicleModel} else item
+                                    AddVehicleDetailsScreenData.COLOR -> if isJust prefillData.vehicleColor then item{selected = fromMaybe "" prefillData.vehicleColor} else item
+                                    AddVehicleDetailsScreenData.DOORS -> if isJust prefillData.vehicleDoors then item{selected = show $ fromMaybe 0 prefillData.vehicleDoors} else item
+                                    AddVehicleDetailsScreenData.SEATBELTS -> if isJust prefillData.vehicleSeatBelts then item{selected = show $ fromMaybe 0 prefillData.vehicleSeatBelts} else item
+                                    _ -> item) state.addVehicleDetailsScreen.data.dropDownList
+          modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicle-> addVehicle{data{preFillData = Just (API.RCDetails prefillData), dropDownList = updatedList, vehicle_registration_number = prefillData.vehicleRegistrationCertNumber, reEnterVehicleRegistrationNumber = prefillData.vehicleRegistrationCertNumber}}
+
+
 
 updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateDriverVersion dbClientVersion dbBundleVersion = do

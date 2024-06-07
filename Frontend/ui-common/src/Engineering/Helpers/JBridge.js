@@ -486,12 +486,14 @@ export const timePicker = function (cb) {
 export const datePicker = function (label) {
   return function (cb) {
     return function (action) {
-      return function () {
-        const callback = callbackMapper.map(function (resp, year, month, date) {
-          cb(action(resp)(year)(month)(date))();
-        });
-        if (window.__OS == "IOS") window.JBridge.datePicker(callback, label, "DatePicker");
-        else window.JBridge.datePicker(callback, label);
+      return function (defaultDate) {
+        return function () {
+          const callback = callbackMapper.map(function (resp, year, month, date) {
+            cb(action(resp)(year)(month)(date))();
+          });
+          if (window.__OS == "IOS") window.JBridge.datePicker(callback, label, "DatePicker", defaultDate);
+          else window.JBridge.datePicker(callback, label);
+        };
       };
     };
   };

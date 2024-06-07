@@ -209,7 +209,7 @@ view push state =
                 , width MATCH_PARENT
                 , margin $ Margin 16 0 16 16
                 , clickable false
-                , visibility $ boolToVisibility callSupportVisibility
+                , visibility $ boolToVisibility $ callSupportVisibility state
                 ][contactSupportView push state]
             ]
             , if state.props.enterReferralCodeModal then enterReferralCodeModal push state else linearLayout[][]
@@ -219,11 +219,13 @@ view push state =
       <> if state.props.menuOptions then [menuOptionModal push state] else []
       <> if state.props.isApplicationInVerification then [applicationInVerification push state] else []
       where 
-        callSupportVisibility = (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") || (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed")
         documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
         buttonVisibility = if state.props.manageVehicle then all (\docType -> (getStatus docType.stage state) == ST.COMPLETED) $ filter(\elem -> elem.isMandatory) documentList
                             else state.props.driverEnabled
 
+
+callSupportVisibility :: ST.RegistrationScreenState -> Boolean
+callSupportVisibility state = (state.data.drivingLicenseStatus == ST.FAILED && state.data.enteredDL /= "__failed") || (state.data.vehicleDetailsStatus == ST.FAILED && state.data.enteredRC /= "__failed")
 
 headerView :: forall w. ST.RegistrationScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
@@ -286,7 +288,7 @@ cardsListView :: forall w. (Action -> Effect Unit) -> ST.RegistrationScreenState
 cardsListView push state =
   let documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
       isRefreshVisible = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
-      count = foldr (\item acc -> if item then acc + 1 else acc) 0 [state.data.cityConfig.showDriverReferral, isRefreshVisible]
+      count = foldr (\item acc -> if item then acc + 1 else acc) 0 [state.data.cityConfig.showDriverReferral, isRefreshVisible , callSupportVisibility state]
   in scrollView
     [ width MATCH_PARENT
     , height $ if EHC.os == "IOS" then V $ (JB.getHeightFromPercent (80 - (count * 10))) - EHC.safeMarginBottom else WRAP_CONTENT

@@ -89,7 +89,7 @@ instance loggableAction :: Loggable Action where
     
 data ScreenOutput = GoBack 
                   | GoToUploadDriverLicense RegistrationScreenState ST.StepProgress
-                  | GoToUploadVehicleRegistration RegistrationScreenState (Array String)
+                  | GoToUploadVehicleRegistration RegistrationScreenState ST.StepProgress
                   | GoToPermissionScreen RegistrationScreenState
                   | LogoutAccount
                   | GoToOnboardSubscription
@@ -148,7 +148,7 @@ eval (RegistrationAction step ) state = do
        let item = step.stage
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state step
-          VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
+          VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step
           GRANT_PERMISSION -> exit $ GoToPermissionScreen state
           SUBSCRIPTION_PLAN -> exit GoToOnboardSubscription
           PROFILE_PHOTO -> exit $ DocCapture state item -- Launch hyperverge

@@ -47,7 +47,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, when, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||), (-), (+), (<=), (>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, scrollBarY, singleLine, onAnimationEnd)
+import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, scrollBarY, singleLine, onAnimationEnd, autoCapitalizationType)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Properties as PP
@@ -71,13 +71,13 @@ import Screens.Types as ST
 import Components.RequestInfoCard as RequestInfoCard
 import Effect.Uncurried (runEffectFn2)
 import Helpers.API (callApi)
-import Services.API (GetMakeListReq(..), GetMakeListResp(..))
+import Services.API (GetMakeListReq(..), GetMakeListResp(..), RCDetails(..))
 import Data.Either (Either(..))
 
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
-  { initialState : getDropDownList initialState
+  { initialState
   , view
   , name : "AddVehicleDetailsScreen"
   , globalEvents : [(\push -> do
@@ -93,6 +93,17 @@ screen initialState =
                 fiber <- launchAff $ flowRunner defaultGlobalState $ getMakeList push
                 pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
                 else pure $ pure unit
+  ),
+  (\push -> do
+      case initialState.data.preFillData of
+        Nothing -> pure unit
+        Just (RCDetails rcData) -> do
+          let _ = EHC.setText (EHC.getNewIDWithTag "ReenterVehicleRegistrationNumber") rcData.vehicleRegistrationCertNumber
+              _ = EHC.setText (EHC.getNewIDWithTag "VehicleRegistrationNumber") rcData.vehicleRegistrationCertNumber
+              _ = spy "Hello" rcData.vehicleRegistrationCertNumber
+          pure unit
+      pure $ pure unit
+
   )]
   , eval:
     ( \state action -> do
@@ -337,8 +348,9 @@ vehicleRegistrationNumber state push =
               , pattern "[0-9a-zA-Z]*,10"
               , stroke ("1," <> Color.white900)
               , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
-              , onChange push (const VehicleRegistrationNumber state.props.input_data)
+              , onChange push VehicleRegistrationNumber
               , inputTypeI 4097
+              , autoCapitalizationType 3
               ] <> FontStyle.subHeading1 TypoGraphy)
             ]
           , textView $
@@ -410,8 +422,9 @@ vehicleRegistrationNumber state push =
                     , pattern "[0-9a-zA-Z]*,10"
                     , stroke ("1," <> Color.white900)
                     , id (EHC.getNewIDWithTag "ReenterVehicleRegistrationNumber")
-                    , onChange push (const ReEnterVehicleRegistrationNumber state.props.input_data)
+                    , onChange push ReEnterVehicleRegistrationNumber
                     , inputTypeI 4097
+                    , autoCapitalizationType 3
                     ] <> FontStyle.subHeading1 TypoGraphy)
                   ]
               , textView $
@@ -685,7 +698,7 @@ dateOfRCRegistrationView push state enableTutorial =
         , orientation HORIZONTAL
         , onClick (\action -> do
                       _ <- push action
-                      JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker 
+                      JB.datePicker "MAXIMUM_PRESENT_DATE" push DatePicker ""
                       ) $ const DatePickerAction
         , clickable state.props.isDateClickable
       ][ textView $
@@ -1039,7 +1052,11 @@ dropDownFields push state idx item =
         , width MATCH_PARENT
         , padding $ Padding 20 15 20 15
         , cornerRadius 8.0
-        , onClick push $ const $ ShowOptions item
+        , onClick (\action -> do
+                  pure $ JB.hideKeyboardOnNavigation true
+                  runEffectFn1 JB.clearFocus (EHC.getNewIDWithTag "ReenterVehicleRegistrationNumber")
+                  runEffectFn1 JB.clearFocus (EHC.getNewIDWithTag "VehicleRegistrationNumber")
+                  push action) $ const $ ShowOptions item
         , stroke $ "1,"<> Color.borderColorLight
         , gravity CENTER_VERTICAL
         ]$
@@ -1111,70 +1128,3 @@ dropDownList dropDownItem push idx =
         ]
        )(dropDownItem.options)
     )
-
-
-getDropDownList :: AddVehicleDetailsScreenState -> AddVehicleDetailsScreenState
-getDropDownList state =
-  if state.data.dropDownList == [] then do
-    let
-      list =
-        [ { isExpanded: false
-          , "type": MAKE
-          , options: []
-          , selected: "Select"
-          , title: "Make"
-          , showEditText :false
-          }
-        , { isExpanded: false
-          , "type": MODEL
-          , options: []
-          , selected: "Select"
-          , title: "Model"
-          , showEditText :false
-          }
-        , { isExpanded: false
-          , "type": COLOR
-          , options: getColors
-          , selected: "Select"
-          , title: "Color"
-          , showEditText :false
-          }
-        , { isExpanded: false
-          , "type": DOORS
-          , options: ["2", "4"]
-          , selected: "Select"
-          , title : "Doors"
-          , showEditText :false
-          }
-        , { isExpanded: false
-          , "type": SEATBELTS
-          , options: [ "4" , "5", "6", "7"]
-          , selected: "Select"
-          , title : "Seatbelts"
-          , showEditText :false
-          }
-        ]
-    state { data { dropDownList = list} }
-  else
-    state
-
-getColors :: Array String
-getColors =
-  [ "Black"
-  , "White"
-  , "Silver"
-  , "Grey"
-  , "Blue"
-  , "Red"
-  , "Green"
-  , "Yellow"
-  , "Orange"
-  , "Brown"
-  , "Beige"
-  , "Dark Blue"
-  , "Light Blue"
-  , "Dark Red"
-  , "Dark Green"
-  , "Dark Brown"
-  , "Maroon"
-  ]
