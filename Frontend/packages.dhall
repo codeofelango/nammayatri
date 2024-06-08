@@ -128,7 +128,7 @@ in  upstream
       , "unsafe-coerce"
       ]
     , repo = "https://github.com/juspay/purescript-presto.git"
-    , version = "update/github-purescript-presto"
+    , version = "e4fb74ac4167c9e587a36b7727e90e5633420596"
     }
   with backtrack =
     { dependencies =
@@ -167,7 +167,7 @@ in  upstream
       , "web-dom"
       , "web-events"
       ]
-    , repo = "https://github.com/Vignesh-772/purescript-presto-dom.git"
+    , repo = "https://github.com/Vignesh-772/purescript-presto-dom"
     , version = "nammayatri"
     }
   with halogen-vdom =

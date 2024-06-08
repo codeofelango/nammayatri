@@ -274,10 +274,12 @@ getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                                 "TAXI"  -> []
                                                 "SUV"   -> ["SEDAN", "HATCHBACK"]
                                                 "SEDAN" -> ["TAXI", "HATCHBACK"] 
+                                                "BIKE"  -> []
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+                                        "BIKE"  -> []
                                         _       -> []
 
 
@@ -301,12 +303,14 @@ getUIDowngradeOptions :: String -> Array String
 getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
                                 YATRISATHI -> case variant of
                                                 "TAXI"  -> []
+                                                "BIKE"  -> []
                                                 "SUV"   -> ["SEDAN"]
                                                 "SEDAN" -> ["TAXI"] 
                                                 _       -> ["TAXI"]
                                 _ -> case variant of
                                         "SUV"   -> ["SEDAN", "HATCHBACK"]
                                         "SEDAN" -> ["HATCHBACK"]
+                                        "BIKE"  -> []
                                         _       -> []
   
 getVehicleType :: String -> String
@@ -318,6 +322,7 @@ getVehicleType vehicleType =
     "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
     "TAXI" -> (getString TAXI)
     "TAXI_PLUS" -> (getString TAXI_PLUS)
+    "BIKE" -> "Bike"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -493,6 +498,7 @@ getCategorizedVariant variant = case variant of
       "HATCHBACK"  -> "AC Taxi"
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "AC Taxi"
+      "BIKE" -> "Bike"
       _ -> "Non AC"
     _ -> case var of
       "SEDAN"  -> "Sedan"
@@ -500,6 +506,7 @@ getCategorizedVariant variant = case variant of
       "TAXI_PLUS"  -> "AC Taxi"
       "SUV" -> "Suv"
       "AUTO_RICKSHAW" -> "Auto Rickshaw"
+      "BIKE" -> "Bike"
       _ -> var
   Nothing -> ""
 
@@ -537,6 +544,7 @@ getVehicleVariantImage variant =
         YATRISATHI -> case variant of
                         "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
                         "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
+                        "BIKE" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
                         _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         _          -> case variant of
                         "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
@@ -617,7 +625,12 @@ getCityConfig cityConfig cityName = do
                             callSupport : false,
                             supportWAN : "", 
                             whatsappSupport : false
-                          }
+                          },
+                          variantSubscriptionConfig : {
+                            enableVariantBasedSubscription : true,
+                            variantList : ["AutoCategory"]
+                          },
+                          vehicleNSImg : ""
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   

@@ -15,7 +15,7 @@
 
 module Services.EndPoints where
 
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Prelude (show, (<>), (==))
 import Services.Config (getBaseUrl)
 
@@ -93,7 +93,7 @@ callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
 driverRegistrationStatus :: String -> String
-driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status?multipleRC=true"
+driverRegistrationStatus dummyString = (getBaseUrl "") <> "/driver/register/status"
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"
@@ -209,7 +209,9 @@ getKioskLocations :: String -> String
 getKioskLocations _ = (getBaseUrl "") <> "/kioskLocation/list"
 
 getUiPlans :: String -> String 
-getUiPlans _ = (getBaseUrl "") <> "/plan/list"
+getUiPlans vehicleVariant = case vehicleVariant of
+  "null" -> (getBaseUrl "") <> "/plan/list"
+  _ -> (getBaseUrl "") <> "/plan/list" <> "?vehicleVariant=" <> show vehicleVariant
 
 getCurrentPlan :: String -> String 
 getCurrentPlan driverId = (getBaseUrl "") <> "/plan/currentPlan"
@@ -291,3 +293,6 @@ convertCoinToCash _ =  (getBaseUrl "") <> "/coins/convertCoinToCash"
 
 uploadOdometerImage :: String -> String
 uploadOdometerImage rideId = (getBaseUrl "") <> "/driver/ride/"<>rideId<>"/uploadOdometer"
+
+onBoardingConfigs :: String -> String
+onBoardingConfigs _ = (getBaseUrl "") <> "/onboarding/configs"

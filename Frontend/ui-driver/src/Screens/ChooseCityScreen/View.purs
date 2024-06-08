@@ -32,12 +32,12 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityConfig)
 import JBridge (isLocationPermissionEnabled)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==), (&&), when, void)
+import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==), (&&), when, void, (||), show)
 import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
@@ -50,6 +50,8 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Components.ErrorModal as ErrorModal
 import Mobility.Prelude
 import Locale.Utils
+import ConfigProvider
+import Data.String.Common as DSC
 
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
@@ -148,7 +150,7 @@ currentLocationView state push =
   ][  imageView
       [ height $ V 220
       , width $ V 220
-      , imageWithFallback $ fetchImage FF_ASSET $ getLocationMapImage state
+      , imageWithFallback $ getLocationMapImage state
       ]
     , textView $
       [ text $ getString LOCATION_UNSERVICEABLE
@@ -183,6 +185,13 @@ currentLocationView state push =
       , visibility GONE -- Disable change city for now
       ] <> FontStyle.tags TypoGraphy
   ]
+  where
+    getLocationMapImage :: ChooseCityScreenState -> String
+    getLocationMapImage state =
+      fetchImage FF_ASSET $ if shouldShowUndetectable then "ny_ic_driver_location_undetectable" else cityConfig.mapImage
+      where 
+        cityConfig = getCityConfig state.data.config.cityConfig $ Mb.fromMaybe "" state.data.locationSelected
+        shouldShowUndetectable = state.props.locationUnserviceable || state.props.locationDetectionFailed || DSC.null cityConfig.mapImage
 
 currentLanguageView :: forall w. ChooseCityScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 currentLanguageView state push = 
@@ -257,44 +266,46 @@ radioButtonView state push visibility' =
 
 enableLocationPermission :: ChooseCityScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 enableLocationPermission state push = 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , gravity CENTER
-  , padding $ Padding 20 20 20 20
-  , margin $ MarginTop 14
-  , visibility $ boolToVisibility (state.props.currentStage == ENABLE_PERMISSION)
-  , margin $ Margin 16 16 16 16
-  , cornerRadius 12.0
-  , background Color.white900
-  , stroke $ "1," <> Color.grey900
-  ][  textView $
-      [ text $ getString ENABLE_LOCATION_PERMISSION
-      , gravity CENTER
-      , color Color.black800
-      , margin $ MarginBottom 20
-      ] <> FontStyle.body8 TypoGraphy
-    , linearLayout 
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , background Color.blue600
-      , cornerRadius 8.0
-      , orientation VERTICAL
-      , gravity CENTER_HORIZONTAL
-      ][ imageView
-         [ height $ V 220
-         , width $ V 220 
-         , imageWithFallback $ fetchImage FF_ASSET "ny_driver_location_permission"
-         ]
-       ]
-    , textView $
-      [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> "Namma yatri " <> "from your device settings to start riding"
-      , gravity CENTER
-      , color Color.black700
-      , margin $ MarginTop 4
-      ] <> FontStyle.paragraphText TypoGraphy
-  ]
+  let config = getAppConfig appConfig
+  in
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , padding $ Padding 20 20 20 20
+    , margin $ MarginTop 14
+    , visibility $ boolToVisibility (state.props.currentStage == ENABLE_PERMISSION)
+    , margin $ Margin 16 16 16 16
+    , cornerRadius 12.0
+    , background Color.white900
+    , stroke $ "1," <> Color.grey900
+    ][  textView $
+        [ text $ getString ENABLE_LOCATION_PERMISSION
+        , gravity CENTER
+        , color Color.black800
+        , margin $ MarginBottom 20
+        ] <> FontStyle.body8 TypoGraphy
+      , linearLayout 
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , background Color.blue600
+        , cornerRadius 8.0
+        , orientation VERTICAL
+        , gravity CENTER_HORIZONTAL
+        ][ imageView
+          [ height $ V 220
+          , width $ V 220 
+          , imageWithFallback $ fetchImage FF_ASSET "ny_driver_location_permission"
+          ]
+        ]
+      , textView $
+        [ text $ getString PLEASE_ENABLE_LOCATION_PERMISSION_FOR <> config.clientName <> " from your device settings to start riding"
+        , gravity CENTER
+        , color Color.black700
+        , margin $ MarginTop 4
+        ] <> FontStyle.paragraphText TypoGraphy
+    ]
 
 mockLocationEnabledView :: forall w. (Action -> Effect Unit) -> ChooseCityScreenState -> PrestoDOM (Effect Unit) w
 mockLocationEnabledView push state =

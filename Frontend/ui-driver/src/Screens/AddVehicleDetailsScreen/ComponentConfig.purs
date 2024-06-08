@@ -32,7 +32,6 @@ import Font.Size as FontSize
 import Language.Types (STR(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resource.Constants as Constant
-import Screens.AddVehicleDetailsScreen.Controller (validateRegistrationNumber)
 import Screens.Types (StageStatus(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -41,17 +40,25 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Font.Style as FontStyle
 import ConfigProvider
 import Mobility.Prelude
+import Components.OptionsMenu as OptionsMenuConfig
+import Data.Array as DA
 
 primaryButtonConfig :: ST.AddVehicleDetailsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
-    feature = (getAppConfig appConfig).feature
+    appConfigV = getAppConfig appConfig
+    feature = appConfigV.feature
+    rcNumberPrefixList = DS.split (DS.Pattern "|") $ appConfigV.vehicle.validationPrefix
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     rcMatch = caseInsensitiveCompare state.data.vehicle_registration_number state.data.reEnterVehicleRegistrationNumber
     activate = (( rcMatch || (not state.data.cityConfig.uploadRCandDL)) && 
                 -- (state.data.dateOfRegistration /= Just "") && 
                 state.data.vehicle_registration_number /= "" &&
-                ((DS.length state.data.vehicle_registration_number >= 2) && validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)))
+                ((DS.length state.data.vehicle_registration_number >= 2) && ((DS.take 2 state.data.vehicle_registration_number) `DA.elem` rcNumberPrefixList)))
+    -- validateWithRCPrefixlist regNum =
+    --       let vehicleConfig = (getAppConfig appConfig).vehicle
+    --           rcValues = DS.split (DS.Pattern "|") $ vehicleConfig.validationPrefix
+    --       in regNum `DA.elem` values
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfRegistration then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
@@ -174,5 +181,28 @@ appOnboardingNavBarConfig state =
       { text = if state.props.openHowToUploadManual
                 then getString UPLOAD_REGISTRATION_CERTIFICATE_STR 
                 else getString VEHICLE_REGISTRATION_DETAILS
+      },
+    rightButton = AppOnboardingNavBar.config.rightButton{
+      text = getString HELP_FAQ
       }
   }
+
+optionsMenuConfig :: ST.AddVehicleDetailsScreenState -> OptionsMenuConfig.Config
+optionsMenuConfig state = OptionsMenuConfig.config {
+  menuItems = [
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : true},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true}
+  ],
+  backgroundColor = Color.blackLessTrans,
+  menuBackgroundColor = Color.white900,
+  gravity = RIGHT,
+  menuExpanded = true,
+  width = WRAP_CONTENT,
+  marginRight = 16,
+  itemHeight = V 50,
+  itemPadding = Padding 16 16 16 16,
+  cornerRadius = 4.0,
+  enableAnim = true
+}
