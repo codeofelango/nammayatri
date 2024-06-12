@@ -21,7 +21,7 @@ create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.InterCity
 create = createWithKV
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.InterCityDetails.InterCityDetails -> m (Maybe Domain.Types.InterCityDetails.InterCityDetails))
-findById (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is Beam.id $ Se.Eq id]
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 instance FromTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityDetails where
   fromTType' (Beam.InterCityDetailsT {..}) = do
@@ -64,3 +64,7 @@ instance ToTType' Beam.InterCityDetails Domain.Types.InterCityDetails.InterCityD
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/InterCityDetails.yaml
+-}

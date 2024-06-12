@@ -24,7 +24,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Busi
 createMany = traverse_ create
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BusinessEvent.BusinessEvent -> m (Maybe Domain.Types.BusinessEvent.BusinessEvent))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BusinessEvent.BusinessEvent -> m ())
 updateByPrimaryKey (Domain.Types.BusinessEvent.BusinessEvent {..}) = do
@@ -41,3 +41,7 @@ updateByPrimaryKey (Domain.Types.BusinessEvent.BusinessEvent {..}) = do
       Se.Set Beam.whenPoolWasComputed whenPoolWasComputed
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/BusinessEvent.yaml
+-}

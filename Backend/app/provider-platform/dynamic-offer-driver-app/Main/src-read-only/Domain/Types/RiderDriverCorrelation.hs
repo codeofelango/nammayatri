@@ -26,9 +26,9 @@ data RiderDriverCorrelationE e = RiderDriverCorrelation
   }
   deriving (Generic)
 
-type RiderDriverCorrelation = RiderDriverCorrelationE ('AsEncrypted)
+type RiderDriverCorrelation = RiderDriverCorrelationE 'AsEncrypted
 
-type DecryptedRiderDriverCorrelation = RiderDriverCorrelationE ('AsUnencrypted)
+type DecryptedRiderDriverCorrelation = RiderDriverCorrelationE 'AsUnencrypted
 
 instance EncryptedItem RiderDriverCorrelation where
   type Unencrypted RiderDriverCorrelation = (DecryptedRiderDriverCorrelation, HashSalt)
@@ -65,3 +65,7 @@ instance EncryptedItem' RiderDriverCorrelation where
   type UnencryptedItem RiderDriverCorrelation = DecryptedRiderDriverCorrelation
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RiderDriverCorrelation.yaml
+-}

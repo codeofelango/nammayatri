@@ -63,4 +63,8 @@ data RawMessage = RawMessage
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MessageType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageType)
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Message.yaml
+-}

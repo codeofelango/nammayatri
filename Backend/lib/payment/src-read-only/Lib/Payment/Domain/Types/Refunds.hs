@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Lib.Payment.Domain.Types.Refunds where
@@ -25,3 +26,7 @@ data Refunds = Refunds
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+{-
+	DSL Source Link: file://./../../../../../spec/Storage/Refunds.yaml
+-}

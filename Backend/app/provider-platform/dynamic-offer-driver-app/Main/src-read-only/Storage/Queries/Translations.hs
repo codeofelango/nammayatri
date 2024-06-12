@@ -22,7 +22,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Tran
 createMany = traverse_ create
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Translations.Translations -> m (Maybe Domain.Types.Translations.Translations))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Translations.Translations -> m ())
 updateByPrimaryKey (Domain.Types.Translations.Translations {..}) = do
@@ -35,3 +35,7 @@ updateByPrimaryKey (Domain.Types.Translations.Translations {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Translations.yaml
+-}

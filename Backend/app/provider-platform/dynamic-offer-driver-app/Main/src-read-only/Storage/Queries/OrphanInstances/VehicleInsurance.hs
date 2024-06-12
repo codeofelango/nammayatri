@@ -45,8 +45,8 @@ instance ToTType' Beam.VehicleInsurance Domain.Types.VehicleInsurance.VehicleIns
         Beam.issueDate = issueDate,
         Beam.limitsOfLiability = limitsOfLiability,
         Beam.policyExpiry = policyExpiry,
-        Beam.policyNumberEncrypted = ((policyNumber & unEncrypted . encrypted)),
-        Beam.policyNumberHash = (policyNumber & hash),
+        Beam.policyNumberEncrypted = policyNumber & unEncrypted . encrypted,
+        Beam.policyNumberHash = policyNumber & hash,
         Beam.policyProvider = policyProvider,
         Beam.rcId = Kernel.Types.Id.getId rcId,
         Beam.rejectReason = rejectReason,
@@ -56,3 +56,7 @@ instance ToTType' Beam.VehicleInsurance Domain.Types.VehicleInsurance.VehicleIns
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../../spec/Storage/DriverOnboarding.yaml
+-}

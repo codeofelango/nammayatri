@@ -24,7 +24,7 @@ createMany = traverse_ create
 findByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig))
-findByMerchantOpCityId (Kernel.Types.Id.Id merchantOperatingCityId) = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
+findByMerchantOpCityId merchantOperatingCityId = do findOneWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 update :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig -> m ())
 update (Domain.Types.DriverIntelligentPoolConfig.DriverIntelligentPoolConfig {..}) = do
@@ -101,3 +101,7 @@ instance ToTType' Beam.DriverIntelligentPoolConfig Domain.Types.DriverIntelligen
         Beam.speedNormalizer = speedNormalizer,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/Merchant.yaml
+-}

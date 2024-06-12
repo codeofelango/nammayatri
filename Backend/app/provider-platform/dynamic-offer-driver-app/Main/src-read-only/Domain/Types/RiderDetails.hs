@@ -34,9 +34,9 @@ data RiderDetailsE e = RiderDetails
   }
   deriving (Generic)
 
-type RiderDetails = RiderDetailsE ('AsEncrypted)
+type RiderDetails = RiderDetailsE 'AsEncrypted
 
-type DecryptedRiderDetails = RiderDetailsE ('AsUnencrypted)
+type DecryptedRiderDetails = RiderDetailsE 'AsUnencrypted
 
 instance EncryptedItem RiderDetails where
   type Unencrypted RiderDetails = (DecryptedRiderDetails, HashSalt)
@@ -89,3 +89,7 @@ instance EncryptedItem' RiderDetails where
   type UnencryptedItem RiderDetails = DecryptedRiderDetails
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/RiderDetails.yaml
+-}

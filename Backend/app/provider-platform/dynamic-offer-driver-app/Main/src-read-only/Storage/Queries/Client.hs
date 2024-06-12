@@ -21,7 +21,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Clie
 createMany = traverse_ create
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Client.Client -> m (Maybe Domain.Types.Client.Client))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Client.Client -> m ())
 updateByPrimaryKey (Domain.Types.Client.Client {..}) = do
@@ -55,3 +55,7 @@ instance ToTType' Beam.Client Domain.Types.Client.Client where
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
+
+{-
+	DSL Source Link: file://./../../../spec/Storage/client.yaml
+-}
