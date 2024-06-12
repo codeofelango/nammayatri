@@ -84,6 +84,7 @@ view push state =
         Just ST.CarCategory -> state.data.registerationStepsCabs
         Just ST.AutoCategory -> state.data.registerationStepsAuto
         Just ST.BikeCategory -> state.data.registerationStepsBike
+        Just ST.AmbulanceCategory -> state.data.registerationStepsAmbulance 
         Nothing -> state.data.registerationStepsCabs
       completedStatusCount = length $ filter (\doc -> (getStatus doc.stage state) == ST.COMPLETED) documentList
       progressPercent = floor $ (toNumber completedStatusCount) / toNumber (length documentList) * 100.0
@@ -91,6 +92,7 @@ view push state =
         Just ST.CarCategory -> "ny_ic_sedan_side"
         Just ST.AutoCategory -> "ny_ic_auto_side"
         Just ST.BikeCategory -> "ny_ic_bike_side"
+        Just ST.AmbulanceCategory -> "ny_ic_ambulance_side"
         Nothing -> ""
   in
     Anim.screenAnimation
@@ -364,12 +366,11 @@ cardsListView push state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , weight 1.0
-        ][ if state.data.vehicleCategory == Just ST.CarCategory then
-            vehicleSpecificList push state state.data.registerationStepsCabs
-          else if state.data.vehicleCategory == Just ST.BikeCategory then
-            vehicleSpecificList push state state.data.registerationStepsBike
-          else
-            vehicleSpecificList push state state.data.registerationStepsAuto
+        ][ case state.data.vehicleCategory of
+            Just ST.CarCategory -> vehicleSpecificList push state state.data.registerationStepsCabs
+            Just ST.BikeCategory -> vehicleSpecificList push state state.data.registerationStepsBike
+            Just ST.AmbulanceCategory -> vehicleSpecificList push state state.data.registerationStepsAmbulance -- Bind the AmbulanceVariant to a variable here
+            _ -> vehicleSpecificList push state state.data.registerationStepsAuto
         ]
     ]
 
@@ -486,7 +487,7 @@ listItem push item state =
       compImage item = 
         fetchImage FF_ASSET $ case item.stage of
           ST.DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue"
-          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else if state.data.vehicleCategory == Just ST.BikeCategory then "ny_ic_bike_onboard" else "ny_ic_vehicle_onboard"
+          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else if state.data.vehicleCategory == Just ST.BikeCategory then "ny_ic_bike_onboard"  else if state.data.vehicleCategory == Just ST.AmbulanceCategory then "ny_ic_ambulance_onboard" else "ny_ic_vehicle_onboard"
           ST.GRANT_PERMISSION -> "ny_ic_grant_permission"
           ST.SUBSCRIPTION_PLAN -> "ny_ic_plus_circle_blue"
           ST.PROFILE_PHOTO -> "ny_ic_profile_image_blue"
@@ -569,6 +570,7 @@ refreshView push state =
                       Just ST.CarCategory -> state.data.registerationStepsCabs
                       Just ST.AutoCategory -> state.data.registerationStepsAuto
                       Just ST.BikeCategory -> state.data.registerationStepsBike
+                      Just ST.AmbulanceCategory -> state.data.registerationStepsAmbulance
                       Nothing -> state.data.registerationStepsCabs
       showRefresh = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
   in 
@@ -742,6 +744,7 @@ variantListView push state =
                     ST.AutoCategory -> "ny_ic_auto_side_view"
                     ST.CarCategory -> "ny_ic_sedan_side"
                     ST.BikeCategory -> "ny_ic_bike_side"
+                    ST.AmbulanceCategory -> "ny_ic_ambulance_side"
               ]
             , textView $
               [ width WRAP_CONTENT
@@ -750,6 +753,7 @@ variantListView push state =
                         ST.AutoCategory -> getString AUTO_RICKSHAW
                         ST.CarCategory -> getString CAR
                         ST.BikeCategory -> getString BIKE_TAXI
+                        ST.AmbulanceCategory -> getString AMBULANCE
               , color Color.black800
               , margin $ MarginLeft 20
               ] <> FontStyle.subHeading1 TypoGraphy
@@ -765,12 +769,13 @@ getStatus step state =
           let documentStatusArr = state.data.documentStatusList
               vehicleDoc = [ ST.VEHICLE_PERMIT, ST.FITNESS_CERTIFICATE, ST.VEHICLE_INSURANCE, ST.VEHICLE_PUC, ST.VEHICLE_DETAILS_OPTION]
               findStatus = if step `elem` vehicleDoc 
-                          then find (\docStatus -> docStatus.docType == step && filterCondition docStatus) documentStatusArr
-                          else find (\docStatus -> docStatus.docType == step) documentStatusArr
+                          then find (\docItem -> docItem.docType == step && filterCondition docItem) documentStatusArr
+                          else find (\docItem -> docItem.docType == step) documentStatusArr
           case findStatus of
             Nothing -> ST.NOT_STARTED
-            Just docStatus -> docStatus.status
-  where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
+            Just docItem -> docItem.status
+  where 
+    filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
 dependentDocAvailable item state = all (\docType -> (getStatus docType state) == ST.COMPLETED) item.dependencyDocumentType

@@ -1364,3 +1364,18 @@ data STR = LETS_GET_STARTED
         | DOCUMENT_UPLOADED_SUCCESSFULLY
         | REGISTER_YOUR_BIKE
         | BIKE_TAXI
+        | SELECT_FACILITIES
+        | FIRST_AID_KIT
+        | DRIVER_ACKNOWLEDGE
+        | BOOKING_PREFERENCE
+        | INSPECTION
+        | A_F
+        | BY_PROCEEDING_YOU_ACCEPT_FULL_RESPONSIBILITY
+        | A_C
+        | AMBULANCE
+        | NON_AC
+        | AC
+        | NO_OXYGEN
+        | OXYGEN
+        | VENTILATOR
+        | SELECT_ONE

@@ -567,8 +567,9 @@ onBoardingFlow = do
       registerationStepsCabs = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.cabs) updatedGs.globalProps.onBoardingDocs
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
       registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
+      registerationStepsAmbulance = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.ambulances) updatedGs.globalProps.onBoardingDocs
       checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
-      variantList = (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else [])
+      variantList = (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else []) <> (if checkAvailability _.ambulances then [ST.AmbulanceCategory] else []) 
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
@@ -587,6 +588,7 @@ onBoardingFlow = do
                       registerationStepsCabs = registerationStepsCabs,
                       registerationStepsAuto = registerationStepsAutos,
                       registerationStepsBike = registerationStepsBike,
+                      registerationStepsAmbulance = registerationStepsAmbulance,
                       documentStatusList = documentStatusList,
                       variantList = variantList,
                       linkedRc = linkedRC,
@@ -681,7 +683,7 @@ onBoardingFlow = do
       case resp of
         Right docs -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Just docs }
         Left err -> pure unit -- handle error
-
+        
 updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateDriverVersion dbClientVersion dbBundleVersion = do
   if (isJust dbClientVersion && isJust dbBundleVersion) then do
@@ -896,7 +898,7 @@ addVehicleDetailsflow addRcFromProf = do
           modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
-          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory)
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory state.data.airConditioned state.data.oxygen state.data.ventilator)
           void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
@@ -945,7 +947,7 @@ addVehicleDetailsflow addRcFromProf = do
           modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""},props{ addRcFromProfile = addRcFromProf}}
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
-          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true state.data.vehicleCategory)
+          registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true state.data.vehicleCategory state.data.airConditioned state.data.oxygen state.data.ventilator)
           void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
@@ -1191,7 +1193,7 @@ driverProfileFlow = do
       let (GlobalState defaultEpassState) = defaultGlobalState
       pure $ setText (getNewIDWithTag "VehicleRegistrationNumber") ""
       pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") ""
-      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen { data { vehicleCategory = RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY}})
       addVehicleDetailsflow true
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs
     GO_TO_CALL_DRIVER state -> do
@@ -3316,6 +3318,7 @@ logoutFlow = do
   deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
   deleteValueFromLocalStore FREE_TRIAL_DAYS
   deleteValueFromLocalStore REFERRAL_CODE_ADDED
+  deleteValueFromLocalStore VEHICLE_CATEGORY
   pure $ factoryResetApp ""
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "logout"
   isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit

@@ -20,6 +20,7 @@ import Common.Types.App (LazyCheck(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Data.Array as DA
 import Mobility.Prelude as MP
+import Data.List (elem)
 
 screen :: ST.BookingOptionsScreenState -> Screen Action ST.BookingOptionsScreenState ScreenOutput
 screen initialState =
@@ -60,10 +61,16 @@ view push state =
 
 downgradeVehicleView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 downgradeVehicleView push state =
-  let canDowngrade = (not $ DA.null state.data.downgradeOptions) && state.data.vehicleType /= "BIKE"
+  let canDowngrade = (not $ DA.null state.data.downgradeOptions) && 
+                   not (state.data.vehicleType `elem` ["BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"])
       downgradeFrom = case state.data.vehicleType of
                         "SUV" -> getString AC_SUV
                         "BIKE" -> "Bike"
+                        "AMBULANCE_TAXI" -> "AMBULANCE_TAXI"
+                        "AMBULANCE_TAXI_OXY" -> "AMBULANCE_TAXI_OXY"
+                        "AMBULANCE_AC" -> "AMBULANCE_AC"
+                        "AMBULANCE_AC_OXY" -> "AMBULANCE_AC_OXY"
+                        "AMBULANCE_VENTILATOR" -> "AMBULANCE_VENTILATOR"
                         _     -> getString AC_CAB
       downgradeTo = case state.data.vehicleType of
                       "SUV" -> getString AC_CAB
