@@ -61,8 +61,18 @@ data StopReq = StopReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+newtype DriverNo = DriverNo
+  { driverNumber :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 newtype BookingListRes = BookingListRes
   { list :: [SRB.BookingAPIEntity]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype FavouriteBookingListRes = FavouriteBookingListRes
+  { list :: [SRB.FavouriteBookingAPIEntity]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -117,6 +127,14 @@ bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClient
   fork "booking list status update" $ checkBookingsForStatus rbList
   logInfo $ "rbList: test " <> show rbList
   BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
+
+favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
+favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
+  rides <- runInReplica $ QR.findAllByRiderIdAndDriverNumber personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver.driverNumber
+  rbList <- runInReplica $ QR.findAllBookingsOfRides rides
+  fork "booking list status update" $ checkBookingsForStatus rbList
+  logInfo $ "rbList: test " <> show rbList
+  FavouriteBookingListRes . catMaybes <$> traverse SRB.favouritebuildBookingAPIEntity rbList
 
 addStop :: (Id Person.Person, Id Merchant) -> Id SRB.Booking -> StopReq -> Flow APISuccess
 addStop (_, merchantId) bookingId req = do
