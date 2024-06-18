@@ -89,7 +89,9 @@ data RideAssignedReq = RideAssignedReq
     transactionId :: Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool,
-    previousRideEndPos :: Maybe LatLong
+    previousRideEndPos :: Maybe LatLong,
+    isAlreadyFav :: Bool,
+    favCount :: Int
   }
 
 data ValidatedRideAssignedReq = ValidatedRideAssignedReq
@@ -98,7 +100,9 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     isFreeRide :: Bool,
     previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking,
-    fareParams :: Maybe [DFareBreakup]
+    fareParams :: Maybe [DFareBreakup],
+    isAlreadyFav :: Bool,
+    favCount :: Int
   }
 
 data RideStartedReq = RideStartedReq
@@ -225,7 +229,7 @@ rideAssignedReqHandler req = do
   let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
-  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos now
+  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos now req.isAlreadyFav req.favCount
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   let category = case booking.specialLocationTag of
         Just _ -> "specialLocation"
@@ -247,8 +251,8 @@ rideAssignedReqHandler req = do
   notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
   where
-    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> m DRide.Ride
-    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now = do
+    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> Bool -> Int -> m DRide.Ride
+    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now isAlreadyFav favCount = do
       guid <- generateGUID
       shortId <- generateShortId
       deploymentVersion <- asks (.version)
@@ -296,6 +300,8 @@ rideAssignedReqHandler req = do
             showDriversPreviousRideDropLoc = isJust previousRideEndPos,
             tollConfidence = Nothing,
             distanceUnit = booking.distanceUnit,
+            isAlreadyFav = Just isAlreadyFav,
+            favCount = Just favCount,
             ..
           }
     notifyRideRelatedNotificationOnEvent booking ride now timeDiffEvent = do

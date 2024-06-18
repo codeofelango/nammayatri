@@ -319,6 +319,8 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       clientSdkVersion = Nothing
       tollConfidence = Nothing
       distanceUnit = booking.distanceUnit
+      isAlreadyFav = Just False
+      favCount = Just 0
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

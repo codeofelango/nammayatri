@@ -182,6 +182,8 @@ data Tag
   | RATING
   | IS_DRIVER_BIRTHDAY
   | IS_FREE_RIDE
+  | IS_ALREADY_FAVOURITE
+  | FAVOURITE_COUNT
   | -- Driver arrived info tags
     ARRIVAL_TIME
   | -- Ride distance details tags

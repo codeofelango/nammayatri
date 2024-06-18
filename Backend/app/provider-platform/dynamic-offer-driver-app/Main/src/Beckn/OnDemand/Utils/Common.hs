@@ -415,8 +415,10 @@ mkFulfillmentV2 ::
   Maybe Text ->
   IsValueAddNP ->
   Maybe Text ->
+  Bool ->
+  Int ->
   m Spec.Fulfillment
-mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP riderPhone = do
+mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP riderPhone isAlreadyFav favCount = do
   mbDInfo <- driverInfo
   let rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
@@ -482,7 +484,7 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
     driverInfo = forM (liftM2 (,) mbDriver mbDriverStats) $ \(driver, driverStats) -> do
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide isAlreadyFav favCount
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
@@ -509,8 +511,8 @@ tfCustomer riderPhone riderName =
               }
       }
 
-mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe [Spec.TagGroup]
-mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide =
+mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Bool -> Int -> Maybe [Spec.TagGroup]
+mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide isAlreadyFav favCount =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -527,6 +529,8 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide =
                 ++ driverRatingSingleton
                 ++ isDriverBirthDaySingleton
                 ++ isFreeRideSingleton
+                ++ isAlreadyFavSingleton
+                ++ favCountSingleton
         }
     ]
   where
@@ -591,6 +595,34 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide =
               tagDisplay = Just False,
               tagValue = Just $ show isFreeRide
             }
+
+    isAlreadyFavSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.IS_ALREADY_FAVOURITE,
+                    descriptorName = Just "Is already favourite",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just $ show isAlreadyFav
+          }
+
+    favCountSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.FAVOURITE_COUNT,
+                    descriptorName = Just "Favourite Count",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just $ show favCount
+          }
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkLocationTagGroupV2 location' =
@@ -1292,8 +1324,10 @@ mkFulfillmentV2SoftUpdate ::
   Maybe Text ->
   IsValueAddNP ->
   DLoc.Location ->
+  Bool ->
+  Int ->
   m Spec.Fulfillment
-mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP newDestination = do
+mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent isValueAddNP newDestination isAlreadyFav favCount = do
   mbDInfo <- driverInfo
   let rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
@@ -1359,7 +1393,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
     driverInfo = forM (liftM2 (,) mbDriver mbDriverStats) $ \(driver, driverStats) -> do
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide isAlreadyFav favCount
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,

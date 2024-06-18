@@ -160,6 +160,8 @@ parseRideAssignedEvent order msgId txnId = do
   let isDriverBirthDay = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
       isFreeRide = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
       previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
+      isAlreadyFav = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
+      favCount = fromMaybe 0 $ castToInt $ getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
   bookingDetails <- parseBookingDetails order msgId
   return
     Common.RideAssignedReq
@@ -167,8 +169,14 @@ parseRideAssignedEvent order msgId txnId = do
         transactionId = txnId,
         isDriverBirthDay,
         isFreeRide,
-        previousRideEndPos
+        previousRideEndPos,
+        ..
       }
+  where
+    castToInt :: Maybe Text -> Maybe Int
+    castToInt mbVar = case mbVar of
+      Just val -> readMaybe (T.unpack val)
+      _ -> Nothing
 
 parseRideStartedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> m Common.RideStartedReq
 parseRideStartedEvent order msgId = do

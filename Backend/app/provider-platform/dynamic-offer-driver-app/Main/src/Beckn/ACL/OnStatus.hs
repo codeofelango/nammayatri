@@ -69,7 +69,7 @@ buildOnStatusMessage (DStatus.NewBookingBuildReq (DNewBookingBuildReq bookingId)
 buildOnStatusMessage (DStatus.RideAssignedReq Common.DRideAssignedReq {..}) = do
   let Common.BookingDetails {..} = bookingDetails
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
+  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -84,7 +84,7 @@ buildOnStatusMessage (DStatus.RideStartedReq Common.DRideStartedReq {..}) = do
   let Common.BookingDetails {..} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
+  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -100,7 +100,7 @@ buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = 
   let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   distanceTagGroup <- Common.buildDistanceTagGroup ride
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) Nothing False False
+  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) Nothing False False False 0
   quote <- Common.buildRideCompletedQuote ride fareParams
   return $
     OnStatus.OnStatusMessage
@@ -119,7 +119,7 @@ buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {.
     let Common.BookingDetails {driver, driverStats, vehicle, ride} = bookingDetails'
     let image = Nothing
     let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-    Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
+    Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0
   pure
     OnStatus.OnStatusMessage
       { order =
@@ -136,7 +136,7 @@ buildOnStatusMessage (DStatus.BookingReallocationBuildReq DStatus.DBookingReallo
   let Common.BookingDetails {..} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
+  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0
   pure
     OnStatus.OnStatusMessage
       { order =
@@ -235,7 +235,7 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
   let Common.BookingDetails {driver, driverStats, vehicle, booking, ride, isValueAddNP} = bookingDetails
   let image = Nothing
   let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
-  fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing isValueAddNP Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing isValueAddNP Nothing False 0
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,

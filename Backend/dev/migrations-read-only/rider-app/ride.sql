@@ -80,3 +80,19 @@ ALTER TABLE atlas_app.ride ADD COLUMN drivers_previous_ride_drop_lat double prec
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN toll_confidence text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN is_already_fav boolean ;
+ALTER TABLE atlas_app.ride ADD COLUMN fav_count integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ALTER COLUMN is_already_fav SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ALTER COLUMN is_already_fav DROP NOT NULL;

@@ -95,7 +95,9 @@ data BookingAPIEntity = BookingAPIEntity
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
     serviceTierName :: Maybe Text,
-    serviceTierShortDesc :: Maybe Text
+    serviceTierShortDesc :: Maybe Text,
+    isAlreadyFav :: Maybe Bool,
+    favCount :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -205,7 +207,9 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       serviceTierName = booking.serviceTierName,
       serviceTierShortDesc = booking.serviceTierShortDesc,
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
-      driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing
+      driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
+      isAlreadyFav = activeRide >>= (.isAlreadyFav),
+      favCount = activeRide >>= (.favCount)
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds

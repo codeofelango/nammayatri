@@ -57,6 +57,8 @@ Ride:
       createdAt: UTCTime
       updatedAt: UTCTime
       bppRideId: Id BPPRide
+      isAlreadyFav: Maybe Bool
+      favCount: Maybe Int
   fields:
     id: Id Ride
     bppRideId: Id BPPRide
@@ -107,6 +109,8 @@ Ride:
     safetyCheckStatus: Maybe Bool
     showDriversPreviousRideDropLoc: Bool
     tollConfidence: Maybe Confidence
+    isAlreadyFav: Maybe Bool
+    favCount: Maybe Int
 
   sqlType:
     allowedEditLocationAttempts: int
