@@ -35,6 +35,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -225,7 +226,9 @@ rideAssignedReqHandler req = do
   let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
-  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos now
+  let driverNumber = req.bookingDetails.driverMobileNumber
+  mobileNumberHash <- getDbHash driverNumber
+  ride <- buildRide mbMerchant booking req.bookingDetails req.previousRideEndPos now mobileNumberHash
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
   let category = case booking.specialLocationTag of
         Just _ -> "specialLocation"
@@ -247,8 +250,8 @@ rideAssignedReqHandler req = do
   notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
   where
-    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> m DRide.Ride
-    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now = do
+    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DbHash -> m DRide.Ride
+    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now mobileNumberHash = do
       guid <- generateGUID
       shortId <- generateShortId
       deploymentVersion <- asks (.version)

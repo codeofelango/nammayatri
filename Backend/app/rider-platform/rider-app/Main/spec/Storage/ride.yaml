@@ -17,6 +17,7 @@ imports:
   Version: Kernel.Types.Version
   LatLong: Kernel.External.Maps
   Confidence: Kernel.Types.Confidence
+  DbHash: Kernel.External.Encryption
 
 Ride:
   tableName: ride
@@ -107,6 +108,7 @@ Ride:
     safetyCheckStatus: Maybe Bool
     showDriversPreviousRideDropLoc: Bool
     tollConfidence: Maybe Confidence
+    mobileNumberHash: DbHash
 
   sqlType:
     allowedEditLocationAttempts: int

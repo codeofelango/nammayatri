@@ -10,6 +10,7 @@ import qualified Domain.Types.Ride
 import qualified Domain.Types.VehicleServiceTier
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -50,6 +51,7 @@ data RideT f = RideT
     isFreeRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     otp :: B.C f Kernel.Prelude.Text,
     rideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

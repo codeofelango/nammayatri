@@ -35,6 +35,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -131,7 +132,7 @@ data DUpdatedRide = DUpdatedRide
     rideOldStatus :: DRide.RideStatus
   }
 
-buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
+buildRideEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => DB.Booking -> (DRide.Ride -> DRide.Ride) -> DCommon.BookingDetails -> m RideEntity
 buildRideEntity booking updRide newRideInfo = do
   mbExistingRide <- B.runInReplica $ QRide.findByBPPRideId newRideInfo.bppRideId
   case mbExistingRide of
@@ -273,18 +274,20 @@ validateRequest req@DOnStatusReq {..} = do
       let validatedRideDetails = ValidatedBookingReallocationDetails request
       return ValidatedOnStatusReq {..}
 
-buildNewRide :: MonadFlow m => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
+buildNewRide :: (MonadFlow m, EncFlow m r) => Maybe DM.Merchant -> DB.Booking -> DCommon.BookingDetails -> m DRide.Ride
 buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   id <- generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
   let fromLocation = booking.fromLocation
+      driverNumber = driverMobileNumber
       toLocation = case booking.bookingDetails of
         DB.OneWayDetails details -> Just details.toLocation
         DB.RentalDetails _ -> Nothing
         DB.DriverOfferDetails details -> Just details.toLocation
         DB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DB.InterCityDetails details -> Just details.toLocation
+  mobileNumberHash <- getDbHash driverNumber
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let createdAt = now
       updatedAt = now
