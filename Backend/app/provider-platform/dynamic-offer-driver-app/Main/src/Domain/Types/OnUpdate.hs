@@ -77,9 +77,7 @@ data DEditDestinationUpdateReq = DEditDestinationUpdateReq
   }
 
 data DTollCrossedBuildReq = DTollCrossedBuildReq
-  { bookingDetails :: BookingDetails,
-    isAlreadyFav :: Bool,
-    favCount :: Int
+  { bookingDetails :: BookingDetails
   }
 
 data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE

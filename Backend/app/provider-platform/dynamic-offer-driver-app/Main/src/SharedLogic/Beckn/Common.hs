@@ -62,8 +62,6 @@ data DRideCompletedReq = DRideCompletedReq
     fareParams :: Fare.FareParameters,
     tripEndLocation :: Maybe Maps.LatLong,
     estimateId :: Maybe Text
-    -- isAlreadyFav :: Maybe Bool,
-    -- favCount :: Maybe Int
   }
 
 data DBookingCancelledReq = DBookingCancelledReq
@@ -71,14 +69,10 @@ data DBookingCancelledReq = DBookingCancelledReq
     bookingDetails :: Maybe BookingDetails,
     cancellationSource :: SBCR.CancellationSource,
     estimateId :: Maybe Text
-    -- isAlreadyFav :: Maybe Bool,
-    -- favCount :: Maybe Int
   }
 
 data DDriverArrivedReq = DDriverArrivedReq
   { bookingDetails :: BookingDetails,
     arrivalTime :: Maybe UTCTime,
     estimateId :: Maybe Text
-    -- isAlreadyFav :: Maybe Bool,
-    -- favCount :: Maybe Int
   }
