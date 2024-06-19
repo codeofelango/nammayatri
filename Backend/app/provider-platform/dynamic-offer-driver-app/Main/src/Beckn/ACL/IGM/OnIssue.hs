@@ -18,6 +18,7 @@ import qualified Beckn.ACL.IGM.Utils as Utils
 import qualified Domain.Action.Beckn.IGM.Issue as DIssue
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
+import IGM.Utils (mkOrgName)
 import Kernel.Prelude
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
@@ -111,7 +112,7 @@ tfOrganzationOrg :: DIssue.IssueRes -> Maybe Spec.OrganizationOrg
 tfOrganzationOrg issueRes =
   Just $
     Spec.OrganizationOrg
-      { organizationOrgName = Just $ issueRes.bppId <> "::ONDC:TRV10"
+      { organizationOrgName = mkOrgName issueRes.bppId Spec.ON_DEMAND
       }
 
 tfOrganizationPerson :: DIssue.IssueRes -> Maybe Spec.ComplainantPerson

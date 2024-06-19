@@ -25,8 +25,11 @@ import Prelude (show)
 
 data Domain
   = ON_DEMAND
-  deriving (Eq, Generic, Show, Read, FromDhall, ToSchema)
+  deriving (Eq, Generic, Read, FromDhall, ToSchema)
   deriving (PrettyShow) via Showable Domain
+
+instance Show Domain where
+  show ON_DEMAND = "ONDC:TRV10"
 
 instance FromJSON Domain where
   parseJSON (String "ONDC:TRV10") = pure ON_DEMAND

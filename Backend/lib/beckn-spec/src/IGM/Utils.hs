@@ -77,3 +77,6 @@ computeTtlISO8601 :: Int -> Text
 computeTtlISO8601 ttlInSec =
   let ttlToNominalDiffTime = intToNominalDiffTime ttlInSec
    in Utils.formatTimeDifference ttlToNominalDiffTime
+
+mkOrgName :: Text -> Spec.Domain -> Maybe Text
+mkOrgName orgName domain = Just $ orgName <> "::" <> show domain

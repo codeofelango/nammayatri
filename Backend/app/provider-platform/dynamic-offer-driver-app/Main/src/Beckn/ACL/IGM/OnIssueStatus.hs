@@ -19,6 +19,7 @@ import Data.Text as T
 import qualified Domain.Action.Beckn.IGM.IssueStatus as DIssueStatus
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
+import IGM.Utils (mkOrgName)
 import Kernel.Prelude
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
@@ -112,7 +113,7 @@ tfOrganzationOrg :: DIssueStatus.IssueStatusRes -> Maybe Spec.OrganizationOrg
 tfOrganzationOrg res =
   Just $
     Spec.OrganizationOrg
-      { organizationOrgName = Just $ res.merchant.subscriberId.getShortId <> "::ONDC:TRV10"
+      { organizationOrgName = mkOrgName res.merchant.subscriberId.getShortId Spec.ON_DEMAND
       }
 
 tfOrganizationPerson :: DIssueStatus.IssueStatusRes -> Maybe Spec.ComplainantPerson
