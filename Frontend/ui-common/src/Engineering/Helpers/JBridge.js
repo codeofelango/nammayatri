@@ -2087,10 +2087,15 @@ export const launchInAppRatingPopup = function (unit) {
   }
 };
 export const getExtendedPath = function (path) {
-  if (JBridge.getExtendedPath) {
-    const extendedPath = JBridge.getExtendedPath(JSON.stringify(path));
-    return JSON.parse(extendedPath);
-  } else {
+  try{
+    if (JBridge.getExtendedPath) {
+      const extendedPath = JBridge.getExtendedPath(JSON.stringify(path));
+      return JSON.parse(extendedPath);
+    } else {
+      return path;
+    }
+  }catch(error){
+    console.error("Error in getExtendedPath", error);
     return path;
   }
 };
@@ -2678,4 +2683,12 @@ export const getFromUTC = (timestamp) => (val) => {
     default:
       return date.getUTCDate();
   }
+}
+
+
+export const isClassAvailable = function (className) {
+  if (window.JBridge.isClassAvailable) {
+    return window.JBridge.isClassAvailable(className);
+  }
+  return false;
 }
