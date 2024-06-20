@@ -682,6 +682,11 @@ onBoardingFlow = do
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = not registrationState.props.manageVehicle && any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList =  mkStatusList (DriverRegistrationStatusResp driverRegistrationResp) (GetDriverInfoResp getDriverInfoResp)
+      
+      bgvDetails = filter (\dt -> dt.docType == ST.BackgroundVerification) documentStatusList
+  
+
+
       filterCabs = DA.filter  (\item1 -> DA.any (\item2 -> item1.docType == item2.stage) registerationStepsCabs) documentStatusList
       -- filterAuto = DA.filter  (\item1 -> DA.any (\item2 -> item1.docType == item2.stage) registerationStepsAutos) documentStatusList
       -- finalDocumentStatusList = DA.union filterCabs filterAuto -- Need to check this logic
@@ -696,6 +701,26 @@ onBoardingFlow = do
       manageVehicle = registrationState.props.manageVehicle
       rcVerified = getStatusValue driverRegistrationResp.rcVerificationStatus
       isAllCompleted = ((length filterCabs) == (DA.foldr (\item acc -> if item.status == ST.COMPLETED then acc + 1 else acc) 0 filterCabs)) && rcVerified == ST.COMPLETED
+
+  bgvInfo <- case bgvDetails of
+    [] -> pure ST.DoNothing
+    [bgv] -> do
+      case bgv.status of
+        NOT_STARTED -> do
+          bgvResp <- lift $ lift $ Remote.initiateDriverBGV $ API.InitiateDriverBGVReq
+          case bgvResp of
+           Left _ -> do
+             void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+             pure ST.DoNothing
+           Right _ -> pure ST.Initiated 
+        IN_PROGRESS -> pure $ ST.Pending bgv.verificationUrl -- For Just Url show web View and Nothing show waiting to be completed static screen.
+        ST.UNAUTHORIZED -> pure ST.Unauthorized -- BBGVTODO: GoTo Static Page. Either do it in view on revieving this flag or call a sperate flow below only for this flag.
+        _ -> pure ST.DoNothing -- here this will move forward and if this occures due to status COMPLETED driver goes to home screen as per current flow or if it occures due to driver still uploading docs it goes to Registration screen without causing any change.
+    _ -> do
+      void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+      pure ST.DoNothing
+
+  if bgvInfo == ST.Initiated then onBoardingFlow else pure unit
   
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
@@ -712,7 +737,8 @@ onBoardingFlow = do
                       vehicleTypeMismatch = vehicleTypeMismatch,
                       permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
                       cityConfig = cityConfig,
-                      vehicleCategory = uiCurrentCategory
+                      vehicleCategory = uiCurrentCategory,
+                      bgvInfo = bgvInfo
                   }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, isApplicationInVerification = isAllCompleted, isProfileDetailsCompleted = getDriverInfoResp.firstName /= "Driver" && isJust getDriverInfoResp.mobileNumber}})
   liftFlowBT hideSplash
   void $ lift $ lift $ toggleLoader false
@@ -826,7 +852,7 @@ onBoardingFlow = do
                 rcNumberPrefixList : step.rcNumberPrefixList
               }) onBoardingDocsArr
     
-    transfromDocumentStatusItem :: Array API.DocumentStatusItem ->  String -> Maybe String -> Maybe String -> GetDriverInfoResp ->Array ST.DocumentStatus
+    transfromDocumentStatusItem :: Array API.DocumentStatusItem ->  String -> Maybe String -> Maybe String -> GetDriverInfoResp -> Array ST.DocumentStatus
     transfromDocumentStatusItem statusItem userSelectedVehicle verifiedVehicleCategory regNo (GetDriverInfoResp getDriverInfoResp) =
       map (\(API.DocumentStatusItem documentStatusItem) ->
             let docType = RC.transformToRegisterationStep documentStatusItem.documentType
@@ -837,7 +863,8 @@ onBoardingFlow = do
               docType,
               verificationMessage : documentStatusItem.verificationMessage,
               verifiedVehicleCategory : RC.transformVehicleType verifiedVehicleCategory,
-              regNo : regNo
+              regNo : regNo,
+              verificationUrl : documentStatusItem.verificationUrl
             }
           ) statusItem
 

@@ -46,7 +46,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollView, scrollBarY, fillViewport, alpha, textFromHtml)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageUrl, url, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, stroke, text, webView, textSize, textView, visibility, weight, width, scrollView, scrollBarY, fillViewport, alpha, textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -172,6 +172,7 @@ view push state =
                                       ST.IN_PROGRESS -> Color.yellow900
                                       ST.FAILED -> Color.red
                                       ST.NOT_STARTED -> Color.grey900
+                                      ST.UNAUTHORIZED -> Color.red
                                   , margin $ MarginLeft if index == 0 then 0 else 15
                                   ]
                                   []
@@ -212,6 +213,18 @@ view push state =
                 ][contactSupportView push state]
             ]
             , if state.props.enterReferralCodeModal then enterReferralCodeModal push state else linearLayout[][]
+            , case state.data.bgvInfo of
+                ST.Pending (Just url') -> 
+                  webView
+                      [ height MATCH_PARENT
+                      , width MATCH_PARENT
+                      , id $ getNewIDWithTag "webview"
+                      , url url'
+                      ]
+                ST.Pending Nothing -> applicationInVerification push state
+                ST.Unauthorized -> applicationInVerification push state
+                _ -> linearLayout [][]
+                
         ]
       <> if any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle, state.data.vehicleTypeMismatch] then [ popupModal push state ] else []
       <> if state.props.contactSupportModal /= ST.HIDE then [contactSupportModal push state] else []
@@ -439,6 +452,7 @@ listItem push item state =
                       ST.IN_PROGRESS -> Color.yellow900
                       ST.NOT_STARTED -> Color.black500
                       ST.FAILED -> Color.red
+                      ST.UNAUTHORIZED -> Color.red
                       _ -> Color.black500
         in strokeWidth <> colour
 
@@ -449,6 +463,7 @@ listItem push item state =
           ST.IN_PROGRESS -> Color.yellowOpacity10
           ST.NOT_STARTED -> Color.white900
           ST.FAILED -> Color.redOpacity10
+          ST.UNAUTHORIZED -> Color.redOpacity10
           _ -> Color.white900
 
       compClickable :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
@@ -468,6 +483,7 @@ listItem push item state =
           ST.IN_PROGRESS -> fetchImage COMMON_ASSET "ny_ic_pending"
           ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right"
           ST.FAILED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
+          ST.UNAUTHORIZED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
 
       getVerificationMessage :: ST.RegisterationStep -> ST.RegistrationScreenState -> Maybe String
       getVerificationMessage step state = 
@@ -684,7 +700,7 @@ dependentDocAvailable item state = all (\docType -> (getStatus docType state) ==
 compVisibility :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
 compVisibility state item = not item.isHidden && dependentDocAvailable item state
 
-applicationInVerification :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
+applicationInVerification :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w -- BGVTODO: use this for static screen.
 applicationInVerification push state = 
   linearLayout
   [ height MATCH_PARENT
@@ -701,17 +717,17 @@ applicationInVerification push state =
           imageView
           [ height $ V 250
           , width $ V 280
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress"
+          ,  if state.data.bgvInfo == ST.Unauthorized then imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress" else imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress"
           ]
       ]
     , textView $
-      [ text "Application verification in progress."
+      [ if state.data.bgvInfo == ST.Unauthorized then text "Bhaag ja Yaha se nhi toh maar lagegi !!!!!! :-| " else text "Application verification in progress."
       , color Color.black800
       , width MATCH_PARENT
       , gravity CENTER
       ] <> FontStyle.h2 TypoGraphy
     , textView $
-      [ text "Thank you for completing the registration. We will update you once the verification is done."
+      [ if state.data.bgvInfo == ST.Unauthorized then text "Criminal Ho Tum !!!!!! " else text "Thank you for completing the registration. We will update you once the verification is done."
       , color Color.black800
       , width MATCH_PARENT
       , margin $ Margin 16 10 16 0

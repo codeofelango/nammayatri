@@ -298,6 +298,7 @@ getStatusValue value = case value of
   "INVALID" -> FAILED
   "LIMIT_EXCEED" -> FAILED
   "MANUAL_VERIFICATION_REQUIRED" -> COMPLETED
+  "UNAUTHORIZED" -> ST.UNAUTHORIZED
   _ -> NOT_STARTED
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus

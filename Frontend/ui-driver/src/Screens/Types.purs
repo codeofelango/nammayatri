@@ -20,7 +20,7 @@ module Screens.Types (
 
 import Common.Types.Config
 
-import Common.Types.App as Common
+import Common.Types.App hiding (SosStatus (..)) as Common
 import Domain.Payments as PP
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
@@ -205,6 +205,11 @@ type RegistrationScreenState = {
   data :: RegistrationScreenData,
   props :: RegistrationScreenProps
 }
+
+data BGVInfo = DoNothing | Pending (Maybe String) | Unauthorized | Initiated
+derive instance genericBGVInfo :: Generic BGVInfo _
+instance eqBGVInfo :: Eq BGVInfo where eq = genericEq
+
 type RegistrationScreenData = {
   activeIndex :: Int,
   registerationStepsAuto :: Array StepProgress,
@@ -225,7 +230,8 @@ type RegistrationScreenData = {
   enteredRC :: String,
   vehicleCategory :: Maybe Common.VehicleCategory,
   vehicleTypeMismatch :: Boolean,
-  linkedRc :: Maybe String
+  linkedRc :: Maybe String,
+  bgvInfo :: BGVInfo
 }
 
 type DocumentStatus = {
@@ -234,7 +240,8 @@ type DocumentStatus = {
   status :: StageStatus,
   docType :: RegisterationStep,
   verificationMessage :: Maybe String,
-  regNo :: Maybe String
+  regNo :: Maybe String,
+  verificationUrl :: Maybe String
 }
 
 type VehicleInfo = {
@@ -297,11 +304,12 @@ data RegisterationStep =
   | ProfileDetails
   | VehicleInspectionForm
   | UploadProfile
+  | BackgroundVerification
 
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
 
-data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
+data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED | UNAUTHORIZED
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
