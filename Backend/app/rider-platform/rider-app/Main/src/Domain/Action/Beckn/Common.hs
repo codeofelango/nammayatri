@@ -251,7 +251,7 @@ rideAssignedReqHandler req = do
   notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
   where
     buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DbHash -> m DRide.Ride
-    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now mobileNumberHash = do
+    buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now driverMobileNumberHash = do
       guid <- generateGUID
       shortId <- generateShortId
       deploymentVersion <- asks (.version)

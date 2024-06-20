@@ -108,7 +108,7 @@ Ride:
     safetyCheckStatus: Maybe Bool
     showDriversPreviousRideDropLoc: Bool
     tollConfidence: Maybe Confidence
-    mobileNumberHash: DbHash
+    driverMobileNumberHash: DbHash
 
   sqlType:
     allowedEditLocationAttempts: int

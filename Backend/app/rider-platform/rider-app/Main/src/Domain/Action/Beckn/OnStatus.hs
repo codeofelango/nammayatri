@@ -287,7 +287,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
         DB.DriverOfferDetails details -> Just details.toLocation
         DB.OneWaySpecialZoneDetails details -> Just details.toLocation
         DB.InterCityDetails details -> Just details.toLocation
-  mobileNumberHash <- getDbHash driverNumber
+  driverMobileNumberHash <- getDbHash driverNumber
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let createdAt = now
       updatedAt = now
