@@ -88,6 +88,7 @@ view push state =
       variantImage = case state.data.vehicleCategory of
         Just ST.AutoCategory -> "ny_ic_auto_side"
         Just ST.BikeCategory -> "ny_ic_bike_side"
+        Just ST.AmbulanceCategory -> "ny_ic_ambulance_side"
         Just _ -> "ny_ic_sedan_side"
         Nothing -> ""
   in
@@ -309,6 +310,8 @@ cardsListView push state =
             vehicleSpecificList push state state.data.registerationStepsCabs
           else if state.data.vehicleCategory == Just ST.BikeCategory then
             vehicleSpecificList push state state.data.registerationStepsBike
+          else if state.data.vehicleCategory == Just ST.AmbulanceCategory then
+            vehicleSpecificList push state state.data.registerationStepsAmbulance
           else
             vehicleSpecificList push state state.data.registerationStepsAuto
         ]
@@ -425,7 +428,7 @@ listItem push item state =
       compImage item = 
         fetchImage FF_ASSET $ case item.stage of
           ST.DRIVING_LICENSE_OPTION -> "ny_ic_dl_blue"
-          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else if state.data.vehicleCategory == Just ST.BikeCategory then "ny_ic_bike_onboard" else "ny_ic_vehicle_onboard"
+          ST.VEHICLE_DETAILS_OPTION -> if state.data.vehicleCategory == Just ST.CarCategory then "ny_ic_car_onboard" else if state.data.vehicleCategory == Just ST.BikeCategory then "ny_ic_bike_onboard" else if state.data.vehicleCategory == Just ST.AmbulanceCategory then "ny_ic_ambulance_onboard"  else "ny_ic_vehicle_onboard"
           ST.GRANT_PERMISSION -> "ny_ic_grant_permission"
           ST.SUBSCRIPTION_PLAN -> "ny_ic_plus_circle_blue"
           ST.PROFILE_PHOTO -> "ny_ic_profile_image_blue"
@@ -507,6 +510,7 @@ refreshView push state =
   let documentList = case state.data.vehicleCategory of
                       Just ST.CarCategory -> state.data.registerationStepsCabs
                       Just ST.BikeCategory -> state.data.registerationStepsBike
+                      Just ST.AmbulanceCategory -> state.data.registerationStepsAmbulance
                       Just _ -> state.data.registerationStepsAuto
                       Nothing -> state.data.registerationStepsCabs
       showRefresh = any (_ == IN_PROGRESS) $ map (\item -> getStatus item.stage state) documentList
@@ -658,6 +662,7 @@ variantListView push state =
                     ST.AutoCategory -> "ny_ic_auto_side"
                     ST.CarCategory -> "ny_ic_sedan_side"
                     ST.BikeCategory -> "ny_ic_bike_side"
+                    ST.AmbulanceCategory -> "ny_ic_ambulance_side"
                     ST.UnKnown -> "ny_ic_silhouette"
               ]
             , textView $
@@ -667,6 +672,7 @@ variantListView push state =
                         ST.AutoCategory -> getString AUTO_RICKSHAW
                         ST.CarCategory -> getString CAR
                         ST.BikeCategory -> getString BIKE_TAXI
+                        ST.AmbulanceCategory -> getString AMBULANCE
                         ST.UnKnown -> "Unknown"
               , color Color.black800
               , margin $ MarginLeft 20

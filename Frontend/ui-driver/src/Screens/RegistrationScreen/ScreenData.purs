@@ -41,6 +41,7 @@ initData = {
         registerationStepsCabs : [],
         registerationStepsAuto : [],
         registerationStepsBike : [],
+        registerationStepsAmbulance : [],
         drivingLicenseStatus : NOT_STARTED,
         vehicleDetailsStatus : NOT_STARTED,
         permissionsStatus : NOT_STARTED,
@@ -134,4 +135,5 @@ dummyCityConfig = {
                       showLearnMore : false,
                       learnMoreVideoLink : ""
                     }
+                    
                   }
