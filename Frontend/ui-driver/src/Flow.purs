@@ -998,29 +998,39 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
                 addVehicleDetailsflow state.props.addRcFromProfile
             Left errorPayload -> do
-              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}, props{validating = false}}
+              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { 
+                "data" {
+                  dateOfRegistration = Just ""
+                }
+              , props{
+                  validating = false
+                , showRCregistrationDate = fromMaybe true state.data.cityConfig.registration.rcRegistrationDate
+                , showChassisNumber = fromMaybe false state.data.cityConfig.registration.chassisNumber
+                , openHowToUploadManual = false
+                }
+              }
+              
               if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
                 let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
-                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = correspondingErrorMessage}}
+                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false}, data {errorMessage = correspondingErrorMessage}}
                 addVehicleDetailsflow state.props.addRcFromProfile
-                else do
-                  void $ pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-                  addVehicleDetailsflow state.props.addRcFromProfile
+              else do
+                void $ pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                addVehicleDetailsflow state.props.addRcFromProfile
        Left errorPayload -> do
         void $ lift $ lift $ toggleLoader false
         if errorPayload.code == 429 && (decodeErrorCode errorPayload.response.errorMessage) == "IMAGE_VALIDATION_EXCEED_LIMIT" then do
           modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {props { validateProfilePicturePopUp = false, validating = false, multipleRCstatus = FAILED}})
           modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { props {limitReachedFor = Just "RC"}})
-          if state.props.addRcFromProfile then addVehicleDetailsflow state.props.addRcFromProfile
-          else onBoardingFlow
-          else if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
-            let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
-            modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true, validating = false}, data {errorMessage = correspondingErrorMessage , rcImageID = "IMAGE_NOT_VALIDATED" }}
-            addVehicleDetailsflow state.props.addRcFromProfile 
-            else do
-              void $ pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data {rcImageID = "IMAGE_NOT_VALIDATED" }, props{validating = false}}
-              addVehicleDetailsflow state.props.addRcFromProfile
+          if state.props.addRcFromProfile then addVehicleDetailsflow state.props.addRcFromProfile else onBoardingFlow
+        else if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
+          let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
+          modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true, validating = false}, data {errorMessage = correspondingErrorMessage , rcImageID = "IMAGE_NOT_VALIDATED" }}
+          addVehicleDetailsflow state.props.addRcFromProfile 
+        else do
+          void $ pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+          modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data {rcImageID = "IMAGE_NOT_VALIDATED" }, props{validating = false}}
+          addVehicleDetailsflow state.props.addRcFromProfile
     VALIDATE_RC_DATA_API_CALL state -> do
         liftFlowBT $ logEvent logField_ "ny_driver_rc_photo_confirmed"
         modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> addVehicleDetailsScreen {data { rcImageID = state.data.rcImageID}})
@@ -1045,14 +1055,14 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props { screenType = ST.VEHICLE_DETAILS}}
                 driverProfileFlow
             Left errorPayload -> do
-              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}, props{validating = false}}
+              modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}, props{validating = false, openHowToUploadManual = false}}
               if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
                 let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
-                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = correspondingErrorMessage}}
+                modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false}, data {errorMessage = correspondingErrorMessage}}
                 addVehicleDetailsflow state.props.addRcFromProfile
-                else do
-                  void $ pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-                  addVehicleDetailsflow state.props.addRcFromProfile
+              else do
+                void $ pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                addVehicleDetailsflow state.props.addRcFromProfile
 
     LOGOUT_USER -> logoutFlow
     REFER_API_CALL state -> do
