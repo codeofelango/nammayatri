@@ -15,12 +15,12 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..), RideType(..), RentalBookingConfig)
+import Common.Types.App (RateCardType(..), RideType(..), RentalBookingConfig, SearchResultType(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Components.ChooseVehicle.Controller (SearchType(..)) as CV
+import Components.ChooseVehicle.Controller (config) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -104,27 +104,7 @@ initData = {
     , selectedQuoteId : Nothing
     , selectedQuoteVariant : Nothing
     , intercity : false
-    , selectedEstimatesObject : {
-      vehicleImage: ""
-      , isSelected: false
-      , vehicleVariant: ""
-      , vehicleType: ""
-      , capacity: ""
-      , price: ""
-      , isCheckBox: false
-      , isEnabled: true
-      , activeIndex: 0
-      , index: 0
-      , id: ""
-      , maxPrice : 0
-      , basePrice : 0
-      , showInfo : true
-      , searchResultType : CV.ESTIMATES
-      , isBookingOption : false
-      , pickUpCharges : 0
-      , layoutMargin : Margin 0 0 0 0
-      , showStroke: true
-      }
+    , selectedEstimatesObject : CV.config
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
     , pickUpCharges : 0
@@ -168,6 +148,7 @@ initData = {
     },
     props: {
       rideRequestFlow : false
+    , doUpdatePickupLocation : false
     , maxDateBooking : 5
     , nightSafetyFlow : false
     , isHomescreenExpanded : false
@@ -271,7 +252,7 @@ initData = {
     , searchLocationModelProps : dummySearchLocationModelProps
     , flowWithoutOffers : true
     , showEducationalCarousel : false
-    , specialZoneType : ""
+    -- , specialZoneType : ""
     , currentLocation : {
         lat : 0.0,
         lng : 0.0,
@@ -438,33 +419,18 @@ dummySettingBar = {
 }
 
 dummyAddress :: Address
-dummyAddress = {
-              "area" : Nothing
-            , "state" : Nothing
-            , "country" : Nothing
-            , "building" : Nothing
-            , "door" : Nothing
-            , "street" : Nothing
-            , "city" : Nothing
-            , "areaCode" : Nothing
-            , "ward" : Nothing
-            , "placeId" : Nothing
-            }
-
-dummyQuoteAPIEntity :: QuoteAPIEntity
-dummyQuoteAPIEntity = QuoteAPIEntity {
-  agencyNumber : "",
-  createdAt : "",
-  discount : Nothing,
-  estimatedTotalFare : 0,
-  agencyName : "",
-  vehicleVariant : "",
-  estimatedFare : 0,
-  tripTerms : [],
-  id : "",
-  agencyCompletedRidesCount : 0,
-  quoteDetails : QuoteAPIDetails {fareProductType : "", contents : dummyDriverOfferAPIEntity}
-}
+dummyAddress = 
+  { "area"      : Nothing
+  , "state"     : Nothing
+  , "country"   : Nothing
+  , "building"  : Nothing
+  , "door"      : Nothing
+  , "street"    : Nothing
+  , "city"      : Nothing
+  , "areaCode"  : Nothing
+  , "ward"      : Nothing
+  , "placeId"   : Nothing
+  }
 
 dummyDriverOfferAPIEntity :: QuoteAPIContents
 dummyDriverOfferAPIEntity =

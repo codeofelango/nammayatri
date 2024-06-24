@@ -26,7 +26,7 @@ import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Pay
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, elem)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
@@ -91,6 +91,10 @@ import Data.Ord
 import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Constants (defaultDensity)
+import Mobility.Prelude
+import MerchantConfig.Types
+import Common.Types.App as CT
+import Data.Array as DA
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -538,6 +542,7 @@ getScreenFromStage stage = case stage of
   ChangeToRideAccepted -> "change_to_ride_accepted"
   ChangeToRideStarted -> "change_to_ride_started"
   ConfirmingQuotes -> "confirming_quotes"
+  GoToConfirmLocation -> "go_to_confirm_location"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do
@@ -582,9 +587,18 @@ triggerRideStatusEvent status amount bookingId screen = do
 
 fetchDefaultPickupPoint :: Array Location -> Number -> Number -> String
 fetchDefaultPickupPoint locations lati longi =
-  case filter (\loc -> abs(loc.lat - lati) <= 0.0001 && abs(loc.lng - longi) <= 0.0001) locations of
-    [foundLocation] -> foundLocation.place
-    _ -> ""
+  -- let distance loc = abs(loc.lat - lati) + abs(loc.lng - longi)
+  --     sortedLocations = DA.sortBy (comparing distance) locations
+  -- in DA.first
+  let _ = spy "lati" lati
+      _ = spy "longi" longi
+      _ = spy "locations" locations
+  in case ((filter (\loc -> abs(getDistanceBwCordinates lati longi loc.lat loc.lng) * 1000.0 <= 1.0) locations) !! 0) of
+      Just loc -> loc.place
+      Nothing -> ""
+    -- case filter (\loc -> abs(loc.lat - lati) <= 0.0001 && abs(loc.lng - longi) <= 0.0001) locations of
+    --   [foundLocation] -> foundLocation.place
+    --   _ -> ""
 
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
@@ -775,10 +789,66 @@ getCityConfig cityConfigs cityName = do
   
 getDefaultPixelSize :: Int -> Int
 getDefaultPixelSize size =
-  let pixels = runFn1 getPixels FunctionCall
-      androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
-      iosNativeScale = runFn1 getDefaultPixels ""
-      displayZoomFactor = iosNativeScale / pixels
-  in if os == "IOS" 
-    then ceil $ ((toNumber size) / displayZoomFactor) / pixels 
-    else ceil $ (toNumber size / pixels) * androidDensity
+  if os == "IOS" then size
+  else let pixels = runFn1 getPixels FunctionCall
+           androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall) / defaultDensity
+       in ceil $ (toNumber size / pixels) * androidDensity
+
+
+formatFareType :: String -> String
+formatFareType fareType = 
+  let str = DS.replace (DS.Pattern "_") (DS.Replacement " ") fareType
+  in
+  spaceSeparatedPascalCase str
+
+getImageBasedOnCity :: String -> String
+getImageBasedOnCity image =
+  let cityStr = getValueToLocalStore CUSTOMER_LOCATION
+      city = getCityFromString cityStr
+  in
+  if city == AnyCity 
+    then fetchImage FF_ASSET image
+    else fetchImage FF_ASSET $ image <> "_" <> DS.toLower cityStr
+
+intersection :: forall a. Eq a => Array a -> Array a -> Array a
+intersection arr1 arr2 =
+  filter (\x -> elem x arr2) arr1
+
+getAllServices :: LazyCheck -> Array String 
+getAllServices dummy = 
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in case city of 
+    Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Hyderabad -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Delhi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Chennai -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Mysore -> ["Non-AC Mini", "AC Mini", "Sedan", "Auto", "XL Cab"]
+    Kolkata -> ["Non-AC", "Hatchback", "Sedan", "SUV"]
+    Kochi -> ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+    Pondicherry -> ["Eco", "Auto"]
+    _ ->  ["Eco", "Hatchback", "Sedan", "Auto", "SUV"]
+
+getSelectedServices :: LazyCheck -> Array String
+getSelectedServices dummy = 
+  let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+  in case city of 
+    Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Tumakuru -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Hyderabad -> ["Eco", "Hatchback", "Sedan"]
+    Delhi -> ["Eco", "Hatchback", "Sedan"]
+    Chennai -> ["Eco", "Hatchback", "Sedan"]
+    Mysore -> ["Non-AC Mini", "AC Mini", "Sedan"]
+    Kolkata -> ["Non-AC", "Hatchback", "Sedan"]
+    Kochi -> ["Eco", "Hatchback", "Sedan"]
+    Pondicherry -> ["Eco", "Auto"]
+    _ ->  ["Eco", "Hatchback", "Sedan"] 
+
+getFareProductType :: String -> CT.FareProductType
+getFareProductType fareType = case fareType of
+  "OneWaySpecialZoneAPIDetails" -> CT.OneWaySpecialZoneAPIDetails
+  "DRIVER_OFFER"                -> CT.DRIVER_OFFER
+  "ONE_WAY"                     -> CT.ONE_WAY
+  "INTER_CITY"                  -> CT.INTER_CITY
+  "RENTAL"                      -> CT.RENTAL
+  _                             -> CT.ONE_WAY

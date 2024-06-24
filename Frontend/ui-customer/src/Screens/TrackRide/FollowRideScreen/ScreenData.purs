@@ -8,6 +8,7 @@ import Screens.Types
 import PrestoDOM (BottomSheetState(..))
 import Foreign.Object (empty)
 import Services.API (Route(..), Snapped(..), LatLong(..), GetRouteResp(..), GetDriverLocationResp(..))
+import Common.Types.App as CT
 
 initData :: FollowRideScreenState
 initData =
@@ -167,8 +168,8 @@ mockDriverInfo =
   { otp: ""
   , driverName: "Test Driver"
   , eta: Nothing
-  , vehicleDetails: ""
-  , currentSearchResultType: ESTIMATES
+  , vehicleDetails: "AUTO_RICKSHAW"
+  , currentSearchResultType: CT.ESTIMATES
   , registrationNumber: "XXXXXXXXXX"
   , rating: 5.0
   , startedAt: ""

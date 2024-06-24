@@ -53,7 +53,7 @@ import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (Flow, delay, getState, modifyState)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..))
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..), Stage(..))
 import Styles.Colors as Color
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)

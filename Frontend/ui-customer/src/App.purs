@@ -169,8 +169,7 @@ data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT_SCREEN ReportIssue
 
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
-                        | CANCEL
-                        | RETRY
+                        | RELOAD_SCREEN
                         | NO_OUTPUT
                         | GO_TO_HELP
                         | GO_TO_NAMMASAFETY HomeScreenState Boolean Boolean
@@ -182,7 +181,6 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_MY_PROFILE Boolean
                         | LOCATION_SELECTED LocationListItemState Boolean
                         | HOME_SCREEN
-                        | GET_QUOTES HomeScreenState
                         | SELECT_ESTIMATE HomeScreenState
                         | GET_SELECT_LIST HomeScreenState
                         | CONFIRM_RIDE HomeScreenState
@@ -234,6 +232,8 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_RIDE_SEARCH_FLOW 
                         | CONFIRM_RENTAL_RIDE
                         | STAY_IN_HOME_SCREEN
+                        | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
+                        | EXIT_TO_CONFIRMING_LOCATION_STAGE HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

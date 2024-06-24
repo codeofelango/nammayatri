@@ -681,7 +681,6 @@ data Stage = HomeScreen
            | FavouriteLocationModel
            | ChatWithDriver
            | FindEstimateAndSearch
-           | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
            | RideSearch
@@ -689,6 +688,8 @@ data Stage = HomeScreen
            | ChangeToRideAccepted
            | ChangeToRideStarted
            | ConfirmingQuotes
+           | RetryFindingQuote
+           | GoToConfirmLocation
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -848,7 +849,8 @@ type DisabilityData = {
 
 type HomeScreenStateProps =
   {
-    currentStage :: Stage
+    doUpdatePickupLocation :: Boolean
+  , currentStage :: Stage
   , stageBeforeChatScreen :: Stage
   , showCallPopUp :: Boolean
   , rideRequestFlow :: Boolean
@@ -938,7 +940,6 @@ type HomeScreenStateProps =
   , flowWithoutOffers :: Boolean
   , showEducationalCarousel :: Boolean
   , locateOnMapLocation :: LocateOnMapLocation
-  , specialZoneType :: String
   , currentLocation :: Location
   , isShorterTrip :: Boolean
   , isNotificationExpanded :: Boolean
@@ -1502,12 +1503,6 @@ instance eqLocItemType :: Eq LocItemType where eq = genericEq
 instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
-
-data SearchResultType = QUOTES | ESTIMATES | RENTALS | INTERCITY
-
-derive instance genericSearchResultType :: Generic SearchResultType _
-instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
-instance showSearchResultType :: Show SearchResultType where show = genericShow
 
 type LocationTagBarState =
   { savedLocations :: Array LocationListItemState }
@@ -2159,6 +2154,23 @@ type RentalFareDetails = {
   perHourCharge :: Int,
   nightShiftCharge :: Int
 }
+
+data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling
+
+derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
+instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
+instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
+
+data TicketType = ONE_WAY_TICKET | ROUND_TRIP_TICKET
+
+derive instance genericTicketType :: Generic TicketType _
+instance eqTicketType :: Eq TicketType where eq = genericEq
+
+data LocationActionId = Src | Dest
+
+derive instance genericLocationActionId :: Generic LocationActionId _
+instance eqLocationActionId :: Eq LocationActionId where eq = genericEq
+instance showLocationActionId :: Show LocationActionId where show = genericShow
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION
 

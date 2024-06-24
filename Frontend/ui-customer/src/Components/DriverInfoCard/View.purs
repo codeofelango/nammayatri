@@ -44,7 +44,7 @@ import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Gravity(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -84,7 +84,7 @@ driverInfoViewSpecialZone push state =
   linearLayout
   [ width  MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility if state.props.currentSearchResultType == QUOTES then VISIBLE else GONE
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -209,7 +209,7 @@ navigateView push state =
   , accessibility ENABLE
   , accessibilityHint $ (getEN $ GO_TO_ZONE "GO_TO_ZONE") <> " : Button"
   , accessibility DISABLE_DESCENDANT
-  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES && state.props.currentStage == RideAccepted
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType == QUOTES OneWaySpecialZoneAPIDetails && state.props.currentStage == RideAccepted
   , onClick push $ const $ OnNavigateToZone
   ][ imageView
      [ width $ V 20
@@ -231,7 +231,7 @@ driverInfoView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , visibility if state.props.currentSearchResultType == QUOTES then GONE else VISIBLE
+  , visibility $ boolToVisibility $ state.props.currentSearchResultType /= QUOTES OneWaySpecialZoneAPIDetails
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT

@@ -5,8 +5,10 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (Margin(..))
+import Common.Types.App as CT
+import Data.Maybe (Maybe(..))
 
 data Action
   = NoAction
@@ -26,23 +28,25 @@ type Config
     , index :: Int
     , activeIndex :: Int
     , id :: String
-    , maxPrice :: Int
+    , maxPrice :: Maybe Int
     , basePrice :: Int
     , showInfo :: Boolean
-    , searchResultType :: SearchType
+    , searchResultType :: CT.SearchResultType
     , isBookingOption :: Boolean
     , pickUpCharges :: Int 
     , layoutMargin :: Margin 
     , showStroke :: Boolean
+    , singleVehicle :: Boolean
+    , priceShimmer :: Boolean
+    , availableServices :: Array String
+    , services :: Array String
+    , selectedServices :: Array String
+    , currentEstimateHeight :: Int
+    , selectedEstimateHeight :: Int
+    , validTill :: String
+    , specialLocationTag :: Maybe String
+    , serviceTierName :: Maybe String
     }
-
-data SearchType = QUOTES | ESTIMATES
-
-derive instance genericSearchType :: Generic SearchType _
-instance eqSearchType :: Eq SearchType where eq = genericEq
-instance showSearchType :: Show SearchType where show = genericShow
-instance encodeSearchType :: Encode SearchType where encode = defaultEnumEncode
-instance decodeSearchType :: Decode SearchType where decode = defaultEnumDecode
 
 
 config :: Config
@@ -58,12 +62,22 @@ config =
   , activeIndex: 0
   , index: 0
   , id: ""
-  , maxPrice : 123
+  , maxPrice : Nothing
   , basePrice : 0 
   , showInfo : false
-  , searchResultType : QUOTES
+  , searchResultType : CT.QUOTES CT.ONE_WAY
   , isBookingOption : false
   , pickUpCharges : 0
   , layoutMargin : MarginHorizontal 12 12
   , showStroke : true
+  , serviceTierName : Nothing
+  , singleVehicle : false
+  , priceShimmer : true
+  , availableServices : []
+  , services : [] 
+  , selectedServices : []
+  , currentEstimateHeight : 184 
+  , selectedEstimateHeight : 0
+  , validTill : ""
+  , specialLocationTag : Nothing
   }

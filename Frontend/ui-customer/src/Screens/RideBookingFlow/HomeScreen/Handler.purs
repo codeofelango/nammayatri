@@ -37,6 +37,9 @@ homeScreen = do
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
   void $ lift $ lift $ toggleLoader false
   case act of
+    ExitToConfirmingLocationStage updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_CONFIRMING_LOCATION_STAGE updatedState)
     UpdateLocationName updatedState lat lng-> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_LOCATION_NAME updatedState lat lng)
@@ -70,9 +73,6 @@ homeScreen = do
     SearchPlace input updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ SEARCH_LOCATION input updatedState)
-    GetQuotes updatedState -> do
-          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.NoBack <$> (pure $ GET_QUOTES updatedState)
     GoToTicketBookingFlow updatedState -> do 
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState{props{focussedBottomIcon = MOBILITY}})
           App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_TICKETING updatedState)
@@ -98,12 +98,9 @@ homeScreen = do
     NotificationHandler notification updatedState ->  do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification updatedState)
-    Reload updatedState -> do
-        modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-        App.BackT $ App.NoBack <$> (pure $ CANCEL)
-    Retry updatedState -> do
-        modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-        App.BackT $ App.NoBack <$> (pure $ RETRY)
+    ReloadScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ RELOAD_SCREEN)
     GoToHome state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       App.BackT $ App.NoBack <$> (pure $ HOME_SCREEN)
@@ -218,3 +215,6 @@ homeScreen = do
     StayInHomeScreenSO state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.NoBack <$> (pure $ STAY_IN_HOME_SCREEN)
+    SelectEstimateAndQuotes updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ SELECT_ESTIMATE_AND_QUOTES updatedState)
