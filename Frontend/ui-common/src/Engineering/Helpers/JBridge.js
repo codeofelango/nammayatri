@@ -2189,8 +2189,10 @@ export const initialWebViewSetUp = function (cb) {
         try {
           if (JBridge.initialWebViewSetUp) {
             const callback = callbackMapper.map(function (val) {
-              cb(action(val))();
+              console.log("initialWebViewSetUpCb id ");
+              cb(action(val))();              
             });
+            console.log("initialWebViewSetUp id " + id + " callback " + callback);
 
             JBridge.initialWebViewSetUp(callback, id);
           }
@@ -2205,6 +2207,7 @@ export const initialWebViewSetUp = function (cb) {
 export const goBackPrevWebPage = function (id) {
   try {
     if (JBridge.goBackPrevWebPage) {
+      console.log( "inside js of goBackPrevWebPage id " + id)
       return JBridge.goBackPrevWebPage(id);
     }
   } catch (err) {

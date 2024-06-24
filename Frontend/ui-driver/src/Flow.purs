@@ -652,6 +652,7 @@ onBoardingFlow = do
   config <- getAppConfigFlowBT Constants.appConfig
   GlobalState allState <- getState
   DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq ""
+  -- let bgvDetails = filter (\docStatItm -> docStatItm.documentType == "BackgroundVerification") driverRegistrationResp.driverDocuments
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
@@ -706,21 +707,28 @@ onBoardingFlow = do
     [] -> pure ST.DoNothing
     [bgv] -> do
       case bgv.status of
-        NOT_STARTED -> do
-          bgvResp <- lift $ lift $ Remote.initiateDriverBGV $ API.InitiateDriverBGVReq
-          case bgvResp of
-           Left _ -> do
-             void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
-             pure ST.DoNothing
-           Right _ -> pure ST.Initiated 
-        IN_PROGRESS -> pure $ ST.Pending bgv.verificationUrl -- For Just Url show web View and Nothing show waiting to be completed static screen.
+        -- NOT_STARTED -> do
+        --   -- bgvResp <- lift $ lift $ Remote.initiateDriverBGV $ API.InitiateDriverBGVReq
+        --   -- case bgvResp of
+        --   --  Left _ -> do
+        --   --    void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+        --   --    pure ST.DoNothing
+        --   --  Right _ -> 
+        --   pure ST.DoNothing 
+        IN_PROGRESS | isJust bgv.verificationUrl -> pure $ ST.PendingUserAction -- For Just Url show web View and Nothing show waiting to be completed static screen.
+        IN_PROGRESS | isNothing bgv.verificationUrl -> pure ST.PendingVerification
         ST.UNAUTHORIZED -> pure ST.Unauthorized -- BBGVTODO: GoTo Static Page. Either do it in view on revieving this flag or call a sperate flow below only for this flag.
         _ -> pure ST.DoNothing -- here this will move forward and if this occures due to status COMPLETED driver goes to home screen as per current flow or if it occures due to driver still uploading docs it goes to Registration screen without causing any change.
     _ -> do
       void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
       pure ST.DoNothing
 
-  if bgvInfo == ST.Initiated then onBoardingFlow else pure unit
+  bgvUrl <- case bgvDetails of
+    [] -> pure Nothing
+    [bgv] -> pure bgv.verificationUrl
+    _ -> do
+      void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+      pure Nothing
   
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
@@ -738,8 +746,8 @@ onBoardingFlow = do
                       permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
                       cityConfig = cityConfig,
                       vehicleCategory = uiCurrentCategory,
-                      bgvInfo = bgvInfo
-                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, isApplicationInVerification = isAllCompleted, isProfileDetailsCompleted = getDriverInfoResp.firstName /= "Driver" && isJust getDriverInfoResp.mobileNumber}})
+                      bgvUrl = bgvUrl
+                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, isApplicationInVerification = isAllCompleted, isProfileDetailsCompleted = getDriverInfoResp.firstName /= "Driver" && isJust getDriverInfoResp.mobileNumber, bgvInfo = bgvInfo}})
   liftFlowBT hideSplash
   void $ lift $ lift $ toggleLoader false
   flow <- UI.registration
@@ -810,6 +818,18 @@ onBoardingFlow = do
     SELECT_LANG_FROM_REGISTRATION -> do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
+    HANDLE_CHECKR_WEBVIEW_EXIT state -> do
+      let _ = spy "Web view exit flow here............." "Reached here as well"
+      onBoardingFlow
+    GET_BGV_URL state -> do
+      bgvResp <- lift $ lift $ Remote.initiateDriverBGV $ API.InitiateDriverBGVReq
+      case bgvResp of
+        Left _ -> do
+          void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          onBoardingFlow
+        Right _ -> do
+          modifyScreenState $ RegistrationScreenStateType (\_ -> state {props { showCheckrWebView = true }})
+          onBoardingFlow
   where 
     mkStatusList :: DriverRegistrationStatusResp -> GetDriverInfoResp -> Array ST.DocumentStatus
     mkStatusList (DriverRegistrationStatusResp driverRegistrationStatusResp) getDriverInfoResp = 

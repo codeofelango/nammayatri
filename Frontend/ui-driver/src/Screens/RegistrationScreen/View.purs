@@ -62,6 +62,7 @@ import Resource.Constants as Constant
 import Data.Int (toNumber, floor)
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
+import PrestoDOM.Elements.Keyed as Keyed 
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
@@ -96,7 +97,6 @@ view push state =
           , clickable true
           , onBackPressed push (const BackPressed)
           , padding $ PaddingBottom EHC.safeMarginBottom
-          , afterRender push $ const AfterRender
           ]
       $ [ chooseVehicleView push state
         , linearLayout
@@ -213,23 +213,32 @@ view push state =
                 ][contactSupportView push state]
             ]
             , if state.props.enterReferralCodeModal then enterReferralCodeModal push state else linearLayout[][]
-            , case state.data.bgvInfo of
-                ST.Pending (Just url') -> 
-                  webView
+            , if state.props.showCheckrWebView && state.props.bgvInfo == ST.PendingUserAction
+                then do
+                  case spy "going inside webview checkr : " state.data.bgvUrl of
+                    (Just url') ->
+                      linearLayout
                       [ height MATCH_PARENT
                       , width MATCH_PARENT
-                      , id $ getNewIDWithTag "webview"
-                      , url url'
+                      , afterRender ( \_ -> do
+                                        _ <- JB.initialWebViewSetUp push (getNewIDWithTag "webviewCheckr") HandleCheckrWebviewExit
+                                        pure unit
+                                    )
+                                    (const AfterRender)
+                      ][ webView
+                         [ height MATCH_PARENT
+                         , width MATCH_PARENT
+                         , id $ getNewIDWithTag "webviewCheckr"
+                         , url url'
+                         ]
                       ]
-                ST.Pending Nothing -> applicationInVerification push state
-                ST.Unauthorized -> applicationInVerification push state
-                _ -> linearLayout [][]
-                
+                    _ -> dummyView state
+              else dummyView state
         ]
       <> if any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle, state.data.vehicleTypeMismatch] then [ popupModal push state ] else []
       <> if state.props.contactSupportModal /= ST.HIDE then [contactSupportModal push state] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
-      <> if state.props.isApplicationInVerification then [applicationInVerification push state] else []
+      <> if state.props.bgvInfo == ST.Unauthorized || state.props.bgvInfo == ST.PendingVerification then [applicationInVerification push state] else [] -- BGVTODO: check once successfully verified this is going to home screen directly (due to pre existing flow) or not 
       where 
         documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
         buttonVisibility = if state.props.manageVehicle then all (\docType -> (getStatus docType.stage state) == ST.COMPLETED) $ filter(\elem -> elem.isMandatory) documentList
@@ -717,20 +726,28 @@ applicationInVerification push state =
           imageView
           [ height $ V 250
           , width $ V 280
-          ,  if state.data.bgvInfo == ST.Unauthorized then imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress" else imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress"
+          ,  if state.props.bgvInfo == ST.Unauthorized then imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress" else imageWithFallback $ fetchImage FF_ASSET "ny_ic_application_verifiaction_in_progress"
           ]
       ]
     , textView $
-      [ if state.data.bgvInfo == ST.Unauthorized then text "Bhaag ja Yaha se nhi toh maar lagegi !!!!!! :-| " else text "Application verification in progress."
+      [ if state.props.bgvInfo == ST.Unauthorized then text "Bhaag ja Yaha se nhi toh maar lagegi !!!!!! :-| " else text "Application verification in progress."
       , color Color.black800
       , width MATCH_PARENT
       , gravity CENTER
       ] <> FontStyle.h2 TypoGraphy
     , textView $
-      [ if state.data.bgvInfo == ST.Unauthorized then text "Criminal Ho Tum !!!!!! " else text "Thank you for completing the registration. We will update you once the verification is done."
+      [ if state.props.bgvInfo == ST.Unauthorized then text "Criminal Ho Tum !!!!!! " else text "Thank you for completing the registration. We will update you once the verification is done."
       , color Color.black800
       , width MATCH_PARENT
       , margin $ Margin 16 10 16 0
       , gravity CENTER
       ] <> FontStyle.body1 TypoGraphy
   ]
+
+
+dummyView :: forall w. ST.RegistrationScreenState -> PrestoDOM ( Effect Unit) w
+dummyView state = 
+  linearLayout
+  [height $ V 0
+  , width $ V 0
+  ][]

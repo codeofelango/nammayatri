@@ -13,10 +13,12 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types (
-  module Common,
-  module Screens.Types
-) where
+module Screens.Types
+  ( DocumentStatus
+  , module Common
+  , module Screens.Types
+  )
+  where
 
 import Common.Types.Config
 
@@ -206,7 +208,7 @@ type RegistrationScreenState = {
   props :: RegistrationScreenProps
 }
 
-data BGVInfo = DoNothing | Pending (Maybe String) | Unauthorized | Initiated
+data BGVInfo = DoNothing | PendingUserAction | PendingVerification | Unauthorized
 derive instance genericBGVInfo :: Generic BGVInfo _
 instance eqBGVInfo :: Eq BGVInfo where eq = genericEq
 
@@ -231,7 +233,7 @@ type RegistrationScreenData = {
   vehicleCategory :: Maybe Common.VehicleCategory,
   vehicleTypeMismatch :: Boolean,
   linkedRc :: Maybe String,
-  bgvInfo :: BGVInfo
+  bgvUrl :: Maybe String
 }
 
 type DocumentStatus = {
@@ -280,7 +282,9 @@ type RegistrationScreenProps = {
   manageVehicle :: Boolean,
   manageVehicleCategory :: Maybe Common.VehicleCategory,
   isApplicationInVerification :: Boolean,
-  isProfileDetailsCompleted :: Boolean
+  isProfileDetailsCompleted :: Boolean,
+  showCheckrWebView :: Boolean,
+  bgvInfo :: BGVInfo
 }
 
 data AnimType = HIDE | SHOW | ANIMATING

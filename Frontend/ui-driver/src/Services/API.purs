@@ -4991,7 +4991,7 @@ data InitiateDriverBGVReq = InitiateDriverBGVReq
 newtype InitiateDriverBGVResp = InitiateDriverBGVResp ApiSuccessResult
 
 instance makeInitiateDriverBGVReq :: RestEndpoint InitiateDriverBGVReq InitiateDriverBGVResp where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.initiateDriverBGV "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.initiateDriverBGV "") headers reqBody Nothing
   decodeResponse = decodeJSON
   encodeRequest = standardEncode
 

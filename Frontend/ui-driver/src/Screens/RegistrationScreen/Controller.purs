@@ -20,6 +20,8 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
+import Data.Maybe (Maybe (..), isJust)
+import Debug (spy)
 import Helpers.Utils (getStatus, contactSupportNumber)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
@@ -47,6 +49,7 @@ import Data.Array as DA
 import Screens.RegistrationScreen.ScreenData as SD
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
+import Engineering.Helpers.Commons as EHC 
 
 instance showAction :: Show Action where
   show _ = ""
@@ -94,12 +97,14 @@ data ScreenOutput = GoBack
                   | LogoutAccount
                   | GoToOnboardSubscription
                   | GoToHomeScreen RegistrationScreenState
+                  | HandleCheckrWebviewExitScreen RegistrationScreenState
                   | RefreshPage
                   | ReferralCode RegistrationScreenState
                   | SSN RegistrationScreenState
                   | ProfileDetailsExit RegistrationScreenState
                   | DocCapture RegistrationScreenState RegisterationStep
                   | SelectLang RegistrationScreenState
+                  | GetBGVUrl RegistrationScreenState
 
 data Action = BackPressed 
             | NoAction
@@ -111,6 +116,7 @@ data Action = BackPressed
             | PrimaryButtonAction PrimaryButtonController.Action
             | Refresh
             | ContactSupport
+            | HandleCheckrWebviewExit String
             | AppOnboardingNavBarAC AppOnboardingNavBar.Action
             | PrimaryEditTextActionController PrimaryEditText.Action 
             | ReferralCodeTextChanged String
@@ -140,9 +146,17 @@ eval BackPressed state = do
   else if state.props.confirmChangeVehicle then continue state { props { confirmChangeVehicle = false}}
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
   else if state.props.manageVehicle then exit $ GoToHomeScreen state
+  else if isJust state.data.bgvUrl && state.props.showCheckrWebView
+    then
+      continueWithCmd state $
+        [do
+          let _ = spy "reached here in backpress" ""
+          _ <- pure $ JB.goBackPrevWebPage (EHC.getNewIDWithTag "webviewCheckr")
+          pure NoAction
+        ]
   else do
-      void $ pure $ JB.minimizeApp ""
-      continue state
+    void $ pure $ JB.minimizeApp ""
+    continue state
 
 eval (RegistrationAction step ) state = do
        let item = step.stage
@@ -161,6 +175,7 @@ eval (RegistrationAction step ) state = do
           ProfileDetails -> exit $ ProfileDetailsExit state
           SocialSecurityNumber -> exit $ SSN state
           VehicleInspectionForm -> exit $ DocCapture state item
+          BackgroundVerification -> if isJust state.data.bgvUrl then continue $ state { props { showCheckrWebView = true}} else exit $ GetBGVUrl state
           _ -> continue state
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
@@ -286,6 +301,11 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
         Mb.Nothing -> continue state
 
 eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
+
+eval (HandleCheckrWebviewExit _) state = do
+  let _ = spy "CheckwebView exit action handle............" ""
+  let newState = state {props {showCheckrWebView = false}}
+  updateAndExit newState $ HandleCheckrWebviewExitScreen newState
 
 eval _ state = update state
 
