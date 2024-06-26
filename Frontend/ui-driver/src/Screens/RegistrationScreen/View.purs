@@ -45,7 +45,7 @@ import JBridge  as JB
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import PaymentPage (consumeBP)
-import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/))
+import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/), discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageUrl, url, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, stroke, text, webView, textSize, textView, visibility, weight, width, scrollView, scrollBarY, fillViewport, alpha, textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -63,13 +63,32 @@ import Data.Int (toNumber, floor)
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
 import PrestoDOM.Elements.Keyed as Keyed 
+import Data.Function.Uncurried (runFn2)
+
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "RegistrationScreen"
-  , globalEvents : []
+  , globalEvents : [(\push -> do
+      -- pure $ pure $ runFn2 JB.storeOnResumeCallback push OnResumeCallback
+      _ <- pure $ runFn2 JB.storeOnResumeCallback push OnResumeCallback
+      if spy "showCheckrWebView" initialState.props.showCheckrWebView && spy "bgvurl" (initialState.props.bgvInfo == ST.PendingUserAction)
+        then do
+          let bgvStp = filter(\elem -> elem.stage == BackgroundVerification) initialState.data.registerationStepsCabs
+          let _ = spy "Andar gya" (initialState.data.registerationStepsCabs)
+          case bgvStp of
+            [bgvStp'] -> do
+              let _ = spy "Andar gya" " dobara"
+              push $ RegistrationAction bgvStp'
+            _ -> do
+              let _ = spy "Andar gya" " yaha kyu aya"
+              pure unit
+      else pure unit
+      pure (pure unit)
+    )
+  ]
   , eval :
       ( \state action -> do
           let _ = spy "RegistrationScreen ----- state" state
@@ -213,27 +232,6 @@ view push state =
                 ][contactSupportView push state]
             ]
             , if state.props.enterReferralCodeModal then enterReferralCodeModal push state else linearLayout[][]
-            , if state.props.showCheckrWebView && state.props.bgvInfo == ST.PendingUserAction
-                then do
-                  case spy "going inside webview checkr : " state.data.bgvUrl of
-                    (Just url') ->
-                      linearLayout
-                      [ height MATCH_PARENT
-                      , width MATCH_PARENT
-                      , afterRender ( \_ -> do
-                                        _ <- JB.initialWebViewSetUp push (getNewIDWithTag "webviewCheckr") HandleCheckrWebviewExit
-                                        pure unit
-                                    )
-                                    (const AfterRender)
-                      ][ webView
-                         [ height MATCH_PARENT
-                         , width MATCH_PARENT
-                         , id $ getNewIDWithTag "webviewCheckr"
-                         , url url'
-                         ]
-                      ]
-                    _ -> dummyView state
-              else dummyView state
         ]
       <> if any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle, state.data.vehicleTypeMismatch] then [ popupModal push state ] else []
       <> if state.props.contactSupportModal /= ST.HIDE then [contactSupportModal push state] else []

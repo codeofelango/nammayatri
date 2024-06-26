@@ -60,9 +60,9 @@ registration = do
     ProfileDetailsExit updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ PROFILE_DETAILS_FROM_REGISTRATION updatedState)
-    HandleCheckrWebviewExitScreen updatedState -> do
-      modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ HANDLE_CHECKR_WEBVIEW_EXIT updatedState)
+    HandleCheckrWebviewExitScreen -> do
+      -- modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ HANDLE_CHECKR_WEBVIEW_EXIT)
     GetBGVUrl updatedState -> do
       modifyScreenState $ RegisterScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GET_BGV_URL updatedState)

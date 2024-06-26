@@ -20,7 +20,7 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButtonController
 import Components.GenericHeader as GenericHeader
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
-import Data.Maybe (Maybe (..), isJust)
+import Data.Maybe (Maybe (..), isJust, fromJust)
 import Debug (spy)
 import Helpers.Utils (getStatus, contactSupportNumber)
 import JBridge as JB
@@ -97,7 +97,7 @@ data ScreenOutput = GoBack
                   | LogoutAccount
                   | GoToOnboardSubscription
                   | GoToHomeScreen RegistrationScreenState
-                  | HandleCheckrWebviewExitScreen RegistrationScreenState
+                  | HandleCheckrWebviewExitScreen
                   | RefreshPage
                   | ReferralCode RegistrationScreenState
                   | SSN RegistrationScreenState
@@ -130,6 +130,7 @@ data Action = BackPressed
             | ExpandOptionalDocs
             | OptionsMenuAction OptionsMenu.Action
             | BottomDrawerListAC BottomDrawerList.Action
+            | OnResumeCallback
             
 derive instance genericAction :: Generic Action _
 instance eqAction :: Eq Action where
@@ -175,7 +176,14 @@ eval (RegistrationAction step ) state = do
           ProfileDetails -> exit $ ProfileDetailsExit state
           SocialSecurityNumber -> exit $ SSN state
           VehicleInspectionForm -> exit $ DocCapture state item
-          BackgroundVerification -> if isJust state.data.bgvUrl then continue $ state { props { showCheckrWebView = true}} else exit $ GetBGVUrl state
+          BackgroundVerification -> do
+            let _ = spy "Idhar bhi aya" ""
+            if isJust state.data.bgvUrl 
+            then do
+              void $ pure $ JB.initWebViewOnActivity $ Mb.fromMaybe "" state.data.bgvUrl
+              continue state
+            else exit $ GetBGVUrl state
+           
           _ -> continue state
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
@@ -302,12 +310,16 @@ eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
 
 eval ExpandOptionalDocs state = continue state { props { optionalDocsExpanded = not state.props.optionalDocsExpanded}}
 
-eval (HandleCheckrWebviewExit _) state = do
-  let _ = spy "CheckwebView exit action handle............" ""
-  let newState = state {props {showCheckrWebView = false}}
-  updateAndExit newState $ HandleCheckrWebviewExitScreen newState
+-- eval (HandleCheckrWebviewExit _) state = do
+--   let _ = spy "CheckwebView exit action handle............" ""
+--   let newState = state {props {showCheckrWebView = false}}
+--   updateAndExit newState $ HandleCheckrWebviewExitScreen newState
+eval OnResumeCallback state = do
+  let _ = spy "OnResumeCallback" " reached"
+  exit $ HandleCheckrWebviewExitScreen
 
 eval _ state = update state
+
 
 getStatusValue :: String -> StageStatus
 getStatusValue value = case value of

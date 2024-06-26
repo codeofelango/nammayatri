@@ -818,17 +818,20 @@ onBoardingFlow = do
     SELECT_LANG_FROM_REGISTRATION -> do
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
-    HANDLE_CHECKR_WEBVIEW_EXIT state -> do
-      let _ = spy "Web view exit flow here............." "Reached here as well"
+    HANDLE_CHECKR_WEBVIEW_EXIT -> do
+      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState {props { showCheckrWebView = false }})
       onBoardingFlow
     GET_BGV_URL state -> do
+      void $ lift $ lift $ toggleLoader true
       bgvResp <- lift $ lift $ Remote.initiateDriverBGV $ API.InitiateDriverBGVReq
       case bgvResp of
         Left _ -> do
           void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          void $ lift $ lift $ toggleLoader false
           onBoardingFlow
         Right _ -> do
           modifyScreenState $ RegistrationScreenStateType (\_ -> state {props { showCheckrWebView = true }})
+          void $ lift $ lift $ toggleLoader false
           onBoardingFlow
   where 
     mkStatusList :: DriverRegistrationStatusResp -> GetDriverInfoResp -> Array ST.DocumentStatus

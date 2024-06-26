@@ -2073,7 +2073,8 @@ export const setStoreCallBackPopUp = function (cb) {
 
 export const deletePopUpCallBack = function (dummy) {
   console.log("jbridge deletepopupcallback before");
-  JBridge.deletePopUpCallBack(dummy);
+  // JBridge.deletePopUpCallBack(dummy);
+  JBridge.initWebViewOnActivity(dummy);
   return true;
 }
 
@@ -2773,5 +2774,11 @@ export const getFromUTC = (timestamp) => (val) => {
       return date.getUTCSeconds();
     default:
       return date.getUTCDate();
+  }
+}
+
+export const initWebViewOnActivity = function (webViewUrl) {
+  if (JBridge.initWebViewOnActivity) {
+    return JBridge.initWebViewOnActivity(webViewUrl);
   }
 }
