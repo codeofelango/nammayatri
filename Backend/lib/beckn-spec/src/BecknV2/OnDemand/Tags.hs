@@ -183,6 +183,7 @@ data Tag
   | IS_DRIVER_BIRTHDAY
   | IS_FREE_RIDE
   | DRIVER_ACCOUNT_ID
+  | DRIVER_ALTERNATE_NUMBER
   | -- Driver arrived info tags
     ARRIVAL_TIME
   | -- Ride distance details tags

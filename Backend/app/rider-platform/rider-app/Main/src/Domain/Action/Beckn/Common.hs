@@ -77,6 +77,7 @@ data BookingDetails = BookingDetails
     driverName :: Text,
     driverImage :: Maybe Text,
     driverMobileNumber :: Text,
+    driverAlternateNumber :: Maybe Text,
     driverMobileCountryCode :: Maybe Text,
     driverRating :: Maybe Centesimal,
     driverRegisteredAt :: Maybe UTCTime,
@@ -327,6 +328,7 @@ rideAssignedReqHandler req = do
             distanceUnit = booking.distanceUnit,
             driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
             paymentDone = False,
+            driverAlternateNumber = driverAlternateNumber,
             ..
           }
 

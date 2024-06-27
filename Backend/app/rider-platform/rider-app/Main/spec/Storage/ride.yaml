@@ -75,6 +75,7 @@ Ride:
     driverName: Text
     driverRating: Maybe Centesimal
     driverMobileNumber: Text
+    driverAlternateNumber: Maybe Text
     driverMobileCountryCode: Maybe Text
     driverRegisteredAt: Maybe UTCTime
     driverImage: Maybe Text
@@ -121,6 +122,7 @@ Ride:
     bppRideId: character(36)
     chargeableDistance: numeric(30,2)
     driverMobileNumber: character varying(255)
+    driverAlternateNumber: character varying (255)
     driverName: character varying(255)
     driverRating: numeric(10,2)
     endOdometerReading: double precision

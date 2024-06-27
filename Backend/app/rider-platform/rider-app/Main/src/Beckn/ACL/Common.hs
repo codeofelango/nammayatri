@@ -148,6 +148,7 @@ parseBookingDetails order msgId = do
         driverRegisteredAt = registeredAt,
         vehicleModel = fromMaybe "UNKWOWN" vehicleModel,
         vehicleNumber = fromMaybe "UNKWOWN" vehicleNumber,
+        driverAlternateNumber = Nothing,
         ..
       }
 
@@ -160,12 +161,13 @@ parseRideAssignedEvent order msgId txnId = do
         _ -> False
   let isDriverBirthDay = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
       isFreeRide = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
+      driverAlternateNumber = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ALTERNATE_NUMBER tagGroups
       (driverAccountId :: Maybe EPayment.AccountId) = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
       previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
   bookingDetails <- parseBookingDetails order msgId
   return
     Common.RideAssignedReq
-      { bookingDetails,
+      { bookingDetails = bookingDetails{driverAlternateNumber = driverAlternateNumber},
         transactionId = txnId,
         isDriverBirthDay,
         isFreeRide,

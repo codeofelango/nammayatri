@@ -24,6 +24,7 @@ module Domain.Action.UI.Call
     directCallStatusCallback,
     getCallStatus,
     getDriverMobileNumber,
+    DriverNumberType (..),
   )
 where
 
@@ -74,6 +75,8 @@ data CallAttachments = CallAttachments
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 type CallCallbackRes = AckResponse
+
+data DriverNumberType = AlternateNumber | PrimaryNumber
 
 type GetDriverMobileNumberResp = Text
 
@@ -169,8 +172,8 @@ directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel 
   where
     updateCallStatus callDuration = QCallStatus.updateCallStatus (fromMaybe 0 callDuration)
 
-getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r) => Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
-getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
+getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, EventStreamFlow m r) => DriverNumberType -> Text -> Text -> Text -> Maybe Text -> Call.ExotelCallStatus -> Text -> m GetDriverMobileNumberResp
+getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
   callId <- generateGUID
   callStatusObj <- buildCallStatus callId callSid (exotelStatusToInterfaceStatus callStatus)
   QCallStatus.create callStatusObj
@@ -195,7 +198,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
     case mbRiderDetails of
       Just (dtmfNumberUsed, booking) -> do
         ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= maybe (throwCallError callId (RideWithBookingIdNotFound $ getId booking.id) (Just exophone.merchantId.getId) (Just exophone.callService)) pure
-        return (ride.driverMobileNumber, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
+        return (getNumberBasedOnType driverNumberType ride, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
       Nothing -> do
         mbRide <- runInReplica $ QRide.findLatestByDriverPhoneNumber callFrom
         case mbRide of
@@ -232,6 +235,9 @@ getDriverMobileNumber callSid callFrom_ callTo_ _dtmfNumber callStatus to_ = do
             createdAt = now,
             updatedAt = now
           }
+    getNumberBasedOnType numberType ride = case numberType of
+      AlternateNumber -> fromMaybe ride.driverMobileNumber ride.driverAlternateNumber
+      PrimaryNumber -> ride.driverMobileNumber
 
 -- getDtmfFlow :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Maybe Text -> Id Merchant -> Text -> Exophone -> m (Maybe (Maybe Text, BT.Booking))
 -- getDtmfFlow dtmfNumber_ merchantId callSid exophone = do
