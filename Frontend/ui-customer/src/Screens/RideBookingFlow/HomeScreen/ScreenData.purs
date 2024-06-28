@@ -374,6 +374,7 @@ initData = let
     , shimmerViewTimerId : ""
     , isKeyBoardOpen : false
     , isContactSupportPopUp : false
+    , homeEntryToast : Nothing
   }
 }
 

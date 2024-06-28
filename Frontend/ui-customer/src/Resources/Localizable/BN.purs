@@ -1305,3 +1305,4 @@ getBN stringKey =
         WAITING_CHARGES -> "অপেক্ষার খরচ"
         PLACE_A_CALL -> "একটি কল করুন"
         YOU_CAN_WRITE_TO_US_AT -> "আপনি আমাদের লিখতে পারেন"
+        NOT_FOUND_IN_SAVED_LOCATION -> "সংরক্ষিত স্থানে পাওয়া যায়নি"

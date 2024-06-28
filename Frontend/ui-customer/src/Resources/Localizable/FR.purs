@@ -1307,3 +1307,4 @@ getFR stringKey =
         WAITING_CHARGES -> "Frais d'attente"
         PLACE_A_CALL -> "Passer un appel"
         YOU_CAN_WRITE_TO_US_AT -> "Vous pouvez nous écrire à"
+        NOT_FOUND_IN_SAVED_LOCATION -> "Non trouvé dans les emplacements enregistrés"

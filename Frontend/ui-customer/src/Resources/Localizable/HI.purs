@@ -1305,3 +1305,4 @@ getHI stringKey =
         WAITING_CHARGES -> "प्रतीक्षा शुल्क"
         PLACE_A_CALL -> "कॉल करें"
         YOU_CAN_WRITE_TO_US_AT -> "आप हमें लिख सकते हैं"
+        NOT_FOUND_IN_SAVED_LOCATION -> "सहेजे गए स्थानों में नहीं मिला"

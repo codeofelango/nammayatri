@@ -1307,3 +1307,4 @@ getML stringKey =
         WAITING_CHARGES -> "കാത്തിരിക്കൽ ചാർജുകൾ"
         PLACE_A_CALL -> "വിളിക്കുക" 
         YOU_CAN_WRITE_TO_US_AT -> "നിങ്ങൾ ഞങ്ങളെ എങ്ങനെ എഴുതാനായില്ലേ? ഞങ്ങളെ ഇവിടെ എഴുതിയിട്ടുണ്ട്"
+        NOT_FOUND_IN_SAVED_LOCATION -> "സേവ് ചെയ്ത സ്ഥലങ്ങളിലേക്ക് കണ്ടെത്താനായില്ല"

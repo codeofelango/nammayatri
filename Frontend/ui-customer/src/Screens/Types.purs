@@ -936,6 +936,7 @@ type HomeScreenStateProps =
   , shimmerViewTimerId :: String
   , isKeyBoardOpen :: Boolean
   , isContactSupportPopUp :: Boolean
+  , homeEntryToast :: Maybe String
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

@@ -1306,3 +1306,4 @@ getKN stringKey =
         WAITING_CHARGES -> "ನಿರೀಕ್ಷಣಾ ಶುಲ್ಕಗಳು"
         PLACE_A_CALL -> "ಕರೆ ಇಟ್ಟುಕೊಳ್ಳಿ"
         YOU_CAN_WRITE_TO_US_AT -> "ನೀವು ನಮಗೆ ಬರೆಯಬಹುದು"
+        NOT_FOUND_IN_SAVED_LOCATION -> "ಸೇವ್ ಮಾಡಿದ ಸ್ಥಳದಲ್ಲಿ ಕಂಡುಬರಲಿಲ್ಲ"
