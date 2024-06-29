@@ -284,7 +284,8 @@ type RegistrationScreenProps = {
   isApplicationInVerification :: Boolean,
   isProfileDetailsCompleted :: Boolean,
   showCheckrWebView :: Boolean,
-  bgvInfo :: BGVInfo
+  bgvInfo :: BGVInfo,
+  otherMandetoryDocsDone :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
@@ -313,7 +314,7 @@ data RegisterationStep =
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
 
-data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED | UNAUTHORIZED
+data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED | UNAUTHORIZED | PENDING_REVIEW
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 

@@ -80,6 +80,7 @@ initData = {
         isApplicationInVerification: false,
         isProfileDetailsCompleted: false,
         showCheckrWebView: false,
-        bgvInfo: ST.DoNothing
+        bgvInfo: ST.DoNothing,
+        otherMandetoryDocsDone: false
       }
   }

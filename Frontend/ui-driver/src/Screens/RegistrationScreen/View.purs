@@ -192,6 +192,7 @@ view push state =
                                       ST.FAILED -> Color.red
                                       ST.NOT_STARTED -> Color.grey900
                                       ST.UNAUTHORIZED -> Color.red
+                                      ST.PENDING_REVIEW -> Color.green900
                                   , margin $ MarginLeft if index == 0 then 0 else 15
                                   ]
                                   []
@@ -236,7 +237,7 @@ view push state =
       <> if any (_ == true) [state.props.logoutModalView, state.props.confirmChangeVehicle, state.data.vehicleTypeMismatch] then [ popupModal push state ] else []
       <> if state.props.contactSupportModal /= ST.HIDE then [contactSupportModal push state] else []
       <> if state.props.menuOptions then [menuOptionModal push state] else []
-      <> if state.props.bgvInfo == ST.Unauthorized || state.props.bgvInfo == ST.PendingVerification then [applicationInVerification push state] else [] -- BGVTODO: check once successfully verified this is going to home screen directly (due to pre existing flow) or not 
+      <> if state.props.bgvInfo == ST.Unauthorized || (state.props.bgvInfo == ST.PendingVerification && state.props.otherMandetoryDocsDone) then [applicationInVerification push state] else [] -- BGVTODO: check once successfully verified this is going to home screen directly (due to pre existing flow) or not 
       where 
         documentList = if state.data.vehicleCategory == Just ST.CarCategory then state.data.registerationStepsCabs else state.data.registerationStepsAuto
         buttonVisibility = if state.props.manageVehicle then all (\docType -> (getStatus docType.stage state) == ST.COMPLETED) $ filter(\elem -> elem.isMandatory) documentList
@@ -460,6 +461,7 @@ listItem push item state =
                       ST.NOT_STARTED -> Color.black500
                       ST.FAILED -> Color.red
                       ST.UNAUTHORIZED -> Color.red
+                      ST.PENDING_REVIEW -> Color.green900
                       _ -> Color.black500
         in strokeWidth <> colour
 
@@ -471,6 +473,7 @@ listItem push item state =
           ST.NOT_STARTED -> Color.white900
           ST.FAILED -> Color.redOpacity10
           ST.UNAUTHORIZED -> Color.redOpacity10
+          ST.PENDING_REVIEW -> Color.greenOpacity10
           _ -> Color.white900
 
       compClickable :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
@@ -491,6 +494,7 @@ listItem push item state =
           ST.NOT_STARTED -> fetchImage COMMON_ASSET "ny_ic_chevron_right"
           ST.FAILED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
           ST.UNAUTHORIZED -> fetchImage COMMON_ASSET "ny_ic_warning_filled_red"
+          ST.PENDING_REVIEW -> fetchImage COMMON_ASSET "ny_ic_green_tick"
 
       getVerificationMessage :: ST.RegisterationStep -> ST.RegistrationScreenState -> Maybe String
       getVerificationMessage step state = 

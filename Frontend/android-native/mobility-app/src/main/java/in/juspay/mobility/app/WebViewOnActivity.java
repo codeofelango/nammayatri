@@ -3,6 +3,7 @@ package in.juspay.mobility.app;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -48,20 +49,9 @@ public class WebViewOnActivity extends AppCompatActivity {
 //            getAudioFocus();
 //        }
 //        initializeReelController();
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                System.out.println("Url called is : " + url);
-                if (url.startsWith("https://apply.checkrhq-staging.net/static/js/new-success-page")) {
-                    goBackToRegistrationScreen();
-                    return true;
-                }
-                return false;
-            }
-        });
     }
 
-    protected void goBackToRegistrationScreen() {
+    public void goBackToRegistrationScreen(View view) {
         super.onBackPressed();
     }
 
