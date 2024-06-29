@@ -2073,7 +2073,8 @@ export const setStoreCallBackPopUp = function (cb) {
 
 export const deletePopUpCallBack = function (dummy) {
   console.log("jbridge deletepopupcallback before");
-  JBridge.deletePopUpCallBack(dummy);
+  // JBridge.deletePopUpCallBack(dummy);
+  JBridge.initWebViewOnActivity(dummy);
   return true;
 }
 
@@ -2189,8 +2190,10 @@ export const initialWebViewSetUp = function (cb) {
         try {
           if (JBridge.initialWebViewSetUp) {
             const callback = callbackMapper.map(function (val) {
-              cb(action(val))();
+              console.log("initialWebViewSetUpCb id ");
+              cb(action(val))();              
             });
+            console.log("initialWebViewSetUp id " + id + " callback " + callback);
 
             JBridge.initialWebViewSetUp(callback, id);
           }
@@ -2205,6 +2208,7 @@ export const initialWebViewSetUp = function (cb) {
 export const goBackPrevWebPage = function (id) {
   try {
     if (JBridge.goBackPrevWebPage) {
+      console.log( "inside js of goBackPrevWebPage id " + id)
       return JBridge.goBackPrevWebPage(id);
     }
   } catch (err) {
@@ -2770,5 +2774,11 @@ export const getFromUTC = (timestamp) => (val) => {
       return date.getUTCSeconds();
     default:
       return date.getUTCDate();
+  }
+}
+
+export const initWebViewOnActivity = function (webViewUrl) {
+  if (JBridge.initWebViewOnActivity) {
+    return JBridge.initWebViewOnActivity(webViewUrl);
   }
 }

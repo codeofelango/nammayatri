@@ -3832,14 +3832,18 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void goBackPrevWebPage(String id) {
+        System.out.println("Here inside goBackPrevWebPage java code");
         if (bridgeComponents.getActivity() != null) {
             WebView webView = bridgeComponents.getActivity().findViewById(Integer.parseInt(id));
             ExecutorManager.runOnMainThread(() -> {
                 if (webView == null) return;
+                System.out.println("Value of can go back is : " + webView.canGoBack());
                 if (webView.canGoBack()) {
                     webView.post(webView::goBack);
                 } else {
+                    System.out.println("Value of storeDashboardCallBack is : " + storeDashboardCallBack);
                     if (storeDashboardCallBack != null) {
+                        Log.d("ROTNADEEP IS HERE", storeDashboardCallBack);
                         String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                                 storeDashboardCallBack, "TRUE");
                         bridgeComponents.getJsCallback().addJsToWebView(javascript);
@@ -4180,6 +4184,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     webView.setWebViewClient(new WebViewClient() {
                         @Override
                         public boolean shouldOverrideUrlLoading(WebView view, String url) {
+//                            view.addJavascriptInterface(Callback, "Callback");
+//                            view.evaluateJavascript(""); callback.exit
                             if (url.startsWith("intent://")) {
                                 try {
                                     Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
@@ -4215,6 +4221,13 @@ public class MobilityCommonBridge extends HyperBridge {
             });
         }
     }
+//
+//    @JavascriptInterface
+//    class Callback() {
+//        public boolean f(@Nullable Object obj) {
+//
+//        }
+//    }
 
     @JavascriptInterface
     public void minimizeApp() {
