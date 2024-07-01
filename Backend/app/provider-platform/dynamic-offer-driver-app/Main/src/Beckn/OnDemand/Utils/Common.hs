@@ -345,6 +345,7 @@ mkAddress DLoc.LocationAddress {..} =
 
 data DriverInfo = DriverInfo
   { mobileNumber :: Text,
+    alternateMobileNumber :: Maybe Text,
     name :: Text,
     tags :: Maybe [Spec.TagGroup]
   }
@@ -489,11 +490,13 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
   where
     driverInfo = forM (liftM2 (,) mbDriver mbDriverStats) $ \(driver, driverStats) -> do
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
+      dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId dAlternatePhoneNum
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
+            alternateMobileNumber = dAlternatePhoneNum,
             name = dName,
             tags = if isValueAddNP then dTags else Nothing
           }
@@ -517,8 +520,8 @@ tfCustomer riderPhone riderName =
               }
       }
 
-mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> Maybe [Spec.TagGroup]
-mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId =
+mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> Maybe Text -> Maybe [Spec.TagGroup]
+mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverAlternateNumber =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -536,6 +539,7 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
                 ++ isDriverBirthDaySingleton
                 ++ isFreeRideSingleton
                 ++ driverAccountIdSingleton
+                ++ driverAlternateNumberSingleton
         }
     ]
   where
@@ -615,6 +619,22 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
                     },
               tagDisplay = Just False,
               tagValue = Just $ show isFreeRide
+            }
+
+    driverAlternateNumberSingleton
+      | isNothing driverAlternateNumber = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.DRIVER_ALTERNATE_NUMBER,
+                      descriptorName = Just "Driver Alternate Number",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = driverAlternateNumber
             }
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
@@ -1403,11 +1423,13 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
   where
     driverInfo = forM (liftM2 (,) mbDriver mbDriverStats) $ \(driver, driverStats) -> do
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
+      dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId dAlternatePhoneNum
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
+            alternateMobileNumber = dAlternatePhoneNum,
             name = dName,
             tags = if isValueAddNP then dTags else Nothing
           }

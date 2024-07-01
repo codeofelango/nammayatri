@@ -25,8 +25,6 @@ ALTER TABLE atlas_driver_offer_bpp.merchant
   ALTER COLUMN short_id SET NOT NULL;
 
 
-
-
 INSERT INTO atlas_driver_offer_bpp.person (id, first_name, middle_name, last_name, role, gender, identifier_type, email, password_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, is_new, device_token, description, created_at, updated_at, merchant_id, onboarded_from_dashboard, total_earned_coins,used_coins) VALUES
     ('favorit-suv-000000000000000000000000', 'Robert', 'James', 'Fischer', 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+91', NULL, true, 'favorit-suv-000000000000device-token', NULL, '2022-04-12 15:15:42.21973+00', '2022-04-12 15:15:42.21973+00','favorit0-0000-0000-0000-00000favorit', false, 0, 0),
     ('favorit-sedan-0000000000000000000000', 'Pentala', NULL, 'Harikrishna', 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+94', NULL, true, 'favorit-sedan-0000000000device-token', NULL, '2022-04-12 15:15:42.221002+00', '2022-04-12 15:15:42.221002+00', '', false, 0, 0),
