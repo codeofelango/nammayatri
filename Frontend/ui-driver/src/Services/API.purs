@@ -1700,6 +1700,7 @@ newtype Category = Category
   { label    :: String
   , logoUrl  :: String
   , category :: String
+  , isRideRequired :: Boolean
   , issueCategoryId :: String
   }
 

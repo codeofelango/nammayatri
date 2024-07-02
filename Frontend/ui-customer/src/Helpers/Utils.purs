@@ -193,6 +193,8 @@ foreign import getMockFollowerName :: String -> String
 
 foreign import getAndRemoveLatestNotificationType :: Unit -> String
 
+foreign import decodeErrorCode :: String -> String
+
 data TimeUnit
   = HOUR
   | MINUTE
