@@ -2622,6 +2622,8 @@ rideTrackingView push state =
 getMessageNotificationViewConfig :: HomeScreenState -> MessageNotificationView Action
 getMessageNotificationViewConfig state =
   let primaryContact = head $ filter (\item -> (item.enableForShareRide || item.enableForFollowing) && (item.priority == 0)) (fromMaybe [] state.data.contactList)
+      toChatComponent { message, sentBy, timeStamp, type: type_, delay } = 
+        { message, sentBy, timeStamp, type: type_, delay}
   in {
     showChatNotification : state.props.showChatNotification
   , enableChatWidget : state.props.enableChatWidget
@@ -2629,7 +2631,7 @@ getMessageNotificationViewConfig state =
   , fareProductType : state.data.fareProductType
   , config : state.data.config
   , rideStarted : state.props.currentStage == RideStarted
-  , lastMessage : state.data.lastMessage
+  , lastMessage : toChatComponent state.data.lastMessage
   , lastSentMessage : state.data.lastSentMessage
   , lastReceivedMessage : state.data.lastReceivedMessage
   , removeNotificationAction : RemoveNotification

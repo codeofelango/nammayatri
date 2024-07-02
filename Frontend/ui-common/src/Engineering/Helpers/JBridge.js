@@ -1055,6 +1055,11 @@ export const differenceBetweenTwoUTCInMinutes = function (date1, date2) {
   return diffInMinutes;
 }
 
+export const getSecondsFromUTCTime = function (str) {
+  const date = new Date(str);
+  return Math.floor(date.getTime() / 1000);
+}
+
 export const isCoordOnPath = function (data) {
   return function (lat) {
     return function (lon) {
@@ -1065,15 +1070,15 @@ export const isCoordOnPath = function (data) {
             try {
               console.log("I AM HERE ------------------ IN CHECK ROUTE");
               if(speed == 0)
-                {
-                  const res = {
-                    "points": (data.points != undefined) ? data.points : [] ,
-                    "eta": 0,
-                    "distance": 0,
-                    "isInPath": true
-                  };
-                  return res;
-                }
+              {
+                const res = {
+                  "points": (data.points != undefined) ? data.points : [] ,
+                  "eta": 0,
+                  "distance": 0,
+                  "isInPath": true
+                };
+                return res;
+              }
               const res = window.JBridge.isCoordOnPath(json, lat, lon, speed);
               return JSON.parse(res);
             } catch (err) {

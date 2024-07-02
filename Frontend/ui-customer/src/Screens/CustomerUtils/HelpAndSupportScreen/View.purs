@@ -60,7 +60,7 @@ import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
 import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
-import Data.Maybe (Maybe(..), isJust, isNothing)
+import Data.Maybe (Maybe(..), isJust, isNothing, fromMaybe)
 
 screen :: HelpAndSupportScreenState -> Screen Action HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -137,7 +137,10 @@ view push state =
                     ] <> FontStyle.body1 LanguageStyle
                   ]
                   , recentRideView state push
-                ] <> ( if state.data.config.feature.enableSelfServe then [
+                ] 
+                  <> [ headingView state $ getString ALL_TOPICS
+                   , allTopicsView state push $ topicsList state] 
+                  <> ( if state.data.config.feature.enableSelfServe then [
                           if DA.null state.data.ongoingIssueList && DA.null state.data.resolvedIssueList then textView[height $ V 0, visibility GONE] else headingView state $ getString YOUR_REPORTS
                           , allTopicsView state push $ reportsList state
                       ] else [])
@@ -155,7 +158,7 @@ view push state =
 
 ------------------------------- recentRide --------------------------
 recentRideView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-recentRideView state push=
+recentRideView state push =
   linearLayout
   [ margin (Margin 16 16 16 16)
   , background Color.white900
@@ -324,18 +327,16 @@ allTopicsView state push topicList =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , padding (Padding 20 0 20 0)
-        , onClick push $ case item.categoryAction of
+        , onClick push $ case (fromMaybe "" item.categoryAction) of
                     "CLOSED"             -> const $ ResolvedIssue
                     "REPORTED"           -> const $ ReportedIssue
                     "CONTACT_US"         -> const $ ContactUs
                     "CALL_SUPPORT"       -> const $ CallSupport
                     "DELETE_ACCOUNT"     -> const $ DeleteAccount
                     "FAQ"                -> const $ SelectFaqCategory item
-                    label | label `DA.elem` ["LOST_AND_FOUND", "RIDE_RELATED", "DRIVER_RELATED", "SOS", "FARE_DISCREPANCY", "PAYMENT_RELATED", "SAFETY"] 
-                                        -> const $ SelectRide item
-                    label | label `DA.elem` ["APP_RELATED", "ACCOUNT_RELATED", "OTHER"] 
-                                        -> const $ OpenChat item
-                    _                   -> const $ OpenChat item
+                    _ | item.isRideRequired 
+                                         -> const $ SelectRide item
+                    _                    -> const $ OpenChat item
                   
         , orientation VERTICAL
         ][  linearLayout
@@ -344,7 +345,7 @@ allTopicsView state push topicList =
             , orientation HORIZONTAL
             , padding $ Padding 0 20 0 20
             ][  imageView
-                [ imageWithFallback item.categoryImageUrl
+                [ imageWithFallback (fromMaybe "" item.categoryImageUrl)
                 , height $ V 17
                 , width $ V 17
                 ]
