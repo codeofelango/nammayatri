@@ -71,6 +71,7 @@ helpAndSupportScreen = do
     GoToHelpAndSupportScreen updatedState -> goToHelpAndSupportScreenHanlder updatedState
     GoToRideSelectionScreen selectedCategory updatedState -> goToRideSelectionScreenHandler selectedCategory updatedState
     GoToChatScreen selectedCategory updatedState -> goToChatScreenHandler selectedCategory updatedState
+    GoToSelectFaqScreen selectedIssue updatedState -> goToSelectFaqScreenHandler selectedIssue updatedState
     GoToOldChatScreen selectedIssue updatedState-> goToOldChatScreenHandler selectedIssue updatedState
 
 
@@ -232,6 +233,20 @@ goToChatScreenHandler selectedCategory updatedState =  do
     }
   )
   App.BackT $ App.BackPoint <$> (pure $ IssueReportChatScreenFlow)
+
+goToSelectFaqScreenHandler :: CategoryListType -> HelpAndSupportScreenState -> FlowBT String FlowState
+goToSelectFaqScreenHandler selectedCategory updatedState = do 
+  modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+  let categoryName' = getTitle selectedCategory.categoryAction
+  modifyScreenState $ SelectFaqScreenStateType (
+    \updatedState ->  updatedState {
+      data {
+        categoryName = categoryName'
+      }
+    }
+  )
+  App.BackT $ App.BackPoint <$> (pure SelectFaqScreenFlow )
+
 
 
 goToOldChatScreenHandler :: IssueInfo -> HelpAndSupportScreenState -> FlowBT String FlowState

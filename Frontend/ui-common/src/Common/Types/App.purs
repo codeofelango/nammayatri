@@ -640,3 +640,15 @@ type RateCard =
     waitingTimeInfo :: WaitingTimeInfo,
     serviceTierName :: Maybe String
   }
+
+type DropDownInfo = {
+  title :: String,
+  description :: String,
+  isExpanded :: Boolean,
+  id :: String
+}
+
+type StringType = {
+  value :: String,
+  type :: String
+}

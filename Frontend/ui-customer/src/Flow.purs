@@ -2765,6 +2765,12 @@ flowRouter flowState = case flowState of
   RideSelectionScreenFlow -> do
     nextFlow <- UI.rideSelection
     flowRouter nextFlow
+  SelectFaqScreenFlow -> do
+    nextFlow <- UI.selectFaqScreen
+    flowRouter nextFlow
+  FaqScreenFlow -> do
+    nextFlow <- UI.faqScreen
+    flowRouter nextFlow
   HomeScreenFlow -> homeScreenFlow
   ActivateSafetyScreenFlow -> activateSafetyScreenFlow
   TripDetailsScreenFlow -> tripDetailsScreenFlow
