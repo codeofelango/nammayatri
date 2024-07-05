@@ -422,7 +422,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
       config <- getAppConfigFlowBT Constants.appConfig
       case driverInfoRes of
         Right (GetDriverInfoResp getDriverInfoResp) -> do
-          void $ pure $ setValueToLocalStore DRIVER_LOCATION <$> (capitalize <$> getCityFromCode <$> getDriverInfoResp.operatingCity)
+          maybe (pure unit) (void <<< pure <<< setValueToLocalStore DRIVER_LOCATION <<< capitalize <<< fromMaybe "") $ getCityFromCode <$> getDriverInfoResp.operatingCity
           updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
           when updateCTBasicData $ liftFlowBT $ updateInitialCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
           liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
