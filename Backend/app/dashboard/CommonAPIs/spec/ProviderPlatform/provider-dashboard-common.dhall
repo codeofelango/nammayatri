@@ -78,6 +78,7 @@ let defaultTypeImportMapper =
       [ { _1 = "Text", _2 = "Kernel.Prelude" }
       , { _1 = "Maybe", _2 = "Kernel.Prelude" }
       , { _1 = "Double", _2 = "Kernel.Prelude" }
+      , { _1 = "Float", _2 = "Kernel.Prelude" }
       , { _1 = "TimeOfDay", _2 = "Kernel.Prelude" }
       , { _1 = "Day", _2 = "Data.Time.Calendar" }
       , { _1 = "Int", _2 = "Kernel.Prelude" }
@@ -86,12 +87,15 @@ let defaultTypeImportMapper =
       , { _1 = "Id", _2 = "Kernel.Types.Id" }
       , { _1 = "ShortId", _2 = "Kernel.Types.Id" }
       , { _1 = "UTCTime", _2 = "Kernel.Prelude" }
+      , { _1 = "FilePath", _2 = "Kernel.Prelude" }
       , { _1 = "Meters", _2 = "Kernel.Types.Common" }
       , { _1 = "HighPrecMeters", _2 = "Kernel.Types.Common" }
       , { _1 = "Kilometers", _2 = "Kernel.Types.Common" }
       , { _1 = "Money", _2 = "Kernel.Types.Common" }
       , { _1 = "HighPrecMoney", _2 = "Kernel.Types.Common" }
       , { _1 = "Seconds", _2 = "Kernel.Types.Common" }
+      , { _1 = "Minutes", _2 = "Kernel.Types.Common" }
+      , { _1 = "Centesimal", _2 = "Kernel.Types.Common" }
       , { _1 = "Currency", _2 = "Kernel.Types.Common" }
       , { _1 = "Price", _2 = "Kernel.Types.Common" }
       , { _1 = "PriceAPIEntity", _2 = "Kernel.Types.Common" }
@@ -205,6 +209,7 @@ let defaultImports =
           , "Servant"
           , "Data.OpenApi (ToSchema)"
           , "Servant.Client"
+          , "Kernel.Types.Common"
           ]
         , _qualifiedImports =
           [ "Kernel.Prelude"

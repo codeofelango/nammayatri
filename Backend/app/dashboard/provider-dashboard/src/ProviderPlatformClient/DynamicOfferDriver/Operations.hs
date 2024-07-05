@@ -51,7 +51,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
-import Kernel.Utils.Common
+-- import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import Servant
 import Tools.Auth.Merchant (CheckedShortId)
@@ -152,28 +152,28 @@ data BookingsAPIs = BookingsAPIs
   }
 
 data MerchantAPIs = MerchantAPIs
-  { merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
-    merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
-    driverPoolConfig :: Maybe Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Euler.EulerClient Merchant.DriverPoolConfigRes,
-    driverPoolConfigUpdate :: Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
-    driverPoolConfigCreate :: Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
-    driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
-    driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
-    documentVerificationConfig :: Maybe Merchant.DocumentType -> Maybe Common.Category -> Euler.EulerClient Merchant.DocumentVerificationConfigRes,
-    documentVerificationConfigUpdate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigUpdateReq -> Euler.EulerClient APISuccess,
-    documentVerificationConfigCreate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigCreateReq -> Euler.EulerClient APISuccess,
+  { --merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
+    -- merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- driverPoolConfig :: Maybe Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Euler.EulerClient Merchant.DriverPoolConfigRes,
+    -- driverPoolConfigUpdate :: Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- driverPoolConfigCreate :: Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
+    -- driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
+    -- driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- documentVerificationConfig :: Maybe Merchant.DocumentType -> Maybe Common.Category -> Euler.EulerClient Merchant.DocumentVerificationConfigRes,
+    -- documentVerificationConfigUpdate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- documentVerificationConfigCreate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigCreateReq -> Euler.EulerClient APISuccess,
     serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
     mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
-    updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
-    updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
-    updateFarePolicy :: Id Common.FarePolicy -> Merchant.UpdateFarePolicyReq -> Euler.EulerClient APISuccess,
+    -- createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
+    -- updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
+    -- updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
+    -- updateFarePolicy :: Id Common.FarePolicy -> Merchant.UpdateFarePolicyReq -> Euler.EulerClient APISuccess,
     upsertFarePolicy :: (LBS.ByteString, Merchant.UpsertFarePolicyReq) -> Euler.EulerClient Merchant.UpsertFarePolicyResp,
     createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
-    schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess,
+    -- schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess,
     updateOnboardingVehicleVariantMapping :: (LBS.ByteString, Common.UpdateOnboardingVehicleVariantMappingReq) -> Euler.EulerClient APISuccess,
     upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
     deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
@@ -354,28 +354,28 @@ mkDriverOperationAPIs merchantId city token = do
     stuckBookingsCancel
       :<|> multipleBookingSync = bookingsClient
 
-    merchantCommonConfig
-      :<|> merchantCommonConfigUpdate
-      :<|> driverPoolConfig
-      :<|> driverPoolConfigUpdate
-      :<|> driverPoolConfigCreate
-      :<|> driverIntelligentPoolConfig
-      :<|> driverIntelligentPoolConfigUpdate
-      :<|> documentVerificationConfig
-      :<|> documentVerificationConfigUpdate
-      :<|> documentVerificationConfigCreate
-      :<|> serviceUsageConfig
+    -- merchantCommonConfig
+    --   :<|> merchantCommonConfigUpdate
+    --   :<|> driverPoolConfig
+    --   :<|> driverPoolConfigUpdate
+    --   :<|> driverPoolConfigCreate
+    --   :<|> driverIntelligentPoolConfig
+    --   :<|> driverIntelligentPoolConfigUpdate
+    --   :<|> documentVerificationConfig
+    --   :<|> documentVerificationConfigUpdate
+    --   :<|> documentVerificationConfigCreate
+    serviceUsageConfig
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate
       :<|> verificationServiceConfigUpdate
-      :<|> createFPDriverExtraFee
-      :<|> updateFPDriverExtraFee
-      :<|> updateFPPerExtraKmRate
-      :<|> updateFarePolicy
+      -- :<|> createFPDriverExtraFee
+      -- :<|> updateFPDriverExtraFee
+      -- :<|> updateFPPerExtraKmRate
+      -- :<|> updateFarePolicy
       :<|> upsertFarePolicy
       :<|> createMerchantOperatingCity
-      :<|> schedulerTrigger
+      -- :<|> schedulerTrigger
       :<|> updateOnboardingVehicleVariantMapping
       :<|> upsertSpecialLocation
       :<|> deleteSpecialLocation

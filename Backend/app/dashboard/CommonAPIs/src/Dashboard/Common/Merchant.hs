@@ -45,6 +45,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 import Lib.Types.SpecialLocation
 import Servant
@@ -78,6 +79,17 @@ data MerchantEndpoint
   | DeleteSpecialLocationGateEndpoint
   | PostMerchantUpdateEndpoint
   | PostMerchantServiceConfigMapsUpdateEndpoint
+  | PostMerchantConfigCommonUpdateEndpoint
+  | PostMerchantConfigDriverPoolUpdateEndpoint
+  | PostMerchantConfigDriverPoolCreateEndpoint
+  | PostMerchantConfigDriverIntelligentPoolUpdateEndpoint -- TODO move to DSL
+  | PostMerchantConfigOnboardingDocumentUpdateEndpoint
+  | PostMerchantConfigOnboardingDocumentCreateEndpoint
+  | PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreateEndpoint
+  | PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdateEndpoint
+  | PostMerchantConfigFarePolicyPerExtraKmRateUpdateEndpoint
+  | PostMerchantConfigFarePolicyUpdateEndpoint
+  | PostMerchantSchedulerTriggerEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "MerchantEndpoint"
@@ -851,3 +863,124 @@ type DeleteSpecialLocationGateAPI =
     :> "delete"
     :> Capture "gateName" Text
     :> Delete '[JSON] APISuccess
+
+-- Moved here types, that can't be generated using DSL for now
+
+type DriverPoolConfigRes = [DriverPoolConfigItem]
+
+data DriverPoolConfigItem = DriverPoolConfigItem
+  { minRadiusOfSearch :: Meters,
+    maxRadiusOfSearch :: Meters,
+    radiusStepSize :: Meters,
+    minRadiusOfSearchWithUnit :: Distance,
+    maxRadiusOfSearchWithUnit :: Distance,
+    radiusStepSizeWithUnit :: Distance,
+    driverPositionInfoExpiry :: Maybe Seconds,
+    actualDistanceThreshold :: Maybe Meters,
+    actualDistanceThresholdOnRide :: Maybe Meters,
+    actualDistanceThresholdWithUnit :: Maybe Distance,
+    actualDistanceThresholdOnRideWithUnit :: Maybe Distance,
+    maxDriverQuotesRequired :: Int,
+    driverQuoteLimit :: Int,
+    driverRequestCountLimit :: Int,
+    driverBatchSize :: Int,
+    maxNumberOfBatches :: Int,
+    maxParallelSearchRequests :: Int,
+    maxParallelSearchRequestsOnRide :: Int,
+    poolSortingType :: PoolSortingType,
+    singleBatchProcessTime :: Seconds,
+    tripDistance :: Meters,
+    radiusShrinkValueForDriversOnRide :: Meters,
+    driverToDestinationDistanceThreshold :: Meters,
+    tripDistanceWithUnit :: Distance,
+    radiusShrinkValueForDriversOnRideWithUnit :: Distance,
+    driverToDestinationDistanceThresholdWithUnit :: Distance,
+    driverToDestinationDuration :: Seconds,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PoolSortingType = Intelligent | Random
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type DocumentVerificationConfigRes = [DocumentVerificationConfigItem]
+
+data DocumentVerificationConfigItem = DocumentVerificationConfigItem
+  { documentType :: DocumentType,
+    checkExtraction :: Bool,
+    checkExpiry :: Bool,
+    supportedVehicleClasses :: SupportedVehicleClasses,
+    vehicleClassCheckType :: VehicleClassCheckType,
+    rcNumberPrefixList :: Maybe [Text],
+    maxRetryCount :: Int,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SupportedVehicleClasses = DLValidClasses [Text] | RCValidClasses [VehicleClassVariantMap]
+  deriving stock (Generic, Show)
+
+instance ToJSON SupportedVehicleClasses where
+  toJSON = genericToJSON supportedVCOptions
+
+instance FromJSON SupportedVehicleClasses where
+  parseJSON = genericParseJSON supportedVCOptions
+
+instance ToSchema SupportedVehicleClasses where
+  declareNamedSchema = genericDeclareNamedSchema supportedVCSchemaOptions
+
+supportedVCOptions :: Options
+supportedVCOptions =
+  defaultOptions
+    { sumEncoding = supportedVCTaggedObject,
+      constructorTagModifier = supportedVCModifier
+    }
+
+supportedVCSchemaOptions :: SchemaOptions
+supportedVCSchemaOptions =
+  defaultSchemaOptions
+    { sumEncoding = supportedVCTaggedObject,
+      constructorTagModifier = supportedVCModifier
+    }
+
+supportedVCTaggedObject :: SumEncoding
+supportedVCTaggedObject =
+  TaggedObject
+    { tagFieldName = "documentType",
+      contentsFieldName = "vehicleClasses"
+    }
+
+supportedVCModifier :: String -> String
+supportedVCModifier = \case
+  "DL" -> "DLValidClasses"
+  "RC" -> "RCValidClasses"
+  x -> x
+
+data VehicleClassVariantMap = VehicleClassVariantMap
+  { vehicleClass :: Text,
+    vehicleCapacity :: Maybe Int,
+    vehicleVariant :: Variant,
+    manufacturer :: Maybe Text,
+    manufacturerModel :: Maybe Text,
+    reviewRequired :: Maybe Bool,
+    vehicleModel :: Text,
+    bodyType :: Maybe Text,
+    priority :: Maybe Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleClassCheckType = Infix | Prefix | Suffix
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DocumentType = RC | DL
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''DocumentType)
