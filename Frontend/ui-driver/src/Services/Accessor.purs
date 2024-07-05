@@ -96,3 +96,15 @@ _languagesAvailableForQuiz = lens (unwrap >>> _.languagesAvailableForQuiz) (\old
 
 _languagesAvailableForVideos :: forall a b c. Newtype a { languagesAvailableForVideos :: b | c } => Lens' a b
 _languagesAvailableForVideos = lens (unwrap >>> _.languagesAvailableForVideos) (\oldRec newVal -> wrap ((unwrap oldRec) { languagesAvailableForVideos = newVal }))
+
+_payload :: forall a b c. Newtype a { payload :: b | c } => Lens' a b
+_payload = lens (unwrap >>> _.payload) (\oldRec newVal -> wrap ((unwrap oldRec) { payload = newVal }))
+
+_fragmentViewGroups :: forall a b c. Newtype a { fragmentViewGroups :: b | c } => Lens' a b
+_fragmentViewGroups = lens (unwrap >>> _.fragmentViewGroups) (\oldRec newVal -> wrap ((unwrap oldRec) { fragmentViewGroups = newVal }))
+
+_main :: forall a b c. Newtype a { main :: b | c } => Lens' a b
+_main = lens (unwrap >>> _.main) (\oldRec newVal -> wrap ((unwrap oldRec) { main = newVal }))
+
+_amount :: forall a b c. Newtype a { amount :: b | c } => Lens' a b
+_amount = lens (unwrap >>> _.amount) (\oldRec newVal -> wrap ((unwrap oldRec) { amount = newVal }))

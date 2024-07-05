@@ -21,6 +21,7 @@ type CommonAppConfig = (
   , fontConfig :: FontConfig
   , loaderConfig :: LoaderConfig
   , currency :: String
+  , distanceUnit :: String
   , internationalNumberEnabled :: Boolean
   , navigationAppConfig :: NavigationConfig
   , genericHeaderConfig :: GenericHeaderConfig
@@ -34,11 +35,13 @@ type CommonAppConfig = (
   , logFunctionCalls :: Boolean
   , bannerCarousel :: BannerCarousalConfig 
   , countryCodeConfig ::  Array CountryCodeObj
+  , defaultCountryCodeConfig :: CountryCodeObj
   , defaultLanguage :: String)
   
 type Colors = {
   black800 :: String
 , black900 :: String
+, green700 :: String
 , red :: String
 }
 
@@ -75,6 +78,7 @@ type NavigationAppConfig = {
 , packageName :: String
 , walkQuery :: String
 , directionQuery :: String
+, fallbackQuery :: String
 }
 
 type GenericHeaderConfig = {
@@ -99,8 +103,10 @@ type CityConfig = {
   cityLat :: Number,
   cityLong :: Number,
   supportNumber :: String,
+  supportMail :: String,
   languageKey :: String,
   showDriverReferral :: Boolean,
+  mandatoryDriverReferral :: Boolean,
   showCustomerReferral :: Boolean,
   uploadRCandDL :: Boolean,
   enableYatriCoins :: Boolean,
@@ -150,7 +156,11 @@ type DashboardConfig = {
 type RegistrationConfig = {
   supportWAN :: String,
   callSupport :: Boolean,
-  whatsappSupport :: Boolean
+  whatsappSupport :: Boolean,
+  emailSupport :: Boolean,
+  defVariantList :: Array VehicleCategory,
+  enableAc :: Boolean,
+  enableDataOfIssue :: Boolean
 }
 
 type BannerCarousalConfig = {

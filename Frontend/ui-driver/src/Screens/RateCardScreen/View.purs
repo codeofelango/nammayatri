@@ -17,6 +17,7 @@ module Screens.RateCardScreen.View where
 
 import Animation as Anim
 import Components.PrimaryButton as PrimaryButton
+import ConfigProvider
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -24,7 +25,7 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>), (==), (>), (<), not, void, discard, (-), show, (*), (<=), (>=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, relativeLayout, gravity, height, alpha, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, singleLine, id, frameLayout, scrollBarY, fillViewport, onAnimationEnd, rippleColor, shimmerFrameLayout, clickable)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, relativeLayout, gravity, height, alpha, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, singleLine, id, frameLayout, scrollBarY, fillViewport, onAnimationEnd, rippleColor, shimmerFrameLayout, clickable, alignParentBottom)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -33,6 +34,7 @@ import Data.Maybe (fromMaybe, isJust, Maybe(..))
 import Mobility.Prelude (boolToVisibility)
 import Data.Number.Format (fixed, toStringWith)
 import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as EHU
 import Components.RateCard as RateCard
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -66,42 +68,49 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.RateCardScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $
-    relativeLayout
-     [ height MATCH_PARENT
-     , width MATCH_PARENT
-     , background Color.grey700
-     , onBackPressed push $ const BackClick
-     ] $
-     [ linearLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , orientation VERTICAL
+  Anim.screenAnimation
+    $ relativeLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , background Color.grey700
+        , onBackPressed push $ const BackClick
         ]
-        [ headerLayout push state
-        , peakTimeView push state
-        , scrollView
+    $ [ linearLayout
           [ width MATCH_PARENT
-          , weight 1.0
-          , scrollBarY false
-          , margin $ MarginTop 16
-          , fillViewport true
-          ][ linearLayout
-              [ width MATCH_PARENT
-              , height MATCH_PARENT
-              , orientation VERTICAL
-              ][ linearLayout
-                  [ width MATCH_PARENT
-                  , height WRAP_CONTENT
-                  , orientation VERTICAL
-                  ] ( vehicleListView push state )
-              , linearLayout[weight 1.0][]
-              , rateSlider push state
-              ]
-
+          , height MATCH_PARENT
+          , orientation VERTICAL
           ]
-        ]
-    ] <> if state.props.showRateCard then [ rateCardView push state ] else []
+          [ headerLayout push state
+          , peakTimeView push state
+          , linearLayout
+              [ weight 1.0
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              ]
+              [ scrollView
+                  [ width MATCH_PARENT
+                  , height MATCH_PARENT
+                  , scrollBarY false
+                  ]
+                  [ linearLayout
+                      [ width MATCH_PARENT
+                      , height MATCH_PARENT
+                      , orientation VERTICAL
+                      , padding $ PaddingTop 16     
+                      ]
+                      [ linearLayout
+                          [ width MATCH_PARENT
+                          , height WRAP_CONTENT
+                          , orientation VERTICAL
+                          ]
+                          (vehicleListView push state)
+                      ]
+                  ]
+              ]
+          , rateSlider push state
+          ]
+      ]
+    <> if state.props.showRateCard then [ rateCardView push state ] else []
 
 
 headerLayout :: forall w. (Action -> Effect Unit) -> ST.RateCardScreenState -> PrestoDOM (Effect Unit) w
@@ -116,8 +125,8 @@ headerLayout push state =
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , orientation HORIZONTAL
-        , layoutGravity "center_vertical"
-        , padding $ PaddingVertical 10 10
+        , gravity CENTER
+        , padding $ Padding 10 (EHC.safeMarginTopWithDefault 13) 10 13
         ]
         [ imageView
             [ width $ V 30
@@ -169,7 +178,6 @@ serviceTierItem push state service index =
   relativeLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , weight 1.0
     ]
     [ linearLayout
         [ width MATCH_PARENT
@@ -188,9 +196,9 @@ serviceTierItem push state service index =
             , height $ V 48
             ]
         , linearLayout
-          [ weight 1.0
-          , height WRAP_CONTENT
+          [ height WRAP_CONTENT
           , orientation VERTICAL
+          , width WRAP_CONTENT
           ][ linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -212,14 +220,14 @@ serviceTierItem push state service index =
             ]
           ]
         , relativeLayout
-          [ width WRAP_CONTENT
+          [ weight 1.0
           , height WRAP_CONTENT
           , padding $ PaddingVertical 12 12
           , orientation VERTICAL
           , gravity RIGHT
           ][  PrestoAnim.animationSet [ Anim.fadeIn $ not state.props.sliderLoading ] $
               linearLayout
-              [ width WRAP_CONTENT
+              [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
               , gravity RIGHT
@@ -236,7 +244,7 @@ serviceTierItem push state service index =
                 ]  <> FontStyle.body3 CT.TypoGraphy
               ]
             , linearLayout
-              [ width WRAP_CONTENT
+              [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
               , gravity RIGHT
@@ -275,9 +283,9 @@ serviceTierItem push state service index =
     ]
     where primaryTextColor = if peakTime then Color.green900 else Color.black800
           secondaryTextColor = if peakTime then Color.green900 else Color.black600
-          curr = CP.getCurrency CS.appConfig
+          curr = EHU.getCurrencySymbol $ fromMaybe CT.INR service.currency
           primaryText = curr <> show (DI.round $  (DI.toNumber state.props.sliderVal) * (fromMaybe 0.0 service.perKmRate))
-          secondaryText = curr <> (toStringWith (fixed 2) $ fromMaybe 0.0 service.perKmRate) <> "/km"
+          secondaryText = curr <> (toStringWith (fixed 2) $ fromMaybe 0.0 service.perKmRate) <> "/" <> getDistanceUnit appConfig -- getDistanceUnit 
           peakTime = service.farePolicyHour == Just API.Peak
 
 peakTimeView :: forall w. (Action -> Effect Unit) -> ST.RateCardScreenState -> PrestoDOM (Effect Unit) w
@@ -300,15 +308,17 @@ peakTimeView push state =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , background Color.white900
-        , alpha 0.2
+        , alpha $ if EHC.os == "IOS" then 1.0 else 0.2
         ][ textView $
-            [ text ""
+            [ text $ "↑  " <> getString HIGHEST_EARNING_PEAK_TIME
             , height WRAP_CONTENT 
             , color Color.white900
+            , background Color.green900
+            , visibility $ if EHC.os == "IOS" then VISIBLE else INVISIBLE
             , padding $ Padding 16 8 16 8
             , width MATCH_PARENT
             , gravity CENTER
-            ]
+            ] <> FontStyle.body1 CT.TypoGraphy
           ]
     ] 
   where peakTime = isJust $ DA.find (\item -> item.farePolicyHour == Just API.Peak) state.data.ridePreferences
@@ -323,13 +333,13 @@ rateSlider push state =
     , background Color.white900
     , gravity CENTER
     , stroke $ "1," <> Color.grey900
-    , padding $ PaddingVertical 16 16
+    , padding $ PaddingVertical 16 (EHC.safeMarginBottomWithDefault 16)
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
         , cornerRadius 12.0
-        , background Color.blue600
+        , background state.data.config.profile.background
         , gravity CENTER
         , padding $ Padding 16 16 16 16
         , margin $ MarginHorizontal 16 16
@@ -355,7 +365,7 @@ rateSlider push state =
                   , clickable decButtonEnabled
                   ] <> if decButtonEnabled then [rippleColor Color.rippleShade] else []
             , textView
-                $ [ text $ show state.props.sliderVal <> " km"
+                $ [ text $ show state.props.sliderVal <> " " <> getDistanceUnit appConfig
                   , color Color.black800
                   , gravity CENTER
                   , weight 1.0
@@ -379,7 +389,7 @@ rateSlider push state =
               ][]
           , PrestoAnim.animationSet [ Anim.triggerOnAnimationEnd true ]
             $ linearLayout
-                [ height WRAP_CONTENT
+                [ height $ V 35
                 , width MATCH_PARENT
                 , id $ EHC.getNewIDWithTag "RateSlider"
                 , onAnimationEnd ( \action -> void $ JB.renderSlider 
@@ -408,11 +418,11 @@ rateSlider push state =
                 , height $ V 32
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube"
                 , rippleColor Color.rippleShade
-                , padding $ Padding 0 5 5 5
+                , margin $ Margin 0 5 5 5
                 ]
               , textView $
                 [ text $ getString LEARN_MORE
-                , color Color.blue900
+                , color state.data.config.bookingPreferencesConfig.primaryToggleBackground
                 , rippleColor Color.rippleShade
                 ] <> FontStyle.body3 CT.TypoGraphy
 
@@ -434,9 +444,9 @@ rateSlider push state =
               stepFunctionForCoinConversion = state.props.incrementUnit,
               enableToolTip = false,
               getCallbackOnProgressChanged = true,
-              thumbColor = Color.blue800,
+              thumbColor = state.data.config.bookingPreferencesConfig.primaryToggleBackground,
               bgColor = Color.grey900,
-              progressColor = Color.blue800,
+              progressColor = state.data.config.bookingPreferencesConfig.primaryToggleBackground,
               bgAlpha = 1000
               }
 
@@ -455,10 +465,8 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig
       { text = getString VIEW_BOOKING_PREF
-      , color = Color.primaryButtonColor
       }
       , margin = Margin 16 16 16 0
-      , background = Color.black900
       , height = V 54
       , id = "ViewBookingPreferencesButton"
       }

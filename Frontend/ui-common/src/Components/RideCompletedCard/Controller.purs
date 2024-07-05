@@ -84,7 +84,8 @@ type Config = {
   toll :: Toll,
   rentalRowDetails :: RentalRowConfig,
   rentalBookingData :: RentalBookingConfig,
-  showRentalRideDetails :: Boolean
+  showRentalRideDetails :: Boolean,
+  bottomBackground :: String
 }
 
 data Theme = DARK | LIGHT
@@ -228,6 +229,7 @@ config = {
   },
   needHelpText : "",
   safetyTitle : "",
+  bottomBackground : Color.grey700,
   toll : {
     actualAmount : 0.0,
     text : "",
