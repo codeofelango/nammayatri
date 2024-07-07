@@ -13,6 +13,7 @@ data IssueOption = IssueOption
     priority :: Int,
     issueMessageId :: Maybe Text,
     label :: Maybe Text,
-    merchantId :: Id Merchant
+    merchantId :: Id Merchant,
+    igmSubCategory :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)

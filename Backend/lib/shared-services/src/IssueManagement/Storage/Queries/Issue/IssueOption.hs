@@ -59,6 +59,10 @@ findByIdAndLanguage issueOptionId language = do
 findById :: BeamFlow m r => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = findOneWithKV [Is BeamIO.id $ Eq issueOptionId]
 
+findByIGMIssueSubCategory :: BeamFlow m r => Maybe Text -> m (Maybe IssueOption)
+findByIGMIssueSubCategory (Just igmSubCategory) = findOneWithKV [Is BeamIO.igmSubCategory $ Eq $ Just igmSubCategory]
+findByIGMIssueSubCategory Nothing = pure Nothing
+
 instance FromTType' BeamIO.IssueOption IssueOption where
   fromTType' BeamIO.IssueOptionT {..} = do
     pure $
@@ -70,7 +74,8 @@ instance FromTType' BeamIO.IssueOption IssueOption where
             priority = priority,
             issueMessageId = issueMessageId,
             label = label,
-            merchantId = Id merchantId
+            merchantId = Id merchantId,
+            igmSubCategory = igmSubCategory
           }
 
 instance ToTType' BeamIO.IssueOption IssueOption where
@@ -82,5 +87,6 @@ instance ToTType' BeamIO.IssueOption IssueOption where
         BeamIO.priority = priority,
         BeamIO.issueMessageId = issueMessageId,
         BeamIO.label = label,
-        BeamIO.merchantId = getId merchantId
+        BeamIO.merchantId = getId merchantId,
+        BeamIO.igmSubCategory = igmSubCategory
       }

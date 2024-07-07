@@ -9,6 +9,7 @@ data IssueCategory = IssueCategory
     category :: Text,
     logoUrl :: Text,
     priority :: Int,
-    merchantId :: Id Merchant
+    merchantId :: Id Merchant,
+    igmCategory :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)
