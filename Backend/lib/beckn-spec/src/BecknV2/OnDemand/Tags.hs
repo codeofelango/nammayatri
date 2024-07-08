@@ -48,11 +48,12 @@ data Taggings = Taggings
     itemTags :: TagList,
     personTags :: TagList,
     providerTags :: TagList,
-    orderTags :: TagList
+    orderTags :: TagList,
+    paymentTags :: TagList
   }
 
 instance Default Taggings where
-  def = Taggings [] [] [] [] [] [] [] []
+  def = Taggings [] [] [] [] [] [] [] [] []
 
 data BecknTagGroup
   = -- ONDC standard tag groups for ONDC:TRV10 domain
@@ -82,6 +83,7 @@ data BecknTagGroup
   | RATING_TAGS
   | FORWARD_BATCHING_REQUEST_INFO
   | VEHICLE_INFO
+  | SETTLEMENT_DETAILS
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -93,6 +95,8 @@ instance CompleteTagGroup BecknTagGroup where
   -- getDescriptor :: tags -> (description, shortDescription)
   getTagGroupDescriptor tagGroup = uncurry (Spec.Descriptor . Just . T.pack $ show tagGroup) $ case tagGroup of
     ROUTE_INFO -> (Just "Route Information", Nothing)
+    BUYER_FINDER_FEES -> (Just "Buyer Finder Fees Information", Nothing)
+    SETTLEMENT_TERMS -> (Just "Settlement Terms Information", Nothing)
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -205,8 +209,8 @@ data BecknTag
   | PLANNED_PER_KM_CHARGE
   | PLANNED_PER_KM_CHARGE_ROUND_TRIP
   | PER_DAY_MAX_HOUR_ALLOWANCE
-  | SETTLEMENT_DETAILS
-  | INSURANCE_CHARGE_PER_METER
+  | -- | SETTLEMENT_DETAILS
+    INSURANCE_CHARGE_PER_METER
   | INSURANCE_CHARGE_PER_MILE
   | INSURANCE_CHARGE_PER_KM
   | INSURANCE_CHARGE_PER_YARD
@@ -296,6 +300,15 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> (Just "Round trip", Nothing)
     WAYPOINTS -> (Just "WAYPOINTS", Nothing)
     MULTIPLE_ROUTES -> (Just "Multiple Routes", Nothing)
+    BUYER_FINDER_FEES_PERCENTAGE -> (Just "Buyer Finder Fees", Nothing)
+    SETTLEMENT_AMOUNT -> (Just "Settlement amount", Nothing)
+    SETTLEMENT_WINDOW -> (Just "Settlement window", Nothing)
+    DELAY_INTEREST -> (Just "Delay Interest", Nothing)
+    SETTLEMENT_BASIS -> (Just "Settlement Basic", Nothing)
+    MANDATORY_ARBITRATION -> (Just "Mandatory Arbitration", Nothing)
+    COURT_JURISDICTION -> (Just "Court Jurisdiction", Nothing)
+    STATIC_TERMS -> (Just "Static Terms", Nothing)
+    SETTLEMENT_TYPE -> (Just "Settlement Type", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -307,6 +320,15 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> ROUTE_INFO
     WAYPOINTS -> ROUTE_INFO
     MULTIPLE_ROUTES -> ROUTE_INFO
+    BUYER_FINDER_FEES_PERCENTAGE -> BUYER_FINDER_FEES
+    SETTLEMENT_AMOUNT -> SETTLEMENT_TERMS
+    SETTLEMENT_WINDOW -> SETTLEMENT_TERMS
+    DELAY_INTEREST -> SETTLEMENT_TERMS
+    SETTLEMENT_BASIS -> SETTLEMENT_TERMS
+    MANDATORY_ARBITRATION -> SETTLEMENT_TERMS
+    COURT_JURISDICTION -> SETTLEMENT_TERMS
+    STATIC_TERMS -> SETTLEMENT_TERMS
+    SETTLEMENT_TYPE -> SETTLEMENT_DETAILS
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text
