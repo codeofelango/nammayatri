@@ -8,12 +8,15 @@ import Data.Aeson
 import qualified Domain.Types.Ride
 import qualified Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Types
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
-data CallStatus = CallStatus
-  { callError :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+data CallStatusE e = CallStatus
+  { callAttempt :: Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus,
+    callError :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    callFromNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     callId :: Kernel.Prelude.Text,
     callService :: Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService,
     conversationDuration :: Kernel.Prelude.Int,
@@ -27,4 +30,62 @@ data CallStatus = CallStatus
     status :: Kernel.External.Call.Interface.Types.CallStatus,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic)
+
+type CallStatus = CallStatusE 'AsEncrypted
+
+type DecryptedCallStatus = CallStatusE 'AsUnencrypted
+
+instance EncryptedItem CallStatus where
+  type Unencrypted CallStatus = (DecryptedCallStatus, HashSalt)
+  encryptItem (entity, salt) = do
+    callFromNumber_ <- encryptItem $ (,salt) <$> callFromNumber entity
+    pure
+      CallStatus
+        { callAttempt = callAttempt entity,
+          callError = callError entity,
+          callFromNumber = callFromNumber_,
+          callId = callId entity,
+          callService = callService entity,
+          conversationDuration = conversationDuration entity,
+          createdAt = createdAt entity,
+          customerIvrResponse = customerIvrResponse entity,
+          dtmfNumberUsed = dtmfNumberUsed entity,
+          id = id entity,
+          merchantId = merchantId entity,
+          recordingUrl = recordingUrl entity,
+          rideId = rideId entity,
+          status = status entity,
+          updatedAt = updatedAt entity
+        }
+  decryptItem entity = do
+    callFromNumber_ <- fmap fst <$> decryptItem (callFromNumber entity)
+    pure
+      ( CallStatus
+          { callAttempt = callAttempt entity,
+            callError = callError entity,
+            callFromNumber = callFromNumber_,
+            callId = callId entity,
+            callService = callService entity,
+            conversationDuration = conversationDuration entity,
+            createdAt = createdAt entity,
+            customerIvrResponse = customerIvrResponse entity,
+            dtmfNumberUsed = dtmfNumberUsed entity,
+            id = id entity,
+            merchantId = merchantId entity,
+            recordingUrl = recordingUrl entity,
+            rideId = rideId entity,
+            status = status entity,
+            updatedAt = updatedAt entity
+          },
+        ""
+      )
+
+instance EncryptedItem' CallStatus where
+  type UnencryptedItem CallStatus = DecryptedCallStatus
+  toUnencrypted a salt = (a, salt)
+  fromUnencrypted = fst
+
+data CallAttemptStatus = Attempted | Resolved | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallAttemptStatus)

@@ -754,6 +754,7 @@ TransporterConfig:
     nightSafetyEndTime: Seconds
     cancellationFee: HighPrecMoney
     currency: Currency
+    exotelStatusCheckScheduler : Int
     distanceUnit: DistanceUnit
     driverDistanceTravelledOnPickupThresholdOnCancel: Meters
     driverTimeSpentOnPickupThresholdOnCancel: Seconds
@@ -841,6 +842,7 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: Maybe Seconds
     minmRentalAndScheduledBookingLeadTimeHours: Maybe Int
     scheduledRideFilterExclusionThresholdHours: Maybe Int
+    exotelStatusCheckScheduler: Maybe Seconds
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -886,6 +888,7 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     minmRentalAndScheduledBookingLeadTimeHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     scheduledRideFilterExclusionThresholdHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
+    exotelStatusCheckScheduler: Just $ Kernel.Types.Common.Seconds exotelStatusCheckScheduler|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -933,6 +936,7 @@ TransporterConfig:
     graceTimeForScheduledRidePickup: Kernel.Prelude.fromMaybe 300 (Kernel.Utils.Common.secondsToNominalDiffTime <$> graceTimeForScheduledRidePickup)|E
     minmRentalAndScheduledBookingLeadTimeHours: fromMaybe 24 (Kernel.Types.Common.Hours <$> minmRentalAndScheduledBookingLeadTimeHours)|E
     scheduledRideFilterExclusionThresholdHours: fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours)|E
+    exotelStatusCheckScheduler: fromMaybe 120 ((.getSeconds) <$> exotelStatusCheckScheduler)|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey

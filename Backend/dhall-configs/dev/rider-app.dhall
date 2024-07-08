@@ -182,6 +182,7 @@ let RiderJobType =
       | ScheduledRideNotificationsToRider
       | SafetyIVR
       | CallPoliceApi
+      | CheckExotelStatusDoFallback
       | OtherJobTypes
       >
 
@@ -192,6 +193,7 @@ let jobInfoMapx =
         }
       , { mapKey = RiderJobType.SafetyIVR, mapValue = False }
       , { mapKey = RiderJobType.CallPoliceApi, mapValue = False }
+      , { mapKey = RiderJobType.CheckExotelStatusDoFallback, mapValue = False }
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
       ]
 
@@ -310,4 +312,5 @@ in  { esqDBCfg
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
+    , exotelStatusScheduler = +120
     }

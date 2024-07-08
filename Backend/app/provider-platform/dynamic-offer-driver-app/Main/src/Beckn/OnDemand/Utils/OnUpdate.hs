@@ -34,6 +34,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, (%~))
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.Common hiding (mkPrice)
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
@@ -341,6 +342,37 @@ mkSafetyAlertTags reason =
                   },
             tagDisplay = Just False,
             tagValue = Just reason
+          }
+
+mkCallServiceDownTags :: FCM.FCMNotificationType -> Maybe [Spec.TagGroup]
+mkCallServiceDownTags notificationType =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.CALL_SERVICE_ALERT,
+                  descriptorName = Just "Call Service Down",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just callServiceDownSingleton
+        }
+    ]
+  where
+    callServiceDownSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just $ show Tags.NOTIFICATION_MESSAGE,
+                    descriptorName = Just "Notification Message",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just $ show notificationType
           }
 
 mkUpdatedDistanceTags :: Maybe HighPrecMeters -> Maybe [Spec.TagGroup]

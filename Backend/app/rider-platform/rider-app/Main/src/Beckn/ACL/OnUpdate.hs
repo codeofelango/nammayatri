@@ -110,6 +110,7 @@ parseEventV2 transactionId messageId order = do
         "QUOTE_REPETITION" -> parseQuoteRepetitionEvent transactionId order
         "NEW_MESSAGE" -> parseNewMessageEvent order
         "SAFETY_ALERT" -> parseSafetyAlertEvent order
+        "CALL_SERVICE_ALERT" -> return $ DOnUpdate.OUCallServiceDownEventReq $ DOnUpdate.CallServiceDownEventReq transactionId
         "STOP_ARRIVED" -> parseStopArrivedEvent order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType

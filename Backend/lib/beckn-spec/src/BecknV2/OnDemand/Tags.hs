@@ -74,6 +74,7 @@ data BecknTagGroup
   | CUSTOMER_TIP_INFO
   | AUTO_ASSIGN_ENABLED
   | SAFETY_ALERT
+  | CALL_SERVICE_ALERT
   | RIDE_ODOMETER_DETAILS
   | TOLL_CONFIDENCE_INFO
   | VEHICLE_AGE_INFO
@@ -375,6 +376,8 @@ data BecknTag
     IS_AUTO_ASSIGN_ENABLED
   | -- Safety alert tags
     DEVIATION
+  | -- Call service alert tags
+    NOTIFICATION_MESSAGE
   | -- Ride odometer details tags
     START_ODOMETER_READING
   | -- Driver new message tags

@@ -1,10 +1,16 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
   CallService: Kernel.External.Call.Types
 
 CallStatus:
   tableName: call_status
+
+  types:
+    CallAttemptStatus:
+      enum: "Attempted, Resolved, Failed"
 
   fields:
     id : Id CallStatus
@@ -17,7 +23,21 @@ CallStatus:
     merchantId : Maybe Text
     callService : Maybe CallService
     callError : Maybe Text
+    callAttempt : Maybe CallAttemptStatus
+    callFromNumber: Maybe (EncryptedHashedField e Text)
     createdAt: UTCTime
+
+  beamFields:
+    callFromNumber:
+      callFromNumberEncrypted: Maybe Text
+      callFromNumberHash: Maybe DbHash
+
+  fromTType:
+    callFromNumber: EncryptedHashed <$> (Encrypted <$> callFromNumberEncrypted) <*> callFromNumberHash|E
+
+  toTType:
+    callFromNumberEncrypted: (callFromNumber <&> unEncrypted . (.encrypted))|E
+    callFromNumberHash: (callFromNumber <&> (.hash))|E
 
   constraints:
     id: PrimaryKey
@@ -30,17 +50,27 @@ CallStatus:
 
     updateCallStatus:
       kvFunction: updateWithKV
-      params: [conversationDuration, recordingUrl, status]
+      params: [conversationDuration, recordingUrl, status, callAttempt]
       where: id
 
     updateCallError:
       kvFunction: updateWithKV
       params: [callError, callService, merchantId]
+      where: callId
+
+    updateCallStatusWithId:
+      kvFunction: updateWithKV
+      params: [status, dtmfNumberUsed, merchantId, callService, callId]
       where: id
 
-    updateCallStatusWithRideId:
+    updateCallAttempt:
       kvFunction: updateWithKV
-      params: [entityId, dtmfNumberUsed, merchantId, callService]
+      params: [callAttempt]
+      where: entityId
+
+    updateCallStatusSId:
+      kvFunction: updateWithKV
+      params: [callId]
       where: id
 
   extraOperations:
@@ -54,6 +84,8 @@ CallStatus:
     dtmfNumberUsed: character varying (255)
     entityId: character varying (36)
     merchantId: character varying (36)
+    callFromNumberEncrypted: character varying (255)
+    callFromNumberHash: bytea
 
   default:
     entityId: "'UNKNOWN'"

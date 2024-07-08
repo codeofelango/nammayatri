@@ -157,6 +157,24 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
+  OU.CallServiceDownBuildReq OU.DCallServiceDownReq {..} -> do
+    let BookingDetails {..} = bookingDetails
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.CALL_SERVICE_ALERT) isValueAddNP Nothing
+    pure $
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
+        }
   OU.StopArrivedBuildReq OU.DStopArrivedBuildReq {..} -> do
     let BookingDetails {..} = bookingDetails
     fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing Nothing Nothing False False Nothing (Just $ show Event.STOP_ARRIVED) isValueAddNP Nothing

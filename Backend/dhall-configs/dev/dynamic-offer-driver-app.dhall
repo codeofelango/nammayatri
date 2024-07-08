@@ -196,6 +196,7 @@ let AllocatorJobType =
       < SendSearchRequestToDriver
       | UnblockDriver
       | SendPDNNotificationToDriver
+      | CheckExotelStatusDoFallback
       | MandateExecution
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
@@ -212,6 +213,9 @@ let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.CheckExotelStatusDoFallback
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.MandateExecution, mapValue = True }
@@ -353,4 +357,5 @@ in  { esqDBCfg
     , singleBatchProcessingTempDelay = +2
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
+    , exotelStatusScheduler = +120
     }

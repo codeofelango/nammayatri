@@ -24,6 +24,7 @@ import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Location as DL
 import Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.Id
 import SharedLogic.Beckn.Common as Reexport
@@ -39,6 +40,7 @@ data OnUpdateBuildReq
   | QuoteRepetitionBuildReq DQuoteRepetitionReq
   | NewMessageBuildReq DNewMessageReq
   | SafetyAlertBuildReq DSafetyAlertReq
+  | CallServiceDownBuildReq DCallServiceDownReq
   | StopArrivedBuildReq DStopArrivedBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
@@ -67,6 +69,11 @@ data DQuoteRepetitionReq = DQuoteRepetitionReq
 data DNewMessageReq = DNewMessageReq
   { bookingDetails :: BookingDetails,
     message :: Text
+  }
+
+data DCallServiceDownReq = DCallServiceDownReq
+  { bookingDetails :: BookingDetails,
+    notificationType :: FCM.FCMNotificationType
   }
 
 data DSafetyAlertReq = DSafetyAlertReq

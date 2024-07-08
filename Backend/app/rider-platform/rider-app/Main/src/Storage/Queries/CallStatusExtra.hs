@@ -2,6 +2,7 @@ module Storage.Queries.CallStatusExtra where
 
 import Domain.Types.CallStatus
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
@@ -19,3 +20,9 @@ create cs = do
 
 findByCallSid :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCS.callId $ Se.Eq callSid]
+
+findOneByRideId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe CallStatus)
+findOneByRideId rideId = findAllWithOptionsKV [Se.Is BeamCS.rideId $ Se.Eq rideId] (Se.Desc BeamCS.createdAt) (Just 1) Nothing <&> listToMaybe
+
+findByCallFromHash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DbHash -> m (Maybe CallStatus)
+findByCallFromHash callFromNumberHash = findAllWithOptionsKV [Se.Is BeamCS.callFromNumberHash $ Se.Eq callFromNumberHash] (Se.Desc BeamCS.createdAt) (Just 1) Nothing <&> listToMaybe

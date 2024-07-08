@@ -258,6 +258,7 @@ library
       SharedLogic.PublicTransport
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CallPoliceApi
+      SharedLogic.Scheduler.Jobs.CheckExotelDoFallback
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider

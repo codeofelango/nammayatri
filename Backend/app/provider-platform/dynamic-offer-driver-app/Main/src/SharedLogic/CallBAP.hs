@@ -31,6 +31,7 @@ module SharedLogic.CallBAP
     callOnStatusV2,
     buildBppUrl,
     sendSafetyAlertToBAP,
+    sendCallServiceDownUpdateToBAP,
     mkTxnIdKey,
   )
 where
@@ -84,6 +85,7 @@ import qualified EulerHS.Types as Euler
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -566,6 +568,44 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverArrivedBuildReq
   void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
+
+sendCallServiceDownUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  FCM.FCMNotificationType ->
+  m ()
+sendCallServiceDownUpdateToBAP booking ride notificationType = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
+    merchant <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    driver <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+    vehicle <- runInReplica $ QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    let paymentUrl = Nothing
+    riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
+    riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+    let bookingDetails = ACL.BookingDetails {..}
+        callServiceDownReq = ACL.CallServiceDownBuildReq ACL.DCallServiceDownReq {..}
+    retryConfig <- asks (.shortDurationRetryCfg)
+    callServiceDownMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing callServiceDownReq
+    void $ callOnUpdateV2 callServiceDownMsgV2 retryConfig merchant.id
 
 sendStopArrivalUpdateToBAP ::
   ( CacheFlow m r,

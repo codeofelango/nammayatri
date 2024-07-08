@@ -40,12 +40,14 @@ RiderConfig:
     policeTriggerDelay: NominalDiffTime
     exotelAppIdMapping: Maybe ExotelMapping
     hardLimitForSafetyJobs: Int
+    exotelStatusCheckScheduler : Int
     incidentReportSupport: Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
     policeTriggerDelay: Maybe Seconds
     hardLimitForSafetyJobs: Maybe Seconds
+    exotelStatusCheckScheduler : Maybe Seconds
     incidentReportSupport: Maybe Bool
 
   constraints:
@@ -55,12 +57,14 @@ RiderConfig:
     ivrTriggerDelay: fromMaybe 3000 (Kernel.Utils.Common.secondsToNominalDiffTime <$> ivrTriggerDelay)|E
     policeTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> policeTriggerDelay)|E
     hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
+    exotelStatusCheckScheduler: fromMaybe 120 ((.getSeconds) <$> exotelStatusCheckScheduler)|E
     incidentReportSupport: fromMaybe False incidentReportSupport|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     policeTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     hardLimitForSafetyJobs: Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs|E
+    exotelStatusCheckScheduler: Just $ Kernel.Types.Common.Seconds exotelStatusCheckScheduler|E
     incidentReportSupport: Just incidentReportSupport|E
 
   default:
