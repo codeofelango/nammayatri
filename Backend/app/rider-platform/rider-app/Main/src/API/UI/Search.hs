@@ -29,6 +29,7 @@ import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
+import Domain.Types.BecknConfig
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
@@ -50,6 +51,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 
@@ -74,9 +76,10 @@ search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe
 search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice mbIsDashboardRequest = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest)
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchantId "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchantId.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW) -- get Vehicle Variatnt here
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) bapConfig
   fork "search cabs" . withShortRetry $ do
-    becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
+    becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes bapConfig
     let generatedJson = encode becknTaxiReqV2
     logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId

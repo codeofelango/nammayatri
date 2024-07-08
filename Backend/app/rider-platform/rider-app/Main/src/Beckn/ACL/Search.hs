@@ -27,15 +27,14 @@ import EulerHS.Prelude hiding (state, (%~))
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.BecknConfig as QBC
 
 buildSearchReqV2 ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearch.SearchRes ->
+  BecknConfig ->
   m Spec.SearchReq
-buildSearchReqV2 res@DSearch.SearchRes {..} = do
+buildSearchReqV2 res@DSearch.SearchRes {..} bapConfig = do
   bapUri <- Utils.mkBapUri merchant.id
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show AUTO_RICKSHAW) -- get Vehicle Variatnt here
   messageId <- generateGUIDText
   let eBecknSearchReq = Search.buildBecknSearchReqV2 res bapConfig bapUri messageId
   case eBecknSearchReq of
