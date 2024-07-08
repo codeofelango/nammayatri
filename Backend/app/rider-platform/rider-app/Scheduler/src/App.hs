@@ -35,6 +35,7 @@ import qualified Kernel.Utils.FlowLogging as L
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.JobScheduler
+import "rider-app" SharedLogic.Scheduler.Jobs.CheckExotelDoFallback
 import "rider-app" SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
 import Storage.Beam.SystemConfigs ()
@@ -55,6 +56,7 @@ schedulerHandle flowRt env =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . checkPNAndSendSMS)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToRider)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelDoFallback)
     }
 
 runRiderAppScheduler ::
