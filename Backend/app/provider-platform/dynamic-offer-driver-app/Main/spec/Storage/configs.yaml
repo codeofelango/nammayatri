@@ -11,6 +11,7 @@ imports:
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
   TimeBound : Domain.Types.TimeBound
+  Currency: Kernel.Utils.Common
   DayOfWeek: Data.Time
   Centesimal: Kernel.Types.Common
 
@@ -138,6 +139,36 @@ ValueAddNP:
     findAll:
       kvFunction: findAllWithKV
       where: enabled
+
+CancellationAndNoShowChargeConfigs:
+  tableName: cancellation_and_now_show_charge_configs
+
+  fields:
+    id : Id CancellationAndNoShowChargeConfigs
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleServiceTierType: ServiceTierType|NoRelation
+    currency: Currency
+    minCancellationCharge: HighPrecMoney
+    maxCancellationCharge: HighPrecMoney
+    perMetreCancellationCharge: HighPrecMoney
+    perMinuteCancellationCharge: HighPrecMoney
+    maxWaitingTimeAtPickupSeconds:  Seconds
+    freeCancellationTimeSeconds: Seconds
+    percentageOfRideFareToBeCharged: HighPrecMoney
+
+  queries:
+    findByMerchantOpCityIdAndServiceTierType:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleServiceTierType]
+
+  cachedQueries:
+    findByMerchantOpCityIdAndServiceTierType:
+      keyParams: [merchantOperatingCityId, vehicleServiceTierType]
+      dbQuery: findByMerchantOpCityIdAndServiceTierType
+      dbQueryParams: [merchantOperatingCityId, vehicleServiceTierType]
+      queryType: FindAndCache
 
 SurgePricing:
   tableName: surge_pricing

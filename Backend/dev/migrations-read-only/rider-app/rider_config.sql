@@ -64,3 +64,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN email_otp_config json;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN kapture_config json NOT NULL default '{"kaptureQueue":"", "disposition":""}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN settle_cancellation_fee_before_next_ride boolean ;

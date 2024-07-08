@@ -30,6 +30,8 @@ import SharedLogic.Cancel
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride (updateOnRideStatusWithAdvancedRideCheck)
+import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.CachedQueries.CancellationAndNoShowChargeConfigs as CQCancellationAndNoShowConfigs
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -38,6 +40,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Event
@@ -52,7 +55,9 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
   merchant <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy
+  transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  noShowCharges <- if transporterConfig.canAddCancellationFee then calculateNoShowCharges booking ride else return Nothing
+  cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy noShowCharges
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
@@ -62,10 +67,26 @@ cancelRideImpl rideId rideEndedBy bookingCReason = do
     when (bookingCReason.source == SBCR.ByDriver) $
       DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit}
     Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
-
   fork "cancelRide/ReAllocate - Notify BAP" $ do
     isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason
-    unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+    unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source noShowCharges
+
+calculateNoShowCharges :: SRB.Booking -> DRide.Ride -> Flow (Maybe PriceAPIEntity)
+calculateNoShowCharges booking ride = do
+  mbCancellationAndNoShowConfigs <- CQCancellationAndNoShowConfigs.findByMerchantOpCityIdAndServiceTierType booking.merchantOperatingCityId booking.vehicleServiceTier
+  case (ride.driverArrivalTime, mbCancellationAndNoShowConfigs) of
+    (Just arrivalTime, Just cancellationAndNoShowConfigs) -> do
+      now <- getCurrentTime
+      let timeDiff = roundToIntegral $ diffUTCTime now arrivalTime
+      if timeDiff > cancellationAndNoShowConfigs.maxWaitingTimeAtPickupSeconds
+        then do
+          let maxWaitingTimeAtPickupMinutes = toHighPrecMoney (cancellationAndNoShowConfigs.maxWaitingTimeAtPickupSeconds.getSeconds `div` 60)
+          let cancellationFee = cancellationAndNoShowConfigs.maxCancellationCharge + (maxWaitingTimeAtPickupMinutes * cancellationAndNoShowConfigs.perMinuteCancellationCharge)
+          return $ Just PriceAPIEntity {amount = cancellationFee, currency = cancellationAndNoShowConfigs.currency}
+        else return Nothing
+    _ -> do
+      logError "calculateNoShowCharges: driverArrivalTime or cancellationAndNoShowConfigs is not present"
+      return Nothing
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,
@@ -78,8 +99,9 @@ cancelRideTransaction ::
   SBCR.BookingCancellationReason ->
   Id DMerc.Merchant ->
   DRide.RideEndedBy ->
+  Maybe PriceAPIEntity ->
   m ()
-cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy = do
+cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancellationFee = do
   let driverId = cast ride.driverId
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
@@ -89,3 +111,7 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy = do
   QBCR.upsert bookingCReason
   void $ QRB.updateStatus booking.id SRB.CANCELLED
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
+  whenJust cancellationFee $ \fee -> do
+    riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
+    riderDetails <- QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+    QRiderDetails.updateCancellationDues (fee.amount + riderDetails.cancellationDues) riderId

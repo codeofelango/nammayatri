@@ -30,6 +30,7 @@ RiderConfig:
     kaptureQueue: Text # deprecated
     kaptureConfig: IssueManagement.Common.KaptureConfig
     emailOtpConfig: Maybe Email.Types.EmailOTPConfig
+    settleCancellationFeeBeforeNextRide: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
