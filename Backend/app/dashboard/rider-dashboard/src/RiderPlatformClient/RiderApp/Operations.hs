@@ -84,10 +84,10 @@ data BookingsAPIs = BookingsAPIs
   }
 
 data MerchantAPIs = MerchantAPIs
-  { serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
-    mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+  { -- serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
+    -- mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
     upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> CMerchant.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
     deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
@@ -183,11 +183,11 @@ mkAppBackendAPIs merchantId city token = do
       :<|> multipleRideSync
       :<|> ticketRideList = ridesClient
 
-    serviceUsageConfig
-      :<|> mapsServiceUsageConfigUpdate
-      :<|> smsServiceConfigUpdate
-      :<|> smsServiceUsageConfigUpdate
-      :<|> createMerchantOperatingCity
+    -- serviceUsageConfig
+    --   :<|> mapsServiceUsageConfigUpdate
+    --   :<|> smsServiceConfigUpdate
+    --   :<|> smsServiceUsageConfigUpdate
+    createMerchantOperatingCity
       :<|> upsertSpecialLocation
       :<|> deleteSpecialLocation
       :<|> upsertSpecialLocationGate

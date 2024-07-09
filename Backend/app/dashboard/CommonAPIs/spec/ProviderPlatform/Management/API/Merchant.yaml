@@ -18,6 +18,11 @@ imports:
   # VehicleClassVariantMap: Dashboard.Common.Merchant # TODO remove
   # VehicleClassCheckType: Dashboard.Common.Merchant # TODO remove
   # DocumentType: Dashboard.Common.Merchant # TODO remove
+  SmsServiceConfigUpdateReq: Dashboard.Common.Merchant
+  VerificationServiceConfigUpdateReq: Dashboard.Common.Merchant
+  ServiceUsageConfigRes: Dashboard.Common.Merchant
+  MapsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
+  SmsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
 
 module: Merchant
 
@@ -218,7 +223,62 @@ apis:
         type: UpdateOnboardingVehicleVariantMappingReq
       response:
         type: APISuccess
+  - POST:
+      endpoint: /serviceConfig/verification/update
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT VERIFICATION_SERVICE_CONFIG_UPDATE
+      request:
+        type: VerificationServiceConfigUpdateReq
+      response:
+        type: APISuccess
 
+  # common apis for provider and rider dashboard
+  - POST:
+      endpoint: /serviceConfig/sms/update
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
+      request:
+        type: SmsServiceConfigUpdateReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /serviceUsageConfig
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
+      response:
+        type: ServiceUsageConfigRes
+  - POST:
+      endpoint: /serviceUsageConfig/maps/update
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
+      request:
+        type: MapsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateMapsServiceUsageConfigUpdateReq
+  - POST:
+      endpoint: /serviceUsageConfig/sms/update
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
+      request:
+        type: SmsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateSmsServiceUsageConfigUpdateReq
+  # - POST:
+  #     endpoint: /config/operatingCity/create
+  #     auth:
+  #       # ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SCHEDULER_TRIGGER FIXME
+  #     multipart:
+  #       type: CreateMerchantOperatingCityReq
+  #     response:
+  #       type: CreateMerchantOperatingCityRes
+  #     helper: # TODO make it work
+  #       endpoint: /config/operatingCity/create
+  #       request:
+  #         type: CreateMerchantOperatingCityReqT
+  #       response:
+  #         type: CreateMerchantOperatingCityRes
 types:
   MerchantUpdateReq:
     name: Maybe Text

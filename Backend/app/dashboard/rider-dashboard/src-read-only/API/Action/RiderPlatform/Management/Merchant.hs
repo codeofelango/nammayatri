@@ -21,10 +21,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("merchant" :> (PostMerchantUpdate :<|> PostMerchantServiceConfigMapsUpdate))
+type API = ("merchant" :> (PostMerchantUpdate :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postMerchantUpdate merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city
+handler merchantId city = postMerchantUpdate merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city :<|> postMerchantServiceConfigSmsUpdate merchantId city :<|> getMerchantServiceUsageConfig merchantId city :<|> postMerchantServiceUsageConfigMapsUpdate merchantId city :<|> postMerchantServiceUsageConfigSmsUpdate merchantId city
 
 type PostMerchantUpdate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MERCHANT_UPDATE :> API.Types.RiderPlatform.Management.Merchant.PostMerchantUpdate)
 
@@ -36,8 +36,46 @@ type PostMerchantServiceConfigMapsUpdate =
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceConfigMapsUpdate
   )
 
+type PostMerchantServiceConfigSmsUpdate =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'MERCHANT
+      'SMS_SERVICE_CONFIG_UPDATE
+      :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceConfigSmsUpdate
+  )
+
+type GetMerchantServiceUsageConfig = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SERVICE_USAGE_CONFIG :> API.Types.RiderPlatform.Management.Merchant.GetMerchantServiceUsageConfig)
+
+type PostMerchantServiceUsageConfigMapsUpdate =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'MERCHANT
+      'MAPS_SERVICE_USAGE_CONFIG_UPDATE
+      :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceUsageConfigMapsUpdate
+  )
+
+type PostMerchantServiceUsageConfigSmsUpdate =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'MERCHANT
+      'SMS_SERVICE_USAGE_CONFIG_UPDATE
+      :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceUsageConfigSmsUpdate
+  )
+
 postMerchantUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.Merchant.MerchantUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Merchant.postMerchantUpdate merchantShortId opCity apiTokenInfo req
 
 postMerchantServiceConfigMapsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.MapsServiceConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantServiceConfigMapsUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Merchant.postMerchantServiceConfigMapsUpdate merchantShortId opCity apiTokenInfo req
+
+postMerchantServiceConfigSmsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.SmsServiceConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMerchantServiceConfigSmsUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Merchant.postMerchantServiceConfigSmsUpdate merchantShortId opCity apiTokenInfo req
+
+getMerchantServiceUsageConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler Dashboard.Common.Merchant.ServiceUsageConfigRes)
+getMerchantServiceUsageConfig merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Merchant.getMerchantServiceUsageConfig merchantShortId opCity apiTokenInfo
+
+postMerchantServiceUsageConfigMapsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.MapsServiceUsageConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Merchant.postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity apiTokenInfo req
+
+postMerchantServiceUsageConfigSmsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.SmsServiceUsageConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Merchant.postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity apiTokenInfo req

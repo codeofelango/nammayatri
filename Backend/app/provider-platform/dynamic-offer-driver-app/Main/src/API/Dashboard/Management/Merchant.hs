@@ -39,17 +39,17 @@ type API =
          --  :<|> Common.DocumentVerificationConfigAPI
          --  :<|> Common.DocumentVerificationConfigUpdateAPI
          --  :<|> Common.DocumentVerificationConfigCreateAPI
-         Common.ServiceUsageConfigAPI
-           :<|> Common.MapsServiceUsageConfigUpdateAPI
-           :<|> Common.SmsServiceConfigUpdateAPI
-           :<|> Common.SmsServiceUsageConfigUpdateAPI
-           :<|> Common.VerificationServiceConfigUpdateAPI
-           --  :<|> Common.CreateFPDriverExtraFee
-           --  :<|> Common.UpdateFPDriverExtraFee
-           --  :<|> Common.UpdateFPPerExtraKmRate
-           --  :<|> Common.UpdateFarePolicy
-           --  :<|> Common.UpsertFarePolicyAPI
-           :<|> Common.CreateMerchantOperatingCityAPIT
+         --  Common.ServiceUsageConfigAPI
+         --    :<|> Common.MapsServiceUsageConfigUpdateAPI
+         --    :<|> Common.SmsServiceConfigUpdateAPI
+         --    :<|> Common.SmsServiceUsageConfigUpdateAPI
+         --    :<|> Common.VerificationServiceConfigUpdateAPI
+         --  :<|> Common.CreateFPDriverExtraFee
+         --  :<|> Common.UpdateFPDriverExtraFee
+         --  :<|> Common.UpdateFPPerExtraKmRate
+         --  :<|> Common.UpdateFarePolicy
+         --  :<|> Common.UpsertFarePolicyAPI
+         Common.CreateMerchantOperatingCityAPIT
            --  :<|> Common.SchedulerTriggerAPI
            --  :<|> Common.UpdateOnboardingVehicleVariantMappingAPI
            :<|> Common.UpsertSpecialLocationAPIT
@@ -70,17 +70,17 @@ handler merchantId city =
   --   :<|> documentVerificationConfig merchantId city
   --   :<|> documentVerificationConfigUpdate merchantId city
   --   :<|> documentVerificationConfigCreate merchantId city
-  serviceUsageConfig merchantId city
-    :<|> mapsServiceUsageConfigUpdate merchantId city
-    :<|> smsServiceConfigUpdate merchantId city
-    :<|> smsServiceUsageConfigUpdate merchantId city
-    :<|> verificationServiceConfigUpdate merchantId city
-    -- :<|> createFPDriverExtraFee merchantId city
-    -- :<|> updateFPDriverExtraFee merchantId city
-    -- :<|> updateFPPerExtraKmRate merchantId city
-    -- :<|> updateFarePolicy merchantId city
-    -- :<|> upsertFarePolicy merchantId city
-    :<|> createMerchantOperatingCity merchantId city
+  -- serviceUsageConfig merchantId city
+  --   :<|> mapsServiceUsageConfigUpdate merchantId city
+  --   :<|> smsServiceConfigUpdate merchantId city
+  --   :<|> smsServiceUsageConfigUpdate merchantId city
+  --   :<|> verificationServiceConfigUpdate merchantId city
+  -- :<|> createFPDriverExtraFee merchantId city
+  -- :<|> updateFPDriverExtraFee merchantId city
+  -- :<|> updateFPPerExtraKmRate merchantId city
+  -- :<|> updateFarePolicy merchantId city
+  -- :<|> upsertFarePolicy merchantId city
+  createMerchantOperatingCity merchantId city
     -- :<|> schedulerTrigger merchantId city
     -- :<|> updateOnboardingVehicleVariantMapping merchantId city
     :<|> upsertSpecialLocation merchantId city
@@ -182,39 +182,39 @@ handler merchantId city =
 --   FlowHandler APISuccess
 -- documentVerificationConfigCreate merchantShortId opCity documentType category = withFlowHandlerAPI . DMerchant.documentVerificationConfigCreate merchantShortId opCity documentType category
 
-serviceUsageConfig ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  FlowHandler Common.ServiceUsageConfigRes
-serviceUsageConfig merchantShortId = withFlowHandlerAPI . DMerchant.serviceUsageConfig merchantShortId
+-- serviceUsageConfig ::
+--   ShortId DM.Merchant ->
+--   Context.City ->
+--   FlowHandler Common.ServiceUsageConfigRes
+-- serviceUsageConfig merchantShortId = withFlowHandlerAPI . DMerchant.serviceUsageConfig merchantShortId
 
-mapsServiceUsageConfigUpdate ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Common.MapsServiceUsageConfigUpdateReq ->
-  FlowHandler APISuccess
-mapsServiceUsageConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.mapsServiceUsageConfigUpdate merchantShortId opCity
+-- mapsServiceUsageConfigUpdate ::
+--   ShortId DM.Merchant ->
+--   Context.City ->
+--   Common.MapsServiceUsageConfigUpdateReq ->
+--   FlowHandler APISuccess
+-- mapsServiceUsageConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.mapsServiceUsageConfigUpdate merchantShortId opCity
 
-smsServiceConfigUpdate ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Common.SmsServiceConfigUpdateReq ->
-  FlowHandler APISuccess
-smsServiceConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.smsServiceConfigUpdate merchantShortId opCity
+-- smsServiceConfigUpdate ::
+--   ShortId DM.Merchant ->
+--   Context.City ->
+--   Common.SmsServiceConfigUpdateReq ->
+--   FlowHandler APISuccess
+-- smsServiceConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.smsServiceConfigUpdate merchantShortId opCity
 
-smsServiceUsageConfigUpdate ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Common.SmsServiceUsageConfigUpdateReq ->
-  FlowHandler APISuccess
-smsServiceUsageConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.smsServiceUsageConfigUpdate merchantShortId opCity
+-- smsServiceUsageConfigUpdate ::
+--   ShortId DM.Merchant ->
+--   Context.City ->
+--   Common.SmsServiceUsageConfigUpdateReq ->
+--   FlowHandler APISuccess
+-- smsServiceUsageConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.smsServiceUsageConfigUpdate merchantShortId opCity
 
-verificationServiceConfigUpdate ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Common.VerificationServiceConfigUpdateReq ->
-  FlowHandler APISuccess
-verificationServiceConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.verificationServiceConfigUpdate merchantShortId opCity
+-- verificationServiceConfigUpdate ::
+--   ShortId DM.Merchant ->
+--   Context.City ->
+--   Common.VerificationServiceConfigUpdateReq ->
+--   FlowHandler APISuccess
+-- verificationServiceConfigUpdate merchantShortId opCity = withFlowHandlerAPI . DMerchant.verificationServiceConfigUpdate merchantShortId opCity
 
 -- createFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Common.CreateFPDriverExtraFeeReq -> FlowHandler APISuccess
 -- createFPDriverExtraFee merchantShortId opCity farePolicyId startDistance mbStartDistance_ distanceUnit req = withFlowHandlerAPI $ DMerchant.createFPDriverExtraFee merchantShortId opCity (cast farePolicyId) startDistance mbStartDistance_ distanceUnit req

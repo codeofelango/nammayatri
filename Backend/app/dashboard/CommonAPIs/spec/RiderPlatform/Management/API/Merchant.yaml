@@ -2,6 +2,10 @@ imports:
   ExophoneReq: Dashboard.Common.Merchant
   FCMConfigUpdateReq: Dashboard.Common.Merchant
   MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
+  SmsServiceConfigUpdateReq: Dashboard.Common.Merchant
+  ServiceUsageConfigRes: Dashboard.Common.Merchant
+  MapsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
+  SmsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
 
 module: Merchant
 
@@ -23,6 +27,40 @@ apis:
         type: MapsServiceConfigUpdateReq
       response:
         type: APISuccess
+
+  # common apis for provider and rider dashboard
+  - POST:
+      endpoint: /serviceConfig/sms/update
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
+      request:
+        type: SmsServiceConfigUpdateReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /serviceUsageConfig
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
+      response:
+        type: ServiceUsageConfigRes
+  - POST:
+      endpoint: /serviceUsageConfig/maps/update
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
+      request:
+        type: MapsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateMapsServiceUsageConfigUpdateReq
+  - POST:
+      endpoint: /serviceUsageConfig/sms/update
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
+      request:
+        type: SmsServiceUsageConfigUpdateReq
+      response:
+        type: APISuccess
+      validation: Dashboard.Common.Merchant.validateSmsServiceUsageConfigUpdateReq
 
 types:
   MerchantUpdateReq:

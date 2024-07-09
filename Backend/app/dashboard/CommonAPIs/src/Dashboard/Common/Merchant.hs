@@ -92,6 +92,10 @@ data MerchantEndpoint
   | PostMerchantConfigFarePolicyUpsertEndpoint
   | PostMerchantSchedulerTriggerEndpoint
   | PostMerchantUpdateOnboardingVehicleVariantMappingEndpoint
+  | PostMerchantServiceConfigSmsUpdateEndpoint
+  | PostMerchantServiceConfigVerificationUpdateEndpoint
+  | PostMerchantServiceUsageConfigMapsUpdateEndpoint
+  | PostMerchantServiceUsageConfigSmsUpdateEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "MerchantEndpoint"
@@ -293,12 +297,12 @@ data OSRMCfgUpdateReq = OSRMCfgUpdateReq
 ---------------------------------------------------------
 -- merchant sms service config update -------------------
 
-type SmsServiceConfigUpdateAPI =
-  "serviceConfig"
-    :> "sms"
-    :> "update"
-    :> ReqBody '[JSON] SmsServiceConfigUpdateReq
-    :> Post '[JSON] APISuccess
+-- type SmsServiceConfigUpdateAPI =
+--   "serviceConfig"
+--     :> "sms"
+--     :> "update"
+--     :> ReqBody '[JSON] SmsServiceConfigUpdateReq
+--     :> Post '[JSON] APISuccess
 
 data SmsServiceConfigUpdateReq
   = MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq
@@ -452,12 +456,12 @@ instance HideSecrets ExotelSmsCfgUpdateReq where
 ---------------------------------------------------------
 -- merchant verification service config update ----------
 
-type VerificationServiceConfigUpdateAPI =
-  "serviceConfig"
-    :> "verification"
-    :> "update"
-    :> ReqBody '[JSON] VerificationServiceConfigUpdateReq
-    :> Post '[JSON] APISuccess
+-- type VerificationServiceConfigUpdateAPI =
+--   "serviceConfig"
+--     :> "verification"
+--     :> "update"
+--     :> ReqBody '[JSON] VerificationServiceConfigUpdateReq
+--     :> Post '[JSON] APISuccess
 
 newtype VerificationServiceConfigUpdateReq
   = IdfyConfigUpdateReq IdfyCfgUpdateReq
@@ -551,9 +555,9 @@ instance HideSecrets IdfyCfgUpdateReq where
 ---------------------------------------------------------
 -- merchant service usage config ------------------------
 
-type ServiceUsageConfigAPI =
-  "serviceUsageConfig"
-    :> Get '[JSON] ServiceUsageConfigRes
+-- type ServiceUsageConfigAPI =
+--   "serviceUsageConfig"
+--     :> Get '[JSON] ServiceUsageConfigRes
 
 -- Fields with one possible value (verificationService, initiateCall, whatsappProvidersPriorityList) not included here
 data ServiceUsageConfigRes = ServiceUsageConfigRes
@@ -577,12 +581,12 @@ data ServiceUsageConfigRes = ServiceUsageConfigRes
 ---------------------------------------------------------
 -- merchant maps service config usage update ------------
 
-type MapsServiceUsageConfigUpdateAPI =
-  "serviceUsageConfig"
-    :> "maps"
-    :> "update"
-    :> ReqBody '[JSON] MapsServiceUsageConfigUpdateReq
-    :> Post '[JSON] APISuccess
+-- type MapsServiceUsageConfigUpdateAPI =
+--   "serviceUsageConfig"
+--     :> "maps"
+--     :> "update"
+--     :> ReqBody '[JSON] MapsServiceUsageConfigUpdateReq
+--     :> Post '[JSON] APISuccess
 
 data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
   { getDistances :: Maybe Maps.MapsService,
@@ -618,12 +622,12 @@ validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} = d
 ---------------------------------------------------------
 -- merchant sms service config usage update -------------
 
-type SmsServiceUsageConfigUpdateAPI =
-  "serviceUsageConfig"
-    :> "sms"
-    :> "update"
-    :> ReqBody '[JSON] SmsServiceUsageConfigUpdateReq
-    :> Post '[JSON] APISuccess
+-- type SmsServiceUsageConfigUpdateAPI =
+--   "serviceUsageConfig"
+--     :> "sms"
+--     :> "update"
+--     :> ReqBody '[JSON] SmsServiceUsageConfigUpdateReq
+--     :> Post '[JSON] APISuccess
 
 newtype SmsServiceUsageConfigUpdateReq = SmsServiceUsageConfigUpdateReq
   { smsProvidersPriorityList :: [SMS.SmsService]
@@ -644,6 +648,7 @@ validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
 
 ---- CreateMerchantOperatingCity ------------------------
 
+-- can't move to DSL for now, because helper api is not the same as dashboard api
 type CreateMerchantOperatingCityAPI =
   "config"
     :> "operatingCity"

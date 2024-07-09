@@ -14,7 +14,8 @@
 
 module Domain.Action.Dashboard.Merchant
   ( postMerchantServiceConfigMapsUpdate,
-    mapsServiceUsageConfigUpdate,
+    -- mapsServiceUsageConfigUpdate,
+    postMerchantServiceUsageConfigMapsUpdate,
     -- merchantCommonConfig,
     -- merchantCommonConfigUpdate,
     -- driverPoolConfig,
@@ -26,10 +27,14 @@ module Domain.Action.Dashboard.Merchant
     -- documentVerificationConfigUpdate,
     -- documentVerificationConfigCreate,
     postMerchantUpdate,
-    serviceUsageConfig,
-    smsServiceConfigUpdate,
-    smsServiceUsageConfigUpdate,
-    verificationServiceConfigUpdate,
+    -- serviceUsageConfig,
+    getMerchantServiceUsageConfig,
+    -- smsServiceConfigUpdate,
+    postMerchantServiceConfigSmsUpdate,
+    -- smsServiceUsageConfigUpdate,
+    postMerchantServiceUsageConfigSmsUpdate,
+    -- verificationServiceConfigUpdate,
+    postMerchantServiceConfigVerificationUpdate,
     -- createFPDriverExtraFee,
     -- updateFPDriverExtraFee,
     -- updateFPPerExtraKmRate,
@@ -302,7 +307,7 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
               }
   _ <- CQTC.update updConfig
   CQTC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantConfigCommonUpdate : " (show merchant.id)
   pure Success
 
 postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
@@ -424,7 +429,7 @@ postMerchantConfigDriverPoolUpdate merchantShortId opCity reqDistanceUnit mbTrip
               }
   _ <- CQDPC.update updConfig
   CQDPC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> driverPoolConfigUpdate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
+  logTagInfo "dashboard -> postMerchantConfigDriverPoolUpdate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
   pure Success
 
 castPoolSortingType :: Common.PoolSortingType -> DriverPool.PoolSortingType
@@ -467,7 +472,7 @@ postMerchantConfigDriverPoolCreate merchantShortId opCity reqDistanceUnit mbTrip
   _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> driverPoolConfigCreate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
+  logTagInfo "dashboard -> postMerchantConfigDriverPoolCreate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
   pure Success
 
 buildDriverPoolConfig ::
@@ -548,7 +553,7 @@ postMerchantConfigDriverIntelligentPoolUpdate merchantShortId opCity req = do
               }
   _ <- CQDIPC.update updConfig
   CQDIPC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> driverIntelligentPoolConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantConfigDriverIntelligentPoolUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------
@@ -643,7 +648,7 @@ postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqCategory re
               }
   _ <- CQDVC.update updConfig
   CQDVC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> documentVerificationConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
+  logTagInfo "dashboard -> postMerchantConfigOnboardingDocumentUpdate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 
 castSupportedVehicleClasses :: Common.SupportedVehicleClasses -> DVC.SupportedVehicleClasses
@@ -719,7 +724,7 @@ postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqCategory re
   _ <- CQDVC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDVC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> documentVerificationConfigCreate : " $ show merchant.id <> "documentType : " <> show documentType
+  logTagInfo "dashboard -> postMerchantConfigOnboardingDocumentCreate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 
 buildDocumentVerificationConfig ::
@@ -773,12 +778,12 @@ postMerchantServiceConfigMapsUpdate merchantShortId city req = do
   pure Success
 
 ---------------------------------------------------------------------
-smsServiceConfigUpdate ::
+postMerchantServiceConfigSmsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
-smsServiceConfigUpdate merchantShortId city req = do
+postMerchantServiceConfigSmsUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
@@ -786,15 +791,15 @@ smsServiceConfigUpdate merchantShortId city req = do
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
   CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
   CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
-  logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantServiceConfigSmsUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------
-serviceUsageConfig ::
+getMerchantServiceUsageConfig ::
   ShortId DM.Merchant ->
   Context.City ->
   Flow Common.ServiceUsageConfigRes
-serviceUsageConfig merchantShortId opCity = do
+getMerchantServiceUsageConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   config <- CQMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
@@ -810,12 +815,12 @@ mkServiceUsageConfigRes DMSUC.MerchantServiceUsageConfig {..} =
     }
 
 ---------------------------------------------------------------------
-mapsServiceUsageConfigUpdate ::
+postMerchantServiceUsageConfigMapsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.MapsServiceUsageConfigUpdateReq ->
   Flow APISuccess
-mapsServiceUsageConfigUpdate merchantShortId opCity req = do
+postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -844,12 +849,12 @@ mapsServiceUsageConfigUpdate merchantShortId opCity req = do
   pure Success
 
 ---------------------------------------------------------------------
-smsServiceUsageConfigUpdate ::
+postMerchantServiceUsageConfigSmsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.SmsServiceUsageConfigUpdateReq ->
   Flow APISuccess
-smsServiceUsageConfigUpdate merchantShortId opCity req = do
+postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -867,16 +872,16 @@ smsServiceUsageConfigUpdate merchantShortId opCity req = do
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantServiceUsageConfigSmsUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------
-verificationServiceConfigUpdate ::
+postMerchantServiceConfigVerificationUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.VerificationServiceConfigUpdateReq ->
   Flow APISuccess
-verificationServiceConfigUpdate merchantShortId city req = do
+postMerchantServiceConfigVerificationUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.VerificationService $ Common.getVerificationServiceFromReq req
@@ -884,7 +889,7 @@ verificationServiceConfigUpdate merchantShortId city req = do
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
   CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
-  logTagInfo "dashboard -> verificationServiceConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantServiceConfigVerificationUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------

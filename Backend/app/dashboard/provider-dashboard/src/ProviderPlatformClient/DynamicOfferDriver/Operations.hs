@@ -162,11 +162,11 @@ data MerchantAPIs = MerchantAPIs
     -- documentVerificationConfig :: Maybe Merchant.DocumentType -> Maybe Common.Category -> Euler.EulerClient Merchant.DocumentVerificationConfigRes,
     -- documentVerificationConfigUpdate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigUpdateReq -> Euler.EulerClient APISuccess,
     -- documentVerificationConfigCreate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigCreateReq -> Euler.EulerClient APISuccess,
-    serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
-    mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
+    -- mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    -- verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     -- createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
     -- updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
     -- updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
@@ -364,17 +364,17 @@ mkDriverOperationAPIs merchantId city token = do
     --   :<|> documentVerificationConfig
     --   :<|> documentVerificationConfigUpdate
     --   :<|> documentVerificationConfigCreate
-    serviceUsageConfig
-      :<|> mapsServiceUsageConfigUpdate
-      :<|> smsServiceConfigUpdate
-      :<|> smsServiceUsageConfigUpdate
-      :<|> verificationServiceConfigUpdate
-      -- :<|> createFPDriverExtraFee
-      -- :<|> updateFPDriverExtraFee
-      -- :<|> updateFPPerExtraKmRate
-      -- :<|> updateFarePolicy
-      -- :<|> upsertFarePolicy
-      :<|> createMerchantOperatingCity
+    -- serviceUsageConfig
+    --   :<|> mapsServiceUsageConfigUpdate
+    --   :<|> smsServiceConfigUpdate
+    --   :<|> smsServiceUsageConfigUpdate
+    --   :<|> verificationServiceConfigUpdate
+    -- :<|> createFPDriverExtraFee
+    -- :<|> updateFPDriverExtraFee
+    -- :<|> updateFPPerExtraKmRate
+    -- :<|> updateFarePolicy
+    -- :<|> upsertFarePolicy
+    createMerchantOperatingCity
       -- :<|> schedulerTrigger
       -- :<|> updateOnboardingVehicleVariantMapping
       :<|> upsertSpecialLocation
