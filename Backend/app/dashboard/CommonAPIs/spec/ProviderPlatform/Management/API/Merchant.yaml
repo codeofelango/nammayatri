@@ -8,16 +8,16 @@ imports:
   Variant: Dashboard.Common
   Category:  Dashboard.Common
   FarePolicy:  Dashboard.Common
-  DriverPoolConfigRes: Dashboard.Common.Merchant # TODO remove
-  PoolSortingType: Dashboard.Common.Merchant # TODO remove
-  DocumentVerificationConfigRes: Dashboard.Common.Merchant
+  # DriverPoolConfigRes: Dashboard.Common.Merchant # TODO remove
+  # PoolSortingType: Dashboard.Common.Merchant # TODO remove
+  # DocumentVerificationConfigRes: Dashboard.Common.Merchant
   SlidingWindowOptions: Kernel.Types.SlidingWindowCounters
   Area: Lib.Types.SpecialLocation
   # DocumentVerificationConfigItem: Dashboard.Common.Merchant # TODO remove
-  SupportedVehicleClasses: Dashboard.Common.Merchant # TODO remove
+  SupportedVehicleClasses: Dashboard.Common.Merchant
   # VehicleClassVariantMap: Dashboard.Common.Merchant # TODO remove
-  VehicleClassCheckType: Dashboard.Common.Merchant # TODO remove
-  DocumentType: Dashboard.Common.Merchant # TODO remove
+  # VehicleClassCheckType: Dashboard.Common.Merchant # TODO remove
+  # DocumentType: Dashboard.Common.Merchant # TODO remove
 
 module: Merchant
 
@@ -294,39 +294,41 @@ types:
     orderAndNotificationStatusCheckTimeLimit: Maybe (OptionalValue NominalDiffTime)
     snapToRoadConfidenceThreshold: Maybe (MandatoryValue Double)
     useWithSnapToRoadFallback: Maybe (MandatoryValue Bool)
-  # DriverPoolConfigRes: [DriverPoolConfigItem] # TODO make it work
-  # DriverPoolConfigItem:
-  #   minRadiusOfSearch: Meters
-  #   maxRadiusOfSearch: Meters
-  #   radiusStepSize: Meters
-  #   minRadiusOfSearchWithUnit: Distance
-  #   maxRadiusOfSearchWithUnit: Distance
-  #   radiusStepSizeWithUnit: Distance
-  #   driverPositionInfoExpiry: Maybe Seconds
-  #   actualDistanceThreshold: Maybe Meters
-  #   actualDistanceThresholdOnRide: Maybe Meters
-  #   actualDistanceThresholdWithUnit: Maybe Distance
-  #   actualDistanceThresholdOnRideWithUnit: Maybe Distance
-  #   maxDriverQuotesRequired: Int
-  #   driverQuoteLimit: Int
-  #   driverRequestCountLimit: Int
-  #   driverBatchSize: Int
-  #   maxNumberOfBatches: Int
-  #   maxParallelSearchRequests: Int
-  #   maxParallelSearchRequestsOnRide: Int
-  #   poolSortingType: PoolSortingType
-  #   singleBatchProcessTime: Seconds
-  #   tripDistance: Meters
-  #   radiusShrinkValueForDriversOnRide: Meters
-  #   driverToDestinationDistanceThreshold: Meters
-  #   tripDistanceWithUnit: Distance
-  #   radiusShrinkValueForDriversOnRideWithUnit: Distance
-  #   driverToDestinationDistanceThresholdWithUnit: Distance
-  #   driverToDestinationDuration: Seconds
-  #   createdAt: UTCTime
-  #   updatedAt: UTCTime
-  # PoolSortingType:
-  #   enum: "Intelligent, Random"
+  DriverPoolConfigRes:
+    recordType: Type
+    type: [DriverPoolConfigItem]
+  DriverPoolConfigItem:
+    minRadiusOfSearch: Meters
+    maxRadiusOfSearch: Meters
+    radiusStepSize: Meters
+    minRadiusOfSearchWithUnit: Distance
+    maxRadiusOfSearchWithUnit: Distance
+    radiusStepSizeWithUnit: Distance
+    driverPositionInfoExpiry: Maybe Seconds
+    actualDistanceThreshold: Maybe Meters
+    actualDistanceThresholdOnRide: Maybe Meters
+    actualDistanceThresholdWithUnit: Maybe Distance
+    actualDistanceThresholdOnRideWithUnit: Maybe Distance
+    maxDriverQuotesRequired: Int
+    driverQuoteLimit: Int
+    driverRequestCountLimit: Int
+    driverBatchSize: Int
+    maxNumberOfBatches: Int
+    maxParallelSearchRequests: Int
+    maxParallelSearchRequestsOnRide: Int
+    poolSortingType: PoolSortingType
+    singleBatchProcessTime: Seconds
+    tripDistance: Meters
+    radiusShrinkValueForDriversOnRide: Meters
+    driverToDestinationDistanceThreshold: Meters
+    tripDistanceWithUnit: Distance
+    radiusShrinkValueForDriversOnRideWithUnit: Distance
+    driverToDestinationDistanceThresholdWithUnit: Distance
+    driverToDestinationDuration: Seconds
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  PoolSortingType:
+    enum: "Intelligent, Random"
   DriverPoolConfigUpdateReq:
     minRadiusOfSearch: Maybe (MandatoryValue Meters)
     maxRadiusOfSearch: Maybe (MandatoryValue Meters)
@@ -423,17 +425,19 @@ types:
     minLocationUpdates: Maybe (MandatoryValue Int)
     locationUpdateSampleTime: Maybe (MandatoryValue Minutes)
     defaultDriverSpeed: Maybe (MandatoryValue Double)
-#   # DocumentVerificationConfigRes:[DocumentVerificationConfigItem]
-  # DocumentVerificationConfigItem:
-  #   documentType: DocumentType
-  #   checkExtraction: Bool
-  #   checkExpiry: Bool
-  #   supportedVehicleClasses: SupportedVehicleClasses
-  #   vehicleClassCheckType: VehicleClassCheckType
-  #   rcNumberPrefixList: Maybe [Text]
-  #   maxRetryCount: Int
-  #   createdAt: UTCTime
-  #   updatedAt: UTCTime
+  DocumentVerificationConfigRes:
+    recordType: Type
+    type: [DocumentVerificationConfigItem]
+  DocumentVerificationConfigItem:
+    documentType: DocumentType
+    checkExtraction: Bool
+    checkExpiry: Bool
+    supportedVehicleClasses: SupportedVehicleClasses
+    vehicleClassCheckType: VehicleClassCheckType
+    rcNumberPrefixList: Maybe [Text]
+    maxRetryCount: Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
   # SupportedVehicleClasses:
   #   enum: "DLValidClasses [Text], RCValidClasses [VehicleClassVariantMap]" # don't think it will work
   # VehicleClassVariantMap:
@@ -446,10 +450,11 @@ types:
   #   vehicleModel: Text
   #   bodyType: Maybe Text
   #   priority: Maybe Int
-  # VehicleClassCheckType:
-  #   enum: "Infix, Prefix, Suffix"
-  # DocumentType:
-  #   enum: "RC, DL, ToParamSchema"
+  VehicleClassCheckType:
+    enum: "Infix, Prefix, Suffix"
+  DocumentType:
+    enum: "RC, DL"
+    derive: "Kernel.Prelude.ToParamSchema"
   DocumentVerificationConfigUpdateReq:
     checkExtraction: Maybe (MandatoryValue Bool)
     checkExpiry: Maybe (MandatoryValue Bool)

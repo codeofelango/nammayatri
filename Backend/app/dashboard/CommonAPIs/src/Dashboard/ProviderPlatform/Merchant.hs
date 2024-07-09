@@ -36,7 +36,7 @@ import Kernel.Types.Predicate
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 -- import Kernel.Types.Value
 import qualified Kernel.Utils.Predicates as P
--- import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 -- import qualified Lib.Types.SpecialLocation as SL
 import Servant
@@ -521,6 +521,8 @@ validateSlidingWindowOptions SWC.SlidingWindowOptions {..} =
 --     :> QueryParam "vehicleCategory" Category
 --     :> Get '[JSON] DocumentVerificationConfigRes
 
+$(mkHttpInstancesForEnum ''DocumentType)
+
 ---------------------------------------------------------
 -- merchant onboarding document config update -----------
 
@@ -544,6 +546,8 @@ validateSlidingWindowOptions SWC.SlidingWindowOptions {..} =
 --   }
 --   deriving stock (Show, Generic)
 --   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- $(mkHttpInstancesForEnum ''DocumentType)
 
 instance HideSecrets DocumentVerificationConfigUpdateReq where
   hideSecrets = identity
@@ -577,6 +581,42 @@ instance HideSecrets DocumentVerificationConfigUpdateReq where
 
 instance HideSecrets DocumentVerificationConfigCreateReq where
   hideSecrets = identity
+
+-- instance ToJSON SupportedVehicleClasses where
+--   toJSON = genericToJSON supportedVCOptions
+
+-- instance FromJSON SupportedVehicleClasses where
+--   parseJSON = genericParseJSON supportedVCOptions
+
+-- instance ToSchema SupportedVehicleClasses where
+--   declareNamedSchema = genericDeclareNamedSchema supportedVCSchemaOptions
+
+-- supportedVCOptions :: Options
+-- supportedVCOptions =
+--   defaultOptions
+--     { sumEncoding = supportedVCTaggedObject,
+--       constructorTagModifier = supportedVCModifier
+--     }
+
+-- supportedVCSchemaOptions :: SchemaOptions
+-- supportedVCSchemaOptions =
+--   defaultSchemaOptions
+--     { sumEncoding = supportedVCTaggedObject,
+--       constructorTagModifier = supportedVCModifier
+--     }
+
+-- supportedVCTaggedObject :: SumEncoding
+-- supportedVCTaggedObject =
+--   TaggedObject
+--     { tagFieldName = "documentType",
+--       contentsFieldName = "vehicleClasses"
+--     }
+
+-- supportedVCModifier :: String -> String
+-- supportedVCModifier = \case
+--   "DL" -> "DLValidClasses"
+--   "RC" -> "RCValidClasses"
+--   x -> x
 
 ---------------------------------------------------------
 -- Create Fare Policy -----------------------------------
