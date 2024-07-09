@@ -101,6 +101,7 @@ Ride:
     tripCategory: TripCategory
     onlinePayment: Bool
     enableOtpLessRide: Maybe Bool
+    cancellationFeeIfCancelled: Maybe HighPrecMoney
 
   sqlType:
     id: character(36)
@@ -220,7 +221,11 @@ Ride:
     driverId: "!SecondaryKey" # forcing to be a secondary key
     driverGoHomeRequestId: "!SecondaryKey" # forcing to be a secondary key
 
-  queries: {}
+  queries:
+    updateCancellationFeeIfCancelledField:
+      kvFunction: updateOneWithKV
+      params: [cancellationFeeIfCancelled]
+      where: id
 
   excludedDefaultQueries:
     - create

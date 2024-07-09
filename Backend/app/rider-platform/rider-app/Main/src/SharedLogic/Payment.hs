@@ -8,6 +8,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Logging (logDebug)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import Storage.Beam.Payment ()
@@ -28,3 +29,13 @@ makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentR
       createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId
       updatePaymentIntentAmountCall = TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId
   DPayment.createPaymentIntentService commonMerchantId commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall
+
+makeCancellationPayment ::
+  (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Person.Person ->
+  Ride.Ride ->
+  PriceAPIEntity ->
+  m ()
+makeCancellationPayment _ _ _ _ _ = logDebug "Cancellation payment not implemented yet."

@@ -46,6 +46,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.SearchTry as QST
 import Tools.Error
 import TransactionLogs.PushLogs
@@ -86,12 +87,6 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       booking <- QRB.findById cancelRideReq.bookingId >>= fromMaybeM (BookingDoesNotExist cancelRideReq.bookingId.getId)
       fork "cancel received pushing ondc logs" do
         void $ pushLogs "cancel" (toJSON reqV2) merchant.id.getId
-      let onCancelBuildReq =
-            OC.DBookingCancelledReqV2
-              { booking = booking,
-                cancellationSource = DBCR.ByUser,
-                cancellationFee = Nothing -- fix this
-              }
       let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
       bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
       ttl <- bppConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
@@ -103,14 +98,27 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
             (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelRideReq
             mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
             fork ("cancelBooking:" <> cancelRideReq.bookingId.getId) $ do
-              isReallocated <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
+              (isReallocated, cancellationCharge) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
+              let onCancelBuildReq =
+                    OC.DBookingCancelledReqV2
+                      { booking = booking,
+                        cancellationSource = DBCR.ByUser,
+                        cancellationFee = cancellationCharge
+                      }
               unless isReallocated $ do
                 buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
                 void $
                   Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                     pure buildOnCancelMessageV2
         Just Enums.SOFT_CANCEL -> do
-          -- TODO (Rupak): Calculate cancellation charges and update in fare_parameters, do it domain file. Pass to
+          mbRide <- QRide.findActiveByRBId booking.id
+          cancellationCharges <- DCancel.customerCancellationChargesCalculation booking mbRide
+          let onCancelBuildReq =
+                OC.DBookingCancelledReqV2
+                  { booking = booking,
+                    cancellationSource = DBCR.ByUser,
+                    cancellationFee = cancellationCharges
+                  }
           buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
           void $
             Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do

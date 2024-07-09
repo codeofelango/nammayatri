@@ -613,6 +613,7 @@ library
       Domain.Types.BookingUpdateRequest
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
+      Domain.Types.CancellationAndNoShowChargeConfigs
       Domain.Types.CancellationCharges
       Domain.Types.CancellationReason
       Domain.Types.Client
@@ -725,6 +726,7 @@ library
       Storage.Beam.BookingUpdateRequest
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
+      Storage.Beam.CancellationAndNoShowChargeConfigs
       Storage.Beam.CancellationCharges
       Storage.Beam.CancellationReason
       Storage.Beam.Client
@@ -823,6 +825,7 @@ library
       Storage.Beam.VehicleServiceTier
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
+      Storage.CachedQueries.CancellationAndNoShowChargeConfigs
       Storage.CachedQueries.SurgePricing
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq
@@ -838,6 +841,7 @@ library
       Storage.Queries.BookingUpdateRequest
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
+      Storage.Queries.CancellationAndNoShowChargeConfigs
       Storage.Queries.CancellationCharges
       Storage.Queries.CancellationReason
       Storage.Queries.Client
