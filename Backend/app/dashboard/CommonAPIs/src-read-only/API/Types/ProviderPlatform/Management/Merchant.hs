@@ -5,10 +5,12 @@ module API.Types.ProviderPlatform.Management.Merchant where
 
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
+import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
+import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
@@ -385,28 +387,28 @@ data WaitingChargeAPIEntity
 data WaitingChargeInfoAPIEntity = WaitingChargeInfoAPIEntity {freeWaitingTime :: Kernel.Types.Common.Minutes, waitingCharge :: API.Types.ProviderPlatform.Management.Merchant.WaitingChargeAPIEntity}
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-type API = ("merchant" :> (PostMerchantUpdate :<|> PostMerchantServiceConfigMapsUpdate :<|> GetMerchantConfigCommon :<|> PostMerchantConfigCommonUpdate :<|> GetMerchantConfigDriverPool :<|> PostMerchantConfigDriverPoolUpdate :<|> PostMerchantConfigDriverPoolCreate :<|> GetMerchantConfigDriverIntelligentPool :<|> PostMerchantConfigDriverIntelligentPoolUpdate :<|> GetMerchantConfigOnboardingDocument :<|> PostMerchantConfigOnboardingDocumentUpdate :<|> PostMerchantConfigOnboardingDocumentCreate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> PostMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> PostMerchantConfigFarePolicyUpdate :<|> PostMerchantSchedulerTrigger))
+type API = ("merchant" :> (PostMerchantUpdate :<|> PostMerchantServiceConfigMapsUpdate :<|> GetMerchantConfigCommon :<|> PostMerchantConfigCommonUpdate :<|> GetMerchantConfigDriverPool :<|> PostMerchantConfigDriverPoolUpdate :<|> PostMerchantConfigDriverPoolCreate :<|> GetMerchantConfigDriverIntelligentPool :<|> PostMerchantConfigDriverIntelligentPoolUpdate :<|> GetMerchantConfigOnboardingDocument :<|> PostMerchantConfigOnboardingDocumentUpdate :<|> PostMerchantConfigOnboardingDocumentCreate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> PostMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> PostMerchantConfigFarePolicyUpdate :<|> PostMerchantConfigFarePolicyUpsert :<|> PostMerchantSchedulerTrigger :<|> PostMerchantUpdateOnboardingVehicleVariantMapping))
 
 type PostMerchantUpdate =
-  ( "update" :> ReqBody ('[JSON]) API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateReq
+  ( "update" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateRes
   )
 
 type PostMerchantServiceConfigMapsUpdate =
-  ( "serviceConfig" :> "maps" :> "update" :> ReqBody ('[JSON]) Dashboard.Common.Merchant.MapsServiceConfigUpdateReq
+  ( "serviceConfig" :> "maps" :> "update" :> ReqBody '[JSON] Dashboard.Common.Merchant.MapsServiceConfigUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetMerchantConfigCommon = ("config" :> "common" :> Get ('[JSON]) API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigRes)
+type GetMerchantConfigCommon = ("config" :> "common" :> Get '[JSON] API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigRes)
 
 type PostMerchantConfigCommonUpdate =
-  ( "config" :> "common" :> "update" :> ReqBody ('[JSON]) API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigUpdateReq
+  ( "config" :> "common" :> "update" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -417,7 +419,7 @@ type GetMerchantConfigDriverPool =
            Kernel.Types.Common.Meters
       :> QueryParam "tripDistanceValue" Kernel.Types.Common.HighPrecDistance
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigRes
   )
 
@@ -437,10 +439,10 @@ type PostMerchantConfigDriverPoolUpdate =
            "tripDistance"
            Kernel.Types.Common.Meters
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -460,21 +462,21 @@ type PostMerchantConfigDriverPoolCreate =
            "tripDistance"
            Kernel.Types.Common.Meters
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigCreateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetMerchantConfigDriverIntelligentPool = ("config" :> "driverIntelligentPool" :> Get ('[JSON]) API.Types.ProviderPlatform.Management.Merchant.DriverIntelligentPoolConfigRes)
+type GetMerchantConfigDriverIntelligentPool = ("config" :> "driverIntelligentPool" :> Get '[JSON] API.Types.ProviderPlatform.Management.Merchant.DriverIntelligentPoolConfigRes)
 
 type PostMerchantConfigDriverIntelligentPoolUpdate =
   ( "config" :> "driverIntelligentPool" :> "update"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.DriverIntelligentPoolConfigUpdateReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type GetMerchantConfigOnboardingDocument =
@@ -482,7 +484,7 @@ type GetMerchantConfigOnboardingDocument =
       :> QueryParam
            "vehicleCategory"
            Dashboard.Common.Category
-      :> Get ('[JSON]) API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigRes
+      :> Get '[JSON] API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigRes
   )
 
 type PostMerchantConfigOnboardingDocumentUpdate =
@@ -491,10 +493,10 @@ type PostMerchantConfigOnboardingDocumentUpdate =
            "documentType"
            API.Types.ProviderPlatform.Management.Merchant.DocumentType
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -504,10 +506,10 @@ type PostMerchantConfigOnboardingDocumentCreate =
            "documentType"
            API.Types.ProviderPlatform.Management.Merchant.DocumentType
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigCreateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -526,10 +528,10 @@ type PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate =
            "startDistance"
            Kernel.Types.Common.Meters
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.CreateFPDriverExtraFeeReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -548,10 +550,10 @@ type PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate =
            "startDistance"
            Kernel.Types.Common.Meters
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.CreateFPDriverExtraFeeReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -563,49 +565,75 @@ type PostMerchantConfigFarePolicyPerExtraKmRateUpdate =
       :> "perExtraKmRate"
       :> "update"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.UpdateFPPerExtraKmRateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 type PostMerchantConfigFarePolicyUpdate =
   ( "config" :> "farePolicy" :> Capture "farePolicyId" (Kernel.Types.Id.Id Dashboard.Common.FarePolicy) :> "update"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.ProviderPlatform.Management.Merchant.UpdateFarePolicyReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostMerchantConfigFarePolicyUpsert =
+  ( "config" :> "farePolicy" :> "upsert"
+      :> Kernel.ServantMultipart.MultipartForm
+           Kernel.ServantMultipart.Tmp
+           API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyReq
+      :> Post '[JSON] API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyResp
   )
 
 type PostMerchantSchedulerTrigger =
-  ( "scheduler" :> "trigger" :> ReqBody ('[JSON]) API.Types.ProviderPlatform.Management.Merchant.SchedulerTriggerReq
+  ( "scheduler" :> "trigger" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Merchant.SchedulerTriggerReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
+type PostMerchantUpdateOnboardingVehicleVariantMapping =
+  ( "updateOnboardingVehicleVariantMapping"
+      :> Kernel.ServantMultipart.MultipartForm
+           Kernel.ServantMultipart.Tmp
+           API.Types.ProviderPlatform.Management.Merchant.UpdateOnboardingVehicleVariantMappingReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
 data MerchantAPIs = MerchantAPIs
-  { postMerchantUpdate :: (API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateRes),
-    postMerchantServiceConfigMapsUpdate :: (Dashboard.Common.Merchant.MapsServiceConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getMerchantConfigCommon :: (EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigRes),
-    postMerchantConfigCommonUpdate :: (API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getMerchantConfigDriverPool :: (Kernel.Prelude.Maybe (Kernel.Types.Common.DistanceUnit) -> Kernel.Prelude.Maybe (Kernel.Types.Common.Meters) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecDistance) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigRes),
-    postMerchantConfigDriverPoolUpdate :: (Kernel.Prelude.Maybe (Kernel.Types.Common.DistanceUnit) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecDistance) -> Kernel.Prelude.Maybe (Dashboard.Common.Variant) -> Lib.Types.SpecialLocation.Area -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMerchantConfigDriverPoolCreate :: (Kernel.Prelude.Maybe (Kernel.Types.Common.DistanceUnit) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecDistance) -> Kernel.Prelude.Maybe (Dashboard.Common.Variant) -> Lib.Types.SpecialLocation.Area -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getMerchantConfigDriverIntelligentPool :: (EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.DriverIntelligentPoolConfigRes),
-    postMerchantConfigDriverIntelligentPoolUpdate :: (API.Types.ProviderPlatform.Management.Merchant.DriverIntelligentPoolConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getMerchantConfigOnboardingDocument :: (Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Merchant.DocumentType) -> Kernel.Prelude.Maybe (Dashboard.Common.Category) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigRes),
-    postMerchantConfigOnboardingDocumentUpdate :: (Dashboard.Common.Category -> API.Types.ProviderPlatform.Management.Merchant.DocumentType -> API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMerchantConfigOnboardingDocumentCreate :: (Dashboard.Common.Category -> API.Types.ProviderPlatform.Management.Merchant.DocumentType -> API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :: (Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe (Kernel.Types.Common.DistanceUnit) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecDistance) -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.CreateFPDriverExtraFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :: (Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe (Kernel.Types.Common.DistanceUnit) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecDistance) -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.CreateFPDriverExtraFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMerchantConfigFarePolicyPerExtraKmRateUpdate :: (Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.UpdateFPPerExtraKmRateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMerchantConfigFarePolicyUpdate :: (Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> API.Types.ProviderPlatform.Management.Merchant.UpdateFarePolicyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMerchantSchedulerTrigger :: (API.Types.ProviderPlatform.Management.Merchant.SchedulerTriggerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { postMerchantUpdate :: API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateReq -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.MerchantUpdateRes,
+    postMerchantServiceConfigMapsUpdate :: Dashboard.Common.Merchant.MapsServiceConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMerchantConfigCommon :: EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigRes,
+    postMerchantConfigCommonUpdate :: API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMerchantConfigDriverPool :: Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigRes,
+    postMerchantConfigDriverPoolUpdate :: Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Dashboard.Common.Variant -> Lib.Types.SpecialLocation.Area -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigDriverPoolCreate :: Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Dashboard.Common.Variant -> Lib.Types.SpecialLocation.Area -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMerchantConfigDriverIntelligentPool :: EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.DriverIntelligentPoolConfigRes,
+    postMerchantConfigDriverIntelligentPoolUpdate :: API.Types.ProviderPlatform.Management.Merchant.DriverIntelligentPoolConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMerchantConfigOnboardingDocument :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Merchant.DocumentType -> Kernel.Prelude.Maybe Dashboard.Common.Category -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigRes,
+    postMerchantConfigOnboardingDocumentUpdate :: Dashboard.Common.Category -> API.Types.ProviderPlatform.Management.Merchant.DocumentType -> API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigOnboardingDocumentCreate :: Dashboard.Common.Category -> API.Types.ProviderPlatform.Management.Merchant.DocumentType -> API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.CreateFPDriverExtraFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.CreateFPDriverExtraFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigFarePolicyPerExtraKmRateUpdate :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.UpdateFPPerExtraKmRateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigFarePolicyUpdate :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> API.Types.ProviderPlatform.Management.Merchant.UpdateFarePolicyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantConfigFarePolicyUpsert ::
+      ( Data.ByteString.Lazy.ByteString,
+        API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyReq
+      ) ->
+      EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyResp,
+    postMerchantSchedulerTrigger :: API.Types.ProviderPlatform.Management.Merchant.SchedulerTriggerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantUpdateOnboardingVehicleVariantMapping ::
+      ( Data.ByteString.Lazy.ByteString,
+        API.Types.ProviderPlatform.Management.Merchant.UpdateOnboardingVehicleVariantMappingReq
+      ) ->
+      EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkMerchantAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantAPIs)
 mkMerchantAPIs merchantClient = (MerchantAPIs {..})
   where
-    postMerchantUpdate :<|> postMerchantServiceConfigMapsUpdate :<|> getMerchantConfigCommon :<|> postMerchantConfigCommonUpdate :<|> getMerchantConfigDriverPool :<|> postMerchantConfigDriverPoolUpdate :<|> postMerchantConfigDriverPoolCreate :<|> getMerchantConfigDriverIntelligentPool :<|> postMerchantConfigDriverIntelligentPoolUpdate :<|> getMerchantConfigOnboardingDocument :<|> postMerchantConfigOnboardingDocumentUpdate :<|> postMerchantConfigOnboardingDocumentCreate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> postMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> postMerchantConfigFarePolicyUpdate :<|> postMerchantSchedulerTrigger = merchantClient
+    postMerchantUpdate :<|> postMerchantServiceConfigMapsUpdate :<|> getMerchantConfigCommon :<|> postMerchantConfigCommonUpdate :<|> getMerchantConfigDriverPool :<|> postMerchantConfigDriverPoolUpdate :<|> postMerchantConfigDriverPoolCreate :<|> getMerchantConfigDriverIntelligentPool :<|> postMerchantConfigDriverIntelligentPoolUpdate :<|> getMerchantConfigOnboardingDocument :<|> postMerchantConfigOnboardingDocumentUpdate :<|> postMerchantConfigOnboardingDocumentCreate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> postMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> postMerchantConfigFarePolicyUpdate :<|> postMerchantConfigFarePolicyUpsert :<|> postMerchantSchedulerTrigger :<|> postMerchantUpdateOnboardingVehicleVariantMapping = merchantClient

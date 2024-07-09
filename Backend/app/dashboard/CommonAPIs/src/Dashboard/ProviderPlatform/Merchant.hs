@@ -29,7 +29,7 @@ import Data.Aeson
 import Data.Text as T
 import Kernel.Prelude
 import Kernel.ServantMultipart
-import Kernel.Types.APISuccess
+-- import Kernel.Types.APISuccess
 import Kernel.Types.Common
 -- import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -38,8 +38,9 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
+
 -- import qualified Lib.Types.SpecialLocation as SL
-import Servant
+-- import Servant
 
 ---------------------------------------------------------
 -- merchant update --------------------------------------
@@ -763,12 +764,12 @@ instance HideSecrets UpdateFarePolicyReq where
 --   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 --- Upsert fare policy using csv file ----
-type UpsertFarePolicyAPI =
-  "config"
-    :> "farePolicy"
-    :> "upsert"
-    :> MultipartForm Tmp UpsertFarePolicyReq
-    :> Post '[JSON] UpsertFarePolicyResp
+-- type UpsertFarePolicyAPI =
+--   "config"
+--     :> "farePolicy"
+--     :> "upsert"
+--     :> MultipartForm Tmp UpsertFarePolicyReq
+--     :> Post '[JSON] UpsertFarePolicyResp
 
 -- data UpsertFarePolicyResp = UpsertFarePolicyResp
 --   { unprocessedFarePolicies :: [Text],
@@ -821,10 +822,10 @@ instance HideSecrets SchedulerTriggerReq where
 --
 -- Update Onboarding Vehicle Variant Mapping
 --
-type UpdateOnboardingVehicleVariantMappingAPI =
-  "updateOnboardingVehicleVariantMapping"
-    :> MultipartForm Tmp UpdateOnboardingVehicleVariantMappingReq
-    :> Post '[JSON] APISuccess
+-- type UpdateOnboardingVehicleVariantMappingAPI =
+--   "updateOnboardingVehicleVariantMapping"
+--     :> MultipartForm Tmp UpdateOnboardingVehicleVariantMappingReq
+--     :> Post '[JSON] APISuccess
 
 -- newtype UpdateOnboardingVehicleVariantMappingReq = UpdateOnboardingVehicleVariantMappingReq
 --   { file :: FilePath

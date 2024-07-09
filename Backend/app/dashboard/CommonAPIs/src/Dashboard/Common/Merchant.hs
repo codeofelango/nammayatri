@@ -89,7 +89,9 @@ data MerchantEndpoint
   | PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdateEndpoint
   | PostMerchantConfigFarePolicyPerExtraKmRateUpdateEndpoint
   | PostMerchantConfigFarePolicyUpdateEndpoint
+  | PostMerchantConfigFarePolicyUpsertEndpoint
   | PostMerchantSchedulerTriggerEndpoint
+  | PostMerchantUpdateOnboardingVehicleVariantMappingEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "MerchantEndpoint"

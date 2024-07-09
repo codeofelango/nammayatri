@@ -34,10 +34,12 @@ module Domain.Action.Dashboard.Merchant
     -- updateFPDriverExtraFee,
     -- updateFPPerExtraKmRate,
     -- updateFarePolicy,
-    upsertFarePolicy,
+    -- upsertFarePolicy,
+    postMerchantConfigFarePolicyUpsert,
     createMerchantOperatingCity,
     -- schedulerTrigger,
-    updateOnboardingVehicleVariantMapping,
+    -- updateOnboardingVehicleVariantMapping,
+    postMerchantUpdateOnboardingVehicleVariantMapping,
     upsertSpecialLocationGate,
     deleteSpecialLocationGate,
     upsertSpecialLocation,
@@ -1070,8 +1072,8 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "peak_timings"
       <*> r .: "peak_days"
 
-upsertFarePolicy :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
-upsertFarePolicy merchantShortId opCity req = do
+postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
+postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
@@ -1698,8 +1700,8 @@ instance FromNamedRecord VehicleVariantMappingCSVRow where
       <*> r .: "vehicle_model"
       <*> r .: "priority"
 
-updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
-updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
+postMerchantUpdateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
+postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   logTagInfo "Updating onboarding vehicle variant mapping for merchant: " (show merchant.id <> " and city: " <> show opCity)

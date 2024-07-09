@@ -61,10 +61,10 @@ type API =
            --  :<|> UpdateFPDriverExtraFee -- deprecate this
            --  :<|> UpdateFPPerExtraKmRate -- deprecate this
            --  :<|> UpdateFarePolicy -- deprecate this
-           :<|> UpsertFarePolicyAPI
+           --  :<|> UpsertFarePolicyAPI
            :<|> CreateMerchantOperatingCityAPI
            --  :<|> SchedulerTriggerAPI
-           :<|> UpdateOnboardingVehicleVariantMapping
+           --  :<|> UpdateOnboardingVehicleVariantMapping
            :<|> UpsertSpecialLocationAPI
            :<|> DeleteSpecialLocationAPI
            :<|> UpsertSpecialLocationGateAPI
@@ -147,9 +147,9 @@ type VerificationServiceConfigUpdateAPI =
 --   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FARE_POLICY
 --     :> Common.UpdateFarePolicy
 
-type UpsertFarePolicyAPI =
-  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPSERT_FARE_POLICY
-    :> Common.UpsertFarePolicyAPI
+-- type UpsertFarePolicyAPI =
+--   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPSERT_FARE_POLICY
+--     :> Common.UpsertFarePolicyAPI
 
 type CreateMerchantOperatingCityAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
@@ -159,9 +159,9 @@ type CreateMerchantOperatingCityAPI =
 --   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SCHEDULER_TRIGGER
 --     :> Common.SchedulerTriggerAPI
 
-type UpdateOnboardingVehicleVariantMapping =
-  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
-    :> Common.UpdateOnboardingVehicleVariantMappingAPI
+-- type UpdateOnboardingVehicleVariantMapping =
+--   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+--     :> Common.UpdateOnboardingVehicleVariantMappingAPI
 
 type UpsertSpecialLocationAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION
@@ -200,10 +200,10 @@ handler merchantId city =
     -- :<|> updateFPDriverExtraFee merchantId city -- deprecate this
     -- :<|> updateFPPerExtraKmRate merchantId city -- deprecate this
     -- :<|> updateFarePolicy merchantId city -- deprecate this
-    :<|> upsertFarePolicy merchantId city
+    -- :<|> upsertFarePolicy merchantId city
     :<|> createMerchantOperatingCity merchantId city
     -- :<|> schedulerTrigger merchantId city
-    :<|> updateOnboardingVehicleVariantMapping merchantId city
+    -- :<|> updateOnboardingVehicleVariantMapping merchantId city
     :<|> upsertSpecialLocation merchantId city
     :<|> deleteSpecialLocation merchantId city
     :<|> upsertSpecialLocationGate merchantId city
@@ -448,13 +448,14 @@ verificationServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFl
 --   transaction <- buildTransaction Common.UpdateFarePolicy apiTokenInfo (Just req)
 --   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFarePolicy) farePolicyId req
 
-upsertFarePolicy :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertFarePolicyReq -> FlowHandler Common.UpsertFarePolicyResp
-upsertFarePolicy merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.UpsertFarePolicyEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.merchant.upsertFarePolicy)) req
-  where
-    addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
+-- upsertFarePolicy :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpsertFarePolicyReq -> FlowHandler Common.UpsertFarePolicyResp
+-- upsertFarePolicy merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.UpsertFarePolicyEndpoint apiTokenInfo (Just req)
+--   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchant.upsertFarePolicy)) req
+
+-- where
+--   addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
 createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
 createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do
@@ -467,14 +468,14 @@ createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.Creat
     SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
 
-updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateOnboardingVehicleVariantMappingReq -> FlowHandler APISuccess
-updateOnboardingVehicleVariantMapping merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.UpdateOnboardingVehicleVariantMappingEndpoint apiTokenInfo T.emptyRequest
-  T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.merchant.updateOnboardingVehicleVariantMapping)) req
-  where
-    addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
+-- updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateOnboardingVehicleVariantMappingReq -> FlowHandler APISuccess
+-- updateOnboardingVehicleVariantMapping merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.UpdateOnboardingVehicleVariantMappingEndpoint apiTokenInfo T.emptyRequest
+--   T.withTransactionStoring transaction $
+--     Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.merchant.updateOnboardingVehicleVariantMapping)) req
+--   where
+--     addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
 upsertSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReq -> FlowHandler APISuccess
 upsertSpecialLocation merchantShortId opCity apiTokenInfo mbSpecialLocationId req@Common.UpsertSpecialLocationReq {..} = withFlowHandlerAPI' $ do

@@ -194,14 +194,14 @@ apis:
         type: UpdateFarePolicyReq
       response:
         type: APISuccess
-  # - POST:
-  #     endpoint: /config/farePolicy/upsert/
-  #     auth:
-  #       ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_FARE_POLICY
-  #     multipart: # TODO make it work
-  #       type: UpsertFarePolicyReq
-  #     response:
-  #       type: UpsertFarePolicyResp
+  - POST:
+      endpoint: /config/farePolicy/upsert/
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_FARE_POLICY
+      multipart:
+        type: UpsertFarePolicyReq
+      response:
+        type: UpsertFarePolicyResp
   - POST:
       endpoint: /scheduler/trigger
       auth:
@@ -210,14 +210,14 @@ apis:
         type: SchedulerTriggerReq
       response:
         type: APISuccess
-  # - POST:
-  #     endpoint: /updateOnboardingVehicleVariantMapping
-  #     auth:
-  #       ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
-  #     multipart: # TODO make it work
-  #       type: UpdateOnboardingVehicleVariantMappingReq
-  #     response:
-  #       type: APISuccess
+  - POST:
+      endpoint: /updateOnboardingVehicleVariantMapping
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+      multipart:
+        type: UpdateOnboardingVehicleVariantMappingReq
+      response:
+        type: APISuccess
 
 types:
   MerchantUpdateReq:

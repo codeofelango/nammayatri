@@ -171,10 +171,10 @@ data MerchantAPIs = MerchantAPIs
     -- updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
     -- updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
     -- updateFarePolicy :: Id Common.FarePolicy -> Merchant.UpdateFarePolicyReq -> Euler.EulerClient APISuccess,
-    upsertFarePolicy :: (LBS.ByteString, Merchant.UpsertFarePolicyReq) -> Euler.EulerClient Merchant.UpsertFarePolicyResp,
+    -- upsertFarePolicy :: (LBS.ByteString, Merchant.UpsertFarePolicyReq) -> Euler.EulerClient Merchant.UpsertFarePolicyResp,
     createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
     -- schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess,
-    updateOnboardingVehicleVariantMapping :: (LBS.ByteString, Common.UpdateOnboardingVehicleVariantMappingReq) -> Euler.EulerClient APISuccess,
+    -- updateOnboardingVehicleVariantMapping :: (LBS.ByteString, Common.UpdateOnboardingVehicleVariantMappingReq) -> Euler.EulerClient APISuccess,
     upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
     deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
     upsertSpecialLocationGate :: Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Euler.EulerClient APISuccess,
@@ -373,10 +373,10 @@ mkDriverOperationAPIs merchantId city token = do
       -- :<|> updateFPDriverExtraFee
       -- :<|> updateFPPerExtraKmRate
       -- :<|> updateFarePolicy
-      :<|> upsertFarePolicy
+      -- :<|> upsertFarePolicy
       :<|> createMerchantOperatingCity
       -- :<|> schedulerTrigger
-      :<|> updateOnboardingVehicleVariantMapping
+      -- :<|> updateOnboardingVehicleVariantMapping
       :<|> upsertSpecialLocation
       :<|> deleteSpecialLocation
       :<|> upsertSpecialLocationGate
