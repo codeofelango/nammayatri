@@ -49,10 +49,10 @@ type API =
          --  :<|> Common.UpdateFPPerExtraKmRate
          --  :<|> Common.UpdateFarePolicy
          --  :<|> Common.UpsertFarePolicyAPI
-         Common.CreateMerchantOperatingCityAPIT
-           --  :<|> Common.SchedulerTriggerAPI
-           --  :<|> Common.UpdateOnboardingVehicleVariantMappingAPI
-           :<|> Common.UpsertSpecialLocationAPIT
+         --  Common.CreateMerchantOperatingCityAPIT
+         --  :<|> Common.SchedulerTriggerAPI
+         --  :<|> Common.UpdateOnboardingVehicleVariantMappingAPI
+         Common.UpsertSpecialLocationAPIT
            :<|> Common.DeleteSpecialLocationAPI
            :<|> Common.UpsertSpecialLocationGateAPIT
            :<|> Common.DeleteSpecialLocationGateAPI
@@ -80,10 +80,10 @@ handler merchantId city =
   -- :<|> updateFPPerExtraKmRate merchantId city
   -- :<|> updateFarePolicy merchantId city
   -- :<|> upsertFarePolicy merchantId city
-  createMerchantOperatingCity merchantId city
-    -- :<|> schedulerTrigger merchantId city
-    -- :<|> updateOnboardingVehicleVariantMapping merchantId city
-    :<|> upsertSpecialLocation merchantId city
+  -- createMerchantOperatingCity merchantId city
+  -- :<|> schedulerTrigger merchantId city
+  -- :<|> updateOnboardingVehicleVariantMapping merchantId city
+  upsertSpecialLocation merchantId city
     :<|> deleteSpecialLocation merchantId city
     :<|> upsertSpecialLocationGate merchantId city
     :<|> deleteSpecialLocationGate merchantId city
@@ -231,8 +231,8 @@ handler merchantId city =
 -- upsertFarePolicy :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> FlowHandler Common.UpsertFarePolicyResp
 -- upsertFarePolicy merchantShortId opCity req = withFlowHandlerAPI $ DMerchant.upsertFarePolicy merchantShortId opCity req
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> FlowHandler Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId opCity req = withFlowHandlerAPI $ DMerchant.createMerchantOperatingCity merchantShortId opCity req
+-- createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> FlowHandler Common.CreateMerchantOperatingCityRes
+-- createMerchantOperatingCity merchantShortId opCity req = withFlowHandlerAPI $ DMerchant.createMerchantOperatingCity merchantShortId opCity req
 
 -- updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> FlowHandler APISuccess
 -- updateOnboardingVehicleVariantMapping merchantShortId opCity req = withFlowHandlerAPI $ DMerchant.updateOnboardingVehicleVariantMapping merchantShortId opCity req

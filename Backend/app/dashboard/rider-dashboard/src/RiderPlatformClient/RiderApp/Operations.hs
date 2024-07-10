@@ -26,7 +26,7 @@ import qualified Beckn.Types.Core.Taxi.Search ()
 import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.Common.Merchant as CMerchant
 import qualified Dashboard.RiderPlatform.Customer as Customer
-import qualified Dashboard.RiderPlatform.Merchant as Merchant
+-- import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import Data.Time
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
@@ -88,7 +88,7 @@ data MerchantAPIs = MerchantAPIs
     -- mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     -- smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     -- smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
+    -- createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
     upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> CMerchant.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
     deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
     upsertSpecialLocationGate :: Id SL.SpecialLocation -> CMerchant.UpsertSpecialLocationGateReqT -> Euler.EulerClient APISuccess,
@@ -187,8 +187,8 @@ mkAppBackendAPIs merchantId city token = do
     --   :<|> mapsServiceUsageConfigUpdate
     --   :<|> smsServiceConfigUpdate
     --   :<|> smsServiceUsageConfigUpdate
-    createMerchantOperatingCity
-      :<|> upsertSpecialLocation
+    -- createMerchantOperatingCity
+    upsertSpecialLocation
       :<|> deleteSpecialLocation
       :<|> upsertSpecialLocationGate
       :<|> deleteSpecialLocationGate = merchantClient

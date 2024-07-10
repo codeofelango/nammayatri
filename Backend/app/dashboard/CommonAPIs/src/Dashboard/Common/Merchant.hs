@@ -96,6 +96,7 @@ data MerchantEndpoint
   | PostMerchantServiceConfigVerificationUpdateEndpoint
   | PostMerchantServiceUsageConfigMapsUpdateEndpoint
   | PostMerchantServiceUsageConfigSmsUpdateEndpoint
+  | PostMerchantConfigOperatingCityCreateEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "MerchantEndpoint"
@@ -648,13 +649,12 @@ validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
 
 ---- CreateMerchantOperatingCity ------------------------
 
--- can't move to DSL for now, because helper api is not the same as dashboard api
-type CreateMerchantOperatingCityAPI =
-  "config"
-    :> "operatingCity"
-    :> "create"
-    :> MultipartForm Tmp CreateMerchantOperatingCityReq
-    :> Post '[JSON] CreateMerchantOperatingCityRes
+-- type CreateMerchantOperatingCityAPI =
+--   "config"
+--     :> "operatingCity"
+--     :> "create"
+--     :> MultipartForm Tmp CreateMerchantOperatingCityReq
+--     :> Post '[JSON] CreateMerchantOperatingCityRes
 
 data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
   { file :: FilePath,
@@ -709,12 +709,12 @@ newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type CreateMerchantOperatingCityAPIT =
-  "config"
-    :> "operatingCity"
-    :> "create"
-    :> ReqBody '[JSON] CreateMerchantOperatingCityReqT
-    :> Post '[JSON] CreateMerchantOperatingCityRes
+-- type CreateMerchantOperatingCityAPIT =
+--   "config"
+--     :> "operatingCity"
+--     :> "create"
+--     :> ReqBody '[JSON] CreateMerchantOperatingCityReqT
+--     :> Post '[JSON] CreateMerchantOperatingCityRes
 
 data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
   { geom :: Text,

@@ -33,8 +33,8 @@ type API =
          --  :<|> Common.MapsServiceUsageConfigUpdateAPI
          --  :<|> Common.SmsServiceConfigUpdateAPI
          --  :<|> Common.SmsServiceUsageConfigUpdateAPI
-         Common.CreateMerchantOperatingCityAPIT
-           :<|> Common.UpsertSpecialLocationAPIT
+         --  Common.CreateMerchantOperatingCityAPIT
+         Common.UpsertSpecialLocationAPIT
            :<|> Common.DeleteSpecialLocationAPI
            :<|> Common.UpsertSpecialLocationGateAPIT
            :<|> Common.DeleteSpecialLocationGateAPI
@@ -46,8 +46,8 @@ handler merchantId city =
   --   :<|> mapsServiceUsageConfigUpdate merchantId city
   --   :<|> smsServiceConfigUpdate merchantId city
   --   :<|> smsServiceUsageConfigUpdate merchantId city
-  createMerchantOperatingCity merchantId city
-    :<|> upsertSpecialLocation merchantId city
+  -- createMerchantOperatingCity merchantId city
+  upsertSpecialLocation merchantId city
     :<|> deleteSpecialLocation merchantId city
     :<|> upsertSpecialLocationGate merchantId city
     :<|> deleteSpecialLocationGate merchantId city
@@ -79,12 +79,12 @@ handler merchantId city =
 --   FlowHandler APISuccess
 -- smsServiceUsageConfigUpdate merchantShortId city = withFlowHandlerAPI . DMerchant.smsServiceUsageConfigUpdate merchantShortId city
 
-createMerchantOperatingCity ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Common.CreateMerchantOperatingCityReqT ->
-  FlowHandler Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId city = withFlowHandlerAPI . DMerchant.createMerchantOperatingCity merchantShortId city
+-- createMerchantOperatingCity ::
+--   ShortId DM.Merchant ->
+--   Context.City ->
+--   Common.CreateMerchantOperatingCityReqT ->
+--   FlowHandler Common.CreateMerchantOperatingCityRes
+-- createMerchantOperatingCity merchantShortId city = withFlowHandlerAPI . DMerchant.createMerchantOperatingCity merchantShortId city
 
 upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> FlowHandler APISuccess
 upsertSpecialLocation merchantShortId opCity mbSpecialLocationId = withFlowHandlerAPI . DMerchant.upsertSpecialLocation merchantShortId opCity mbSpecialLocationId

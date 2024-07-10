@@ -23,6 +23,9 @@ imports:
   ServiceUsageConfigRes: Dashboard.Common.Merchant
   MapsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
   SmsServiceUsageConfigUpdateReq: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityReq: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityRes: Dashboard.Common.Merchant
+  CreateMerchantOperatingCityReqT: Dashboard.Common.Merchant
 
 module: Merchant
 
@@ -265,20 +268,23 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.Common.Merchant.validateSmsServiceUsageConfigUpdateReq
-  # - POST:
-  #     endpoint: /config/operatingCity/create
-  #     auth:
-  #       # ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SCHEDULER_TRIGGER FIXME
-  #     multipart:
-  #       type: CreateMerchantOperatingCityReq
-  #     response:
-  #       type: CreateMerchantOperatingCityRes
-  #     helper: # TODO make it work
-  #       endpoint: /config/operatingCity/create
-  #       request:
-  #         type: CreateMerchantOperatingCityReqT
-  #       response:
-  #         type: CreateMerchantOperatingCityRes
+  - POST:
+      endpoint: /config/operatingCity/create
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+      multipart:
+        type: CreateMerchantOperatingCityReq
+      response:
+        type: CreateMerchantOperatingCityRes
+      helperApi:
+        - POST:
+            endpoint: /config/operatingCity/create
+            auth: # TODO remove
+              ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+            request:
+              type: CreateMerchantOperatingCityReqT
+            response:
+              type: CreateMerchantOperatingCityRes
 types:
   MerchantUpdateReq:
     name: Maybe Text

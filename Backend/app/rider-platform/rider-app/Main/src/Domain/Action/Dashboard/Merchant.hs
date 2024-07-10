@@ -23,7 +23,8 @@ module Domain.Action.Dashboard.Merchant
     postMerchantServiceConfigSmsUpdate,
     -- smsServiceUsageConfigUpdate,
     postMerchantServiceUsageConfigSmsUpdate,
-    createMerchantOperatingCity,
+    -- createMerchantOperatingCity,
+    postMerchantConfigOperatingCityCreate,
     upsertSpecialLocation,
     deleteSpecialLocation,
     upsertSpecialLocationGate,
@@ -352,8 +353,8 @@ deleteSpecialLocationGate _merchantShortId _city specialLocationId gateName = do
 normalizeName :: Text -> Text
 normalizeName = T.strip . T.toLower
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId city req = do
+postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigOperatingCityCreate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   baseOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
   let baseOperatingCityId = baseOperatingCity.id

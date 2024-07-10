@@ -36,7 +36,7 @@ import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Storage.Queries.Merchant as SQM
+-- import "lib-dashboard" Storage.Queries.Merchant as SQM
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -62,10 +62,10 @@ type API =
          --  :<|> UpdateFPPerExtraKmRate -- deprecate this
          --  :<|> UpdateFarePolicy -- deprecate this
          --  :<|> UpsertFarePolicyAPI
-         CreateMerchantOperatingCityAPI
-           --  :<|> SchedulerTriggerAPI
-           --  :<|> UpdateOnboardingVehicleVariantMapping
-           :<|> UpsertSpecialLocationAPI
+         -- CreateMerchantOperatingCityAPI
+         --  :<|> SchedulerTriggerAPI
+         --  :<|> UpdateOnboardingVehicleVariantMapping
+         UpsertSpecialLocationAPI
            :<|> DeleteSpecialLocationAPI
            :<|> UpsertSpecialLocationGateAPI
            :<|> DeleteSpecialLocationGatesAPI
@@ -151,9 +151,9 @@ type API =
 --   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPSERT_FARE_POLICY
 --     :> Common.UpsertFarePolicyAPI
 
-type CreateMerchantOperatingCityAPI =
-  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
-    :> Common.CreateMerchantOperatingCityAPI
+-- type CreateMerchantOperatingCityAPI =
+--   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
+--     :> Common.CreateMerchantOperatingCityAPI
 
 -- type SchedulerTriggerAPI =
 --   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SCHEDULER_TRIGGER
@@ -201,10 +201,10 @@ handler merchantId city =
   -- :<|> updateFPPerExtraKmRate merchantId city -- deprecate this
   -- :<|> updateFarePolicy merchantId city -- deprecate this
   -- :<|> upsertFarePolicy merchantId city
-  createMerchantOperatingCity merchantId city
-    -- :<|> schedulerTrigger merchantId city
-    -- :<|> updateOnboardingVehicleVariantMapping merchantId city
-    :<|> upsertSpecialLocation merchantId city
+  -- createMerchantOperatingCity merchantId city
+  -- :<|> schedulerTrigger merchantId city
+  -- :<|> updateOnboardingVehicleVariantMapping merchantId city
+  upsertSpecialLocation merchantId city
     :<|> deleteSpecialLocation merchantId city
     :<|> upsertSpecialLocationGate merchantId city
     :<|> deleteSpecialLocationGate merchantId city
@@ -457,16 +457,16 @@ buildTransaction endpoint apiTokenInfo =
 -- where
 --   addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
-  -- update entry in dashboard
-  merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
-  geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
-  unless (req.city `elem` merchant.supportedOperatingCities) $
-    SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
-  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
+-- createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
+-- createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
+--   -- update entry in dashboard
+--   merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
+--   geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
+--   unless (req.city `elem` merchant.supportedOperatingCities) $
+--     SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
+--   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
 
 -- updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateOnboardingVehicleVariantMappingReq -> FlowHandler APISuccess
 -- updateOnboardingVehicleVariantMapping merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do

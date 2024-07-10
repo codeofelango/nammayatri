@@ -41,7 +41,8 @@ module Domain.Action.Dashboard.Merchant
     -- updateFarePolicy,
     -- upsertFarePolicy,
     postMerchantConfigFarePolicyUpsert,
-    createMerchantOperatingCity,
+    -- createMerchantOperatingCity,
+    postMerchantConfigOperatingCityCreate,
     -- schedulerTrigger,
     -- updateOnboardingVehicleVariantMapping,
     postMerchantUpdateOnboardingVehicleVariantMapping,
@@ -1394,8 +1395,8 @@ deleteSpecialLocationGate _merchantShortId _city specialLocationId gateName = do
 normalizeName :: Text -> Text
 normalizeName = T.strip . T.toLower
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId city req = do
+postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigOperatingCityCreate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   baseOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
 

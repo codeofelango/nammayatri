@@ -28,7 +28,7 @@ import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Coin as Coins
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified Dashboard.ProviderPlatform.DriverReferral as DriverReferral
-import qualified Dashboard.ProviderPlatform.Merchant as Merchant
+-- import qualified Dashboard.ProviderPlatform.Merchant as Merchant
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Message as Message
 import qualified Dashboard.ProviderPlatform.Ride as Ride
@@ -172,7 +172,7 @@ data MerchantAPIs = MerchantAPIs
     -- updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
     -- updateFarePolicy :: Id Common.FarePolicy -> Merchant.UpdateFarePolicyReq -> Euler.EulerClient APISuccess,
     -- upsertFarePolicy :: (LBS.ByteString, Merchant.UpsertFarePolicyReq) -> Euler.EulerClient Merchant.UpsertFarePolicyResp,
-    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
+    -- createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
     -- schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess,
     -- updateOnboardingVehicleVariantMapping :: (LBS.ByteString, Common.UpdateOnboardingVehicleVariantMappingReq) -> Euler.EulerClient APISuccess,
     upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
@@ -374,10 +374,10 @@ mkDriverOperationAPIs merchantId city token = do
     -- :<|> updateFPPerExtraKmRate
     -- :<|> updateFarePolicy
     -- :<|> upsertFarePolicy
-    createMerchantOperatingCity
-      -- :<|> schedulerTrigger
-      -- :<|> updateOnboardingVehicleVariantMapping
-      :<|> upsertSpecialLocation
+    -- createMerchantOperatingCity
+    -- :<|> schedulerTrigger
+    -- :<|> updateOnboardingVehicleVariantMapping
+    upsertSpecialLocation
       :<|> deleteSpecialLocation
       :<|> upsertSpecialLocationGate
       :<|> deleteSpecialLocationGate = merchantClient

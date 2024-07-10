@@ -36,7 +36,7 @@ import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Storage.Queries.Merchant as SQM
+-- import "lib-dashboard" Storage.Queries.Merchant as SQM
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -46,8 +46,8 @@ type API =
          --  :<|> MapsServiceUsageConfigUpdateAPI
          --  :<|> SmsServiceConfigUpdateAPI
          --  :<|> SmsServiceUsageConfigUpdateAPI
-         CreateMerchantOperatingCityAPI
-           :<|> UpsertSpecialLocationAPI
+         -- CreateMerchantOperatingCityAPI
+         UpsertSpecialLocationAPI
            :<|> DeleteSpecialLocationAPI
            :<|> UpsertSpecialLocationGateAPI
            :<|> DeleteSpecialLocationGateAPI
@@ -69,9 +69,9 @@ type API =
 --   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
 --     :> Common.SmsServiceUsageConfigUpdateAPI
 
-type CreateMerchantOperatingCityAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
-    :> Common.CreateMerchantOperatingCityAPI
+-- type CreateMerchantOperatingCityAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
+--     :> Common.CreateMerchantOperatingCityAPI
 
 type UpsertSpecialLocationAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION
@@ -95,8 +95,8 @@ handler merchantId city =
   --   :<|> mapsServiceUsageConfigUpdate merchantId city
   --   :<|> smsServiceConfigUpdate merchantId city
   --   :<|> smsServiceUsageConfigUpdate merchantId city
-  createMerchantOperatingCity merchantId city
-    :<|> upsertSpecialLocation merchantId city
+  -- createMerchantOperatingCity merchantId city
+  upsertSpecialLocation merchantId city
     :<|> deleteSpecialLocation merchantId city
     :<|> upsertSpecialLocationGate merchantId city
     :<|> deleteSpecialLocationGate merchantId city
@@ -163,16 +163,16 @@ buildTransaction endpoint apiTokenInfo =
 --   T.withTransactionStoring transaction $
 --     Client.callRiderAppOperations checkedMerchantId opCity (.merchant.smsServiceUsageConfigUpdate) req
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
-  -- update entry in dashboard
-  merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
-  geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom")
-  unless (req.city `elem` merchant.supportedOperatingCities) $
-    SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
-  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
+-- createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
+-- createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
+--   -- update entry in dashboard
+--   merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
+--   geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom")
+--   unless (req.city `elem` merchant.supportedOperatingCities) $
+--     SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
+--   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
 
 upsertSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReq -> FlowHandler APISuccess
 upsertSpecialLocation merchantShortId opCity apiTokenInfo specialLocationId req@Common.UpsertSpecialLocationReq {..} = withFlowHandlerAPI' $ do
