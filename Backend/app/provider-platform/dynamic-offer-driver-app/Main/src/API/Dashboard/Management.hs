@@ -20,7 +20,7 @@ import qualified API.Action.Dashboard.Management.Ride as RideDSL
 import qualified API.Dashboard.Management.Booking as Booking
 import qualified API.Dashboard.Management.Driver as Driver
 import qualified API.Dashboard.Management.Issue as Issue
-import qualified API.Dashboard.Management.Merchant as Merchant
+-- import qualified API.Dashboard.Management.Merchant as Merchant
 import qualified API.Dashboard.Management.Message as Message
 import qualified API.Dashboard.Management.Overlay as Overlay
 import qualified API.Dashboard.Management.Ride as Ride
@@ -38,7 +38,7 @@ type API =
            :<|> Ride.API
            :<|> Overlay.API
            :<|> Message.API
-           :<|> Merchant.API
+           --  :<|> Merchant.API
            :<|> Issue.API
            :<|> Driver.API
            :<|> Booking.API
@@ -53,7 +53,7 @@ handler merchantId city _ =
     :<|> Ride.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Message.handler merchantId city
-    :<|> Merchant.handler merchantId city
+    -- :<|> Merchant.handler merchantId city
     :<|> Issue.handler merchantId city
     :<|> Driver.handler merchantId city
     :<|> Booking.handler merchantId city

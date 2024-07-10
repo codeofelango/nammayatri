@@ -33,7 +33,7 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as 
 import qualified API.ProviderPlatform.DynamicOfferDriver.DriverReferral as DriverReferral
 import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Maps as Maps
-import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
+-- import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
@@ -66,7 +66,7 @@ type API' =
     :<|> Ride.API
     :<|> Subscription.API
     :<|> Booking.API
-    :<|> Merchant.API
+    -- :<|> Merchant.API
     :<|> Message.API
     :<|> DriverReferral.API
     :<|> DriverRegistration.API
@@ -87,7 +87,7 @@ handler merchantId = do
     :<|> Ride.handler merchantId city
     :<|> Subscription.handler merchantId city
     :<|> Booking.handler merchantId city
-    :<|> Merchant.handler merchantId city
+    -- :<|> Merchant.handler merchantId city
     :<|> Message.handler merchantId city
     :<|> DriverReferral.handler merchantId city
     :<|> DriverRegistration.handler merchantId city
@@ -112,7 +112,7 @@ handlerV2 merchantId city =
     :<|> Ride.handler merchantId city
     :<|> Subscription.handler merchantId city
     :<|> Booking.handler merchantId city
-    :<|> Merchant.handler merchantId city
+    -- :<|> Merchant.handler merchantId city
     :<|> Message.handler merchantId city
     :<|> DriverReferral.handler merchantId city
     :<|> DriverRegistration.handler merchantId city

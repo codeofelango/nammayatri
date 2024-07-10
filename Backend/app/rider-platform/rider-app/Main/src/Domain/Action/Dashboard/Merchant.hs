@@ -25,10 +25,14 @@ module Domain.Action.Dashboard.Merchant
     postMerchantServiceUsageConfigSmsUpdate,
     -- createMerchantOperatingCity,
     postMerchantConfigOperatingCityCreate,
-    upsertSpecialLocation,
-    deleteSpecialLocation,
-    upsertSpecialLocationGate,
-    deleteSpecialLocationGate,
+    -- upsertSpecialLocation,
+    -- deleteSpecialLocation,
+    -- upsertSpecialLocationGate,
+    -- deleteSpecialLocationGate,
+    postMerchantSpecialLocationUpsert,
+    deleteMerchantSpecialLocationDelete,
+    postMerchantSpecialLocationGatesUpsert,
+    deleteMerchantSpecialLocationGatesDelete,
     buildMerchantServiceConfig,
   )
 where
@@ -266,8 +270,8 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId city req = do
   logTagInfo "dashboard -> postMerchantServiceUsageConfigSmsUpdate : " (show merchantOperatingCity.id)
   pure Success
 
-upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
-upsertSpecialLocation merchantShortId _city mbSpecialLocationId request = do
+postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
+postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId request = do
   existingSLWithGeom <- maybe (return Nothing) QSL.findByIdWithGeom mbSpecialLocationId
   let mbExistingSL = fst <$> existingSLWithGeom
       mbGeom = snd =<< existingSLWithGeom
@@ -296,15 +300,15 @@ upsertSpecialLocation merchantShortId _city mbSpecialLocationId request = do
             ..
           }
 
-deleteSpecialLocation :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Flow APISuccess
-deleteSpecialLocation _merchantShortid _city specialLocationId = do
+deleteMerchantSpecialLocationDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Flow APISuccess
+deleteMerchantSpecialLocationDelete _merchantShortid _city specialLocationId = do
   void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Special Location with given id not found")
   void $ runTransaction $ QSL.deleteById specialLocationId
   void $ runTransaction $ QGI.deleteAll specialLocationId
   pure Success
 
-upsertSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
-upsertSpecialLocationGate _merchantShortId _city specialLocationId request = do
+postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
+postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId request = do
   void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   createOrUpdateGate existingGates request
@@ -341,8 +345,8 @@ upsertSpecialLocationGate _merchantShortId _city specialLocationId request = do
             ..
           }
 
-deleteSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> Flow APISuccess
-deleteSpecialLocationGate _merchantShortId _city specialLocationId gateName = do
+deleteMerchantSpecialLocationGatesDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> Flow APISuccess
+deleteMerchantSpecialLocationGatesDelete _merchantShortId _city specialLocationId gateName = do
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   let existingGate = fst <$> find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName gateName) existingGates
   case existingGate of

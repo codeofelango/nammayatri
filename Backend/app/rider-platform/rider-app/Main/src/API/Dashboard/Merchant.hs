@@ -14,43 +14,43 @@
 
 module API.Dashboard.Merchant where
 
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
-import qualified Domain.Action.Dashboard.Merchant as DMerchant
-import qualified Domain.Types.Merchant as DM
-import Environment
-import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess (..))
-import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
-import qualified Lib.Types.SpecialLocation as SL
-import Servant hiding (Unauthorized, throwError)
-import Storage.Beam.SystemConfigs ()
+-- import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
+-- import qualified Domain.Action.Dashboard.Merchant as DMerchant
+-- import qualified Domain.Types.Merchant as DM
+-- import Environment
+-- import Kernel.Prelude
+-- import Kernel.Types.APISuccess (APISuccess (..))
+-- import qualified Kernel.Types.Beckn.Context as Context
+-- import Kernel.Types.Id
+-- import Kernel.Utils.Common (withFlowHandlerAPI)
+-- import qualified Lib.Types.SpecialLocation as SL
+-- import Servant hiding (Unauthorized, throwError)
+-- import Storage.Beam.SystemConfigs ()
 
-type API =
-  "merchant"
-    :> ( -- Common.ServiceUsageConfigAPI
-         --  :<|> Common.MapsServiceUsageConfigUpdateAPI
-         --  :<|> Common.SmsServiceConfigUpdateAPI
-         --  :<|> Common.SmsServiceUsageConfigUpdateAPI
-         --  Common.CreateMerchantOperatingCityAPIT
-         Common.UpsertSpecialLocationAPIT
-           :<|> Common.DeleteSpecialLocationAPI
-           :<|> Common.UpsertSpecialLocationGateAPIT
-           :<|> Common.DeleteSpecialLocationGateAPI
-       )
+-- type API =
+--   "merchant"
+--     :> ( -- Common.ServiceUsageConfigAPI
+--  :<|> Common.MapsServiceUsageConfigUpdateAPI
+--  :<|> Common.SmsServiceConfigUpdateAPI
+--  :<|> Common.SmsServiceUsageConfigUpdateAPI
+--  Common.CreateMerchantOperatingCityAPIT
+--    Common.UpsertSpecialLocationAPIT
+--      :<|> Common.DeleteSpecialLocationAPI
+--      :<|> Common.UpsertSpecialLocationGateAPIT
+--      :<|> Common.DeleteSpecialLocationGateAPI
+--  )
 
-handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
-handler merchantId city =
-  -- serviceUsageConfig merchantId city
-  --   :<|> mapsServiceUsageConfigUpdate merchantId city
-  --   :<|> smsServiceConfigUpdate merchantId city
-  --   :<|> smsServiceUsageConfigUpdate merchantId city
-  -- createMerchantOperatingCity merchantId city
-  upsertSpecialLocation merchantId city
-    :<|> deleteSpecialLocation merchantId city
-    :<|> upsertSpecialLocationGate merchantId city
-    :<|> deleteSpecialLocationGate merchantId city
+-- handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
+-- handler merchantId city =
+-- serviceUsageConfig merchantId city
+--   :<|> mapsServiceUsageConfigUpdate merchantId city
+--   :<|> smsServiceConfigUpdate merchantId city
+--   :<|> smsServiceUsageConfigUpdate merchantId city
+-- createMerchantOperatingCity merchantId city
+-- upsertSpecialLocation merchantId city
+--   :<|> deleteSpecialLocation merchantId city
+--   :<|> upsertSpecialLocationGate merchantId city
+--   :<|> deleteSpecialLocationGate merchantId city
 
 -- serviceUsageConfig ::
 --   ShortId DM.Merchant ->
@@ -86,14 +86,14 @@ handler merchantId city =
 --   FlowHandler Common.CreateMerchantOperatingCityRes
 -- createMerchantOperatingCity merchantShortId city = withFlowHandlerAPI . DMerchant.createMerchantOperatingCity merchantShortId city
 
-upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> FlowHandler APISuccess
-upsertSpecialLocation merchantShortId opCity mbSpecialLocationId = withFlowHandlerAPI . DMerchant.upsertSpecialLocation merchantShortId opCity mbSpecialLocationId
+-- upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> FlowHandler APISuccess
+-- upsertSpecialLocation merchantShortId opCity mbSpecialLocationId = withFlowHandlerAPI . DMerchant.upsertSpecialLocation merchantShortId opCity mbSpecialLocationId
 
-deleteSpecialLocation :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> FlowHandler APISuccess
-deleteSpecialLocation merchantShortId opCity = withFlowHandlerAPI . DMerchant.deleteSpecialLocation merchantShortId opCity
+-- deleteSpecialLocation :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> FlowHandler APISuccess
+-- deleteSpecialLocation merchantShortId opCity = withFlowHandlerAPI . DMerchant.deleteSpecialLocation merchantShortId opCity
 
-upsertSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> FlowHandler APISuccess
-upsertSpecialLocationGate merchantShortId opCity specialLocationId = withFlowHandlerAPI . DMerchant.upsertSpecialLocationGate merchantShortId opCity specialLocationId
+-- upsertSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> FlowHandler APISuccess
+-- upsertSpecialLocationGate merchantShortId opCity specialLocationId = withFlowHandlerAPI . DMerchant.upsertSpecialLocationGate merchantShortId opCity specialLocationId
 
-deleteSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> FlowHandler APISuccess
-deleteSpecialLocationGate merchantShortId opCity specialLocationId = withFlowHandlerAPI . DMerchant.deleteSpecialLocationGate merchantShortId opCity specialLocationId
+-- deleteSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> FlowHandler APISuccess
+-- deleteSpecialLocationGate merchantShortId opCity specialLocationId = withFlowHandlerAPI . DMerchant.deleteSpecialLocationGate merchantShortId opCity specialLocationId

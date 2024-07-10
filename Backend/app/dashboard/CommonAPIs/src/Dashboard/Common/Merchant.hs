@@ -97,6 +97,10 @@ data MerchantEndpoint
   | PostMerchantServiceUsageConfigMapsUpdateEndpoint
   | PostMerchantServiceUsageConfigSmsUpdateEndpoint
   | PostMerchantConfigOperatingCityCreateEndpoint
+  | PostMerchantSpecialLocationUpsertEndpoint
+  | DeleteMerchantSpecialLocationDeleteEndpoint
+  | PostMerchantSpecialLocationGatesUpsertEndpoint
+  | DeleteMerchantSpecialLocationGatesDeleteEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "MerchantEndpoint"
@@ -739,12 +743,12 @@ instance HideSecrets CreateMerchantOperatingCityReq where
 
 ---- UpsertSpecialLocation ---------------------------------------
 
-type UpsertSpecialLocationAPI =
-  "specialLocation"
-    :> QueryParam "specialLocationId" (Id SpecialLocation)
-    :> "upsert"
-    :> MultipartForm Tmp UpsertSpecialLocationReq
-    :> Post '[JSON] APISuccess
+-- type UpsertSpecialLocationAPI =
+--   "specialLocation"
+--     :> QueryParam "specialLocationId" (Id SpecialLocation)
+--     :> "upsert"
+--     :> MultipartForm Tmp UpsertSpecialLocationReq
+--     :> Post '[JSON] APISuccess
 
 data UpsertSpecialLocationReq = UpsertSpecialLocationReq
   { file :: Maybe FilePath,
@@ -778,12 +782,12 @@ getFileAndFileType ethFile =
       (Just payload, Just fileCType)
     Left _err -> (Nothing, Nothing)
 
-type UpsertSpecialLocationAPIT =
-  "specialLocation"
-    :> QueryParam "specialLocationId" (Id SpecialLocation)
-    :> "upsert"
-    :> ReqBody '[JSON] UpsertSpecialLocationReqT
-    :> Post '[JSON] APISuccess
+-- type UpsertSpecialLocationAPIT =
+--   "specialLocation"
+--     :> QueryParam "specialLocationId" (Id SpecialLocation)
+--     :> "upsert"
+--     :> ReqBody '[JSON] UpsertSpecialLocationReqT
+--     :> Post '[JSON] APISuccess
 
 data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
   { locationName :: Maybe Text,
@@ -796,21 +800,21 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
 
 ---- DeleteSpecialLocation ----------------------------------
 
-type DeleteSpecialLocationAPI =
-  "specialLocation"
-    :> Capture "specialLocationId" (Id SpecialLocation)
-    :> "delete"
-    :> Delete '[JSON] APISuccess
+-- type DeleteSpecialLocationAPI =
+--   "specialLocation"
+--     :> Capture "specialLocationId" (Id SpecialLocation)
+--     :> "delete"
+--     :> Delete '[JSON] APISuccess
 
 ------- UpsertSpecialLocationGates ---------------------------------------
 
-type UpsertSpecialLocationGateAPI =
-  "specialLocation"
-    :> Capture "specialLocationId" (Id SpecialLocation)
-    :> "gates"
-    :> "upsert"
-    :> MultipartForm Tmp UpsertSpecialLocationGateReq
-    :> Post '[JSON] APISuccess
+-- type UpsertSpecialLocationGateAPI =
+--   "specialLocation"
+--     :> Capture "specialLocationId" (Id SpecialLocation)
+--     :> "gates"
+--     :> "upsert"
+--     :> MultipartForm Tmp UpsertSpecialLocationGateReq
+--     :> Post '[JSON] APISuccess
 
 data UpsertSpecialLocationGateReq = UpsertSpecialLocationGateReq
   { file :: Maybe FilePath,
@@ -841,13 +845,13 @@ instance FromMultipart Tmp UpsertSpecialLocationGateReq where
 instance HideSecrets UpsertSpecialLocationGateReq where
   hideSecrets = identity
 
-type UpsertSpecialLocationGateAPIT =
-  "specialLocation"
-    :> Capture "specialLocationId" (Id SpecialLocation)
-    :> "gates"
-    :> "upsert"
-    :> ReqBody '[JSON] UpsertSpecialLocationGateReqT
-    :> Post '[JSON] APISuccess
+-- type UpsertSpecialLocationGateAPIT =
+--   "specialLocation"
+--     :> Capture "specialLocationId" (Id SpecialLocation)
+--     :> "gates"
+--     :> "upsert"
+--     :> ReqBody '[JSON] UpsertSpecialLocationGateReqT
+--     :> Post '[JSON] APISuccess
 
 data UpsertSpecialLocationGateReqT = UpsertSpecialLocationGateReqT
   { name :: Text,

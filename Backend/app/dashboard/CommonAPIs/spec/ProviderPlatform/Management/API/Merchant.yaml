@@ -26,6 +26,11 @@ imports:
   CreateMerchantOperatingCityReq: Dashboard.Common.Merchant
   CreateMerchantOperatingCityRes: Dashboard.Common.Merchant
   CreateMerchantOperatingCityReqT: Dashboard.Common.Merchant
+  SpecialLocation: Lib.Types.SpecialLocation
+  UpsertSpecialLocationReq: Dashboard.Common.Merchant
+  UpsertSpecialLocationReqT: Dashboard.Common.Merchant
+  UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
+  UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
 
 module: Merchant
 
@@ -285,6 +290,66 @@ apis:
               type: CreateMerchantOperatingCityReqT
             response:
               type: CreateMerchantOperatingCityRes
+  - POST:
+      endpoint: /specialLocation/upsert
+      query:
+        specialLocationId: (Id SpecialLocation)
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
+      multipart:
+        type: UpsertSpecialLocationReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /specialLocation/upsert
+            query:
+              specialLocationId: (Id SpecialLocation)
+            auth: # TODO remove
+              ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
+            request:
+              type: UpsertSpecialLocationReqT
+            response:
+              type: APISuccess
+  - DELETE:
+      endpoint: /specialLocation/{specialLocationId}/delete
+      params:
+        specialLocationId : Id SpecialLocation
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /specialLocation/{specialLocationId}/gates/upsert
+      params:
+        specialLocationId : Id SpecialLocation
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+      multipart:
+        type: UpsertSpecialLocationGateReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /specialLocation/{specialLocationId}/gates/upsert
+            params:
+              specialLocationId : Id SpecialLocation
+            auth: # TODO remove
+              ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+            request:
+              type: UpsertSpecialLocationGateReqT
+            response:
+              type: APISuccess
+  - DELETE:
+      endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
+      params:
+        specialLocationId : Id SpecialLocation
+        gateName: Text
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
+      response:
+        type: APISuccess
+
 types:
   MerchantUpdateReq:
     name: Maybe Text

@@ -26,7 +26,7 @@ import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.HotSpot as HotSpot
 import qualified API.RiderPlatform.Issue as Issue
 import qualified API.RiderPlatform.IssueList as IssueList
-import qualified API.RiderPlatform.Merchant as Merchant
+-- import qualified API.RiderPlatform.Merchant as Merchant
 import qualified API.RiderPlatform.Ride as Ride
 import qualified API.RiderPlatform.RideBooking as RideBooking
 import qualified API.RiderPlatform.Tickets as Tickets
@@ -51,7 +51,7 @@ type APIV2 =
 type API' =
   Customer.API
     :<|> Booking.API
-    :<|> Merchant.API
+    -- :<|> Merchant.API
     :<|> Ride.API
     :<|> RideBooking.API
     :<|> IssueList.API
@@ -66,7 +66,7 @@ handler merchantId = do
   let city = getCity merchantId.getShortId
   Customer.handler merchantId city
     :<|> Booking.handler merchantId city
-    :<|> Merchant.handler merchantId city
+    -- :<|> Merchant.handler merchantId city
     :<|> Ride.handler merchantId city
     :<|> RideBooking.handler merchantId city
     :<|> IssueList.handler merchantId city
@@ -85,7 +85,7 @@ handlerV2 :: FlowServer APIV2
 handlerV2 merchantId city =
   Customer.handler merchantId city
     :<|> Booking.handler merchantId city
-    :<|> Merchant.handler merchantId city
+    -- :<|> Merchant.handler merchantId city
     :<|> Ride.handler merchantId city
     :<|> RideBooking.handler merchantId city
     :<|> IssueList.handler merchantId city
