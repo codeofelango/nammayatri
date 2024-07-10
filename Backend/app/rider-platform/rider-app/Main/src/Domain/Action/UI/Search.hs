@@ -259,6 +259,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   mbFavourite <- CSavedLocation.findByLatLonAndRiderId personId origin.gps
   HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
+  let txnCity = show merchant.defaultCity
 
   let sourceLatLong = origin.gps
   let stopsLatLong = map (.gps) stops
@@ -332,7 +333,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
             distance = shortestRouteDistance,
             duration = shortestRouteDuration,
             disabilityTag = tag,
-            taggings = getTags shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes,
+            taggings = getTags shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity,
             ..
           }
   fork "updating search counters" $ do
@@ -342,7 +343,7 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
   return dSearchRes
   where
-    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes =
+    getTags distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity =
       Just $
         def{Beckn.fulfillmentTags =
               [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
@@ -351,6 +352,13 @@ search personId req bundleVersion clientVersion clientConfigVersion clientId dev
                 (Beckn.ROUND_TRIP, Just $ show roundTrip),
                 (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
                 (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes)
+              ],
+            Beckn.paymentTags =
+              [ (Beckn.SETTLEMENT_AMOUNT, Nothing),
+                (Beckn.DELAY_INTEREST, Just "0"),
+                (Beckn.SETTLEMENT_BASIS, Just "INVOICE_RECIEPT"),
+                (Beckn.MANDATORY_ARBITRATION, Just "TRUE"),
+                (Beckn.COURT_JURISDICTION, Just txnCity)
               ]
            }
 
