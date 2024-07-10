@@ -721,7 +721,9 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let email = person.email
   driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
   vehicleRegistrationDetails <- traverse buildRCAssociationAPIEntity rcAssociationHistory
-  availableMerchants <- case person.unencryptedMobileNumber of
+  unencryptedMobileNumber <- mapM decrypt person.mobileNumber
+  unencryptedAlternateMobileNumber <- mapM decrypt person.alternateMobileNumber
+  availableMerchants <- case unencryptedMobileNumber of
     Just mbNumber -> do
       let mobileCountryCode = fromMaybe "+91" person.mobileCountryCode
       mobileNumberHash <- getDbHash mbNumber
@@ -775,7 +777,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         driverLicenseDetails,
         vehicleRegistrationDetails,
         rating = driverStats.rating,
-        alternateNumber = person.unencryptedAlternateMobileNumber,
+        alternateNumber = unencryptedAlternateMobileNumber,
         availableMerchants = availableMerchants,
         merchantOperatingCity = merchantOperatingCity <&> (.city),
         blockStateModifier = info.blockStateModifier,
@@ -878,8 +880,7 @@ updatePhoneNumber merchantShortId opCity reqDriverId req = do
   let updDriver =
         driver
           { DP.mobileCountryCode = Just req.newCountryCode,
-            DP.mobileNumber = Just encNewPhoneNumber,
-            DP.unencryptedMobileNumber = Just req.newPhoneNumber
+            DP.mobileNumber = Just encNewPhoneNumber
           }
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
@@ -1099,7 +1100,7 @@ getFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLimit mb
               _ -> pure (0, 0)
             let isDriverActive = fda.isActive
             let isRcAssociated = isJust rcAssociation
-            let driverPhoneNo = driver.unencryptedMobileNumber
+            driverPhoneNo <- mapM decrypt driver.mobileNumber
             let listItem =
                   Common.DriveVehicleAssociationListItem
                     { vehicleNo = Just decryptedVehicleRC,
@@ -1150,7 +1151,7 @@ getFleetDriverAssociation merchantShortId _opCity fleetOwnerId mbLimit mbOffset 
               Just (_, rc) -> getVehicleDetails rc ------- if driver is using fleet vehicle
               Nothing -> getVehicleDetails $ snd $ head associations -------- otherwise give the latest active association
         let driverName = Just driver.firstName
-        let driverPhoneNo = driver.unencryptedMobileNumber
+        driverPhoneNo <- mapM decrypt driver.mobileNumber
         driverLicenseStatus <- do
           mbDl <- B.runInReplica $ QDriverLicense.findByDriverId driver.id
           case mbDl of
@@ -1265,7 +1266,8 @@ getFleetDriverInfo driverId isDriver = do
         driverInfo' <- QDriverInfo.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         return (driverInfo'.mode)
       else return Nothing
-  return (Just driver.firstName, Just driver.id.getId, driver.unencryptedMobileNumber, mode)
+  mobileNumber <- mapM decrypt driver.mobileNumber
+  return (Just driver.firstName, Just driver.id.getId, mobileNumber, mode)
 
 castDriverStatus :: Maybe DrInfo.DriverMode -> Common.DriverMode
 castDriverStatus = \case
@@ -1481,19 +1483,21 @@ getAllDriverForFleet _ fleetOwnerId mbLimit mbOffset = do
   driverList <- FDV.findAllActiveDriverByFleetOwnerId fleetOwnerId limit offset
   let driverIdList :: [Id DP.Person] = map DTFDA.driverId driverList
   driversInfo <- QPerson.getDriversByIdIn driverIdList
-  let fleetDriversInfos = map convertToDriverAPIEntity driversInfo
+  fleetDriversInfos <- mapM convertToDriverAPIEntity driversInfo
   return $ Common.FleetListDriverRes fleetDriversInfos
 
-convertToDriverAPIEntity :: DP.Person -> Common.FleetDriversAPIEntity
-convertToDriverAPIEntity DP.Person {..} =
-  Common.FleetDriversAPIEntity
-    { driverId = cast @DP.Person @Common.Driver id,
-      firstName = firstName,
-      middleName = middleName,
-      lastName = lastName,
-      mobileNumber = unencryptedMobileNumber,
-      mobileCountryCode = mobileCountryCode
-    }
+convertToDriverAPIEntity :: DP.Person -> Flow Common.FleetDriversAPIEntity
+convertToDriverAPIEntity DP.Person {..} = do
+  unencryptedMobileNumber <- mapM decrypt mobileNumber
+  pure $
+    Common.FleetDriversAPIEntity
+      { driverId = cast @DP.Person @Common.Driver id,
+        firstName = firstName,
+        middleName = middleName,
+        lastName = lastName,
+        mobileNumber = unencryptedMobileNumber,
+        mobileCountryCode = mobileCountryCode
+      }
 
 ---------------------------------------------------------------------
 updateDriverName :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
@@ -1921,6 +1925,7 @@ fleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPh
     let dId = cast @DP.Person @Common.Driver driver.id
     (totalEarning, distanceTravelled, completedRides, duration, cancelledRides) <- CQRide.fleetStatsByDriver rideIds (Just driver.id) from to
     let driverName = driver.firstName <> " " <> fromMaybe "" driver.lastName
+    mobileNumber <- mapM decrypt driver.mobileNumber
     pure $
       Common.FleetEarningRes
         { driverId = Just dId,
@@ -1932,7 +1937,7 @@ fleetDriverEarning merchantShortId _ fleetOwnerId mbMobileCountryCode mbDriverPh
           vehicleType = Nothing,
           totalDuration = duration,
           distanceTravelled = fromIntegral distanceTravelled / 1000.0,
-          driverPhoneNo = driver.unencryptedMobileNumber,
+          driverPhoneNo = mobileNumber,
           cancelledRides = cancelledRides
         }
   let summary = Common.Summary {totalCount = 10000, count = length res}
@@ -2248,7 +2253,6 @@ updateFleetOwnerInfo merchantShortId opCity driverId req = do
         driver
           { DP.mobileCountryCode = req.mobileCountryCode,
             DP.mobileNumber = encNewPhoneNumber,
-            DP.unencryptedMobileNumber = req.mobileNo,
             DP.email = req.email,
             DP.firstName = fromMaybe driver.firstName req.firstName,
             DP.lastName = req.lastName

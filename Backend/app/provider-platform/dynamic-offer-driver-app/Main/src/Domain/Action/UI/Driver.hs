@@ -1410,8 +1410,7 @@ verifyAuth (personId, _, _) req = do
     encNewNum <- encrypt altMobNo
     let driver =
           person
-            { SP.unencryptedAlternateMobileNumber = Just altMobNo,
-              SP.alternateMobileNumber = Just encNewNum
+            { SP.alternateMobileNumber = Just encNewNum
             }
         mobileCountryCode = fromMaybe "+91" person.mobileCountryCode
     mobileNumberHash <- getDbHash altMobNo
@@ -1481,8 +1480,7 @@ remove (personId, _, _) = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driver =
         person
-          { SP.unencryptedAlternateMobileNumber = Nothing,
-            SP.alternateMobileNumber = Nothing
+          { SP.alternateMobileNumber = Nothing
           }
   void $ QPerson.updateAlternateMobileNumberAndCode driver
   return Success
