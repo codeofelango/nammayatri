@@ -36,7 +36,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.VehicleServiceTier as DVST
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption (decrypt, encrypt)
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
@@ -276,7 +276,7 @@ rideAssignedReqHandler req = do
   notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
   notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
   where
-    buildRide :: (MonadFlow m, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> m DRide.Ride
+    buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> m DRide.Ride
     buildRide mbMerchant booking BookingDetails {..} previousRideEndPos now = do
       guid <- generateGUID
       shortId <- generateShortId
@@ -292,6 +292,7 @@ rideAssignedReqHandler req = do
       let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditLocationAttemptsThreshold) mbMerchant
       let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       let onlinePayment = maybe False (.onlinePayment) mbMerchant
+      driverPhoneNumber <- encrypt driverMobileNumber
       return
         DRide.Ride
           { id = guid,
@@ -306,6 +307,7 @@ rideAssignedReqHandler req = do
             chargeableDistance = Nothing,
             traveledDistance = Nothing,
             driverArrivalTime = Nothing,
+            driverPhoneNumber = Just driverPhoneNumber,
             vehicleVariant = DVST.castServiceTierToVariant booking.vehicleServiceTierType, -- fix later
             vehicleServiceTierType = Just booking.vehicleServiceTierType,
             createdAt = now,
@@ -408,7 +410,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   fork "updating total rides count" $ SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
-  mbAdvRide <- QRide.findLatestByDriverPhoneNumber ride.driverMobileNumber
+  driverPhoneNumber <- mapM decrypt ride.driverPhoneNumber >>= fromMaybeM (RideFieldNotPresent "driverPhoneNumber")
+  mbAdvRide <- QRide.findLatestByDriverPhoneNumber driverPhoneNumber
   whenJust mbAdvRide $ do \advRide -> when (advRide.id /= ride.id) $ QRide.updateshowDriversPreviousRideDropLoc False advRide.id
   let distanceUnit = ride.distanceUnit
   let updRide =
