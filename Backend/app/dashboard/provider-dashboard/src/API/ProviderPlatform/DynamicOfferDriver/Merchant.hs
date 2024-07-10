@@ -335,6 +335,8 @@ buildTransaction endpoint apiTokenInfo =
 --   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
 --   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.documentVerificationConfig) documentType category
 
+-- FIXME does validation required?
+
 -- documentVerificationConfigUpdate ::
 --   ShortId DM.Merchant ->
 --   City.City ->
@@ -349,6 +351,8 @@ buildTransaction endpoint apiTokenInfo =
 --   transaction <- buildTransaction Common.DocumentVerificationConfigUpdateEndpoint apiTokenInfo (Just req)
 --   T.withTransactionStoring transaction $
 --     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.documentVerificationConfigUpdate) documentType category req
+
+-- FIXME does validation required?
 
 -- documentVerificationConfigCreate ::
 --   ShortId DM.Merchant ->
