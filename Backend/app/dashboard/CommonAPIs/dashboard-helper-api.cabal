@@ -49,6 +49,7 @@ library
       Dashboard.RiderPlatform.Ride
       Dashboard.SafetyPlatform
       API.Types.ProviderPlatform.Management.Merchant
+      API.Types.ProviderPlatform.Management.Message
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.RiderPlatform.Management.Merchant

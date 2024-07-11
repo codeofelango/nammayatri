@@ -48,6 +48,7 @@ library
       API.SpecialZone
       App
       Domain.Action.ProviderPlatform.Management.Merchant
+      Domain.Action.ProviderPlatform.Management.Message
       Domain.Action.ProviderPlatform.Management.Revenue
       Domain.Action.ProviderPlatform.Management.Ride
       ProviderPlatformClient.DynamicOfferDriver.Exotel
@@ -58,6 +59,7 @@ library
       RiderPlatformClient.RiderApp
       Storage.Beam.CommonInstances
       API.Action.ProviderPlatform.Management.Merchant
+      API.Action.ProviderPlatform.Management.Message
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
   other-modules:

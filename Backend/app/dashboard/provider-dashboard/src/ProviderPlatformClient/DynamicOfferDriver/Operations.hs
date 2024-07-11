@@ -21,6 +21,7 @@ where
 import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
 import qualified API.Dashboard.Management.Subscription as MSubscription
 import qualified API.Types.ProviderPlatform.Management.Merchant as MerchantDSL
+import qualified API.Types.ProviderPlatform.Management.Message as MessageDSL
 import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
 import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
 import qualified Dashboard.Common.Booking as Booking
@@ -30,7 +31,7 @@ import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified Dashboard.ProviderPlatform.DriverReferral as DriverReferral
 -- import qualified Dashboard.ProviderPlatform.Merchant as Merchant
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
-import qualified Dashboard.ProviderPlatform.Message as Message
+-- import qualified Dashboard.ProviderPlatform.Message as Message
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Data.ByteString.Lazy as LBS
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
@@ -62,12 +63,13 @@ data DriverOperationAPIs = DriverOperationAPIs
   { subscription :: SubscriptionAPIs,
     rides :: RidesAPIs,
     overlay :: OverlayAPIs,
-    message :: MessageAPIs,
+    -- message :: MessageAPIs,
     -- merchant :: MerchantAPIs,
     issue :: IssueAPIs,
     drivers :: DriversAPIs,
     bookings :: BookingsAPIs,
     merchantDSL :: MerchantDSL.MerchantAPIs,
+    messageDSL :: MessageDSL.MessageAPIs,
     revenueDSL :: RevenueDSL.RevenueAPIs,
     rideDSL :: RideDSL.RideAPIs
   }
@@ -181,16 +183,16 @@ data BookingsAPIs = BookingsAPIs
 --   deleteSpecialLocationGate :: Id SL.SpecialLocation -> Text -> Euler.EulerClient APISuccess
 -- }
 
-data MessageAPIs = MessageAPIs
-  { uploadFile :: (LBS.ByteString, Message.UploadFileRequest) -> Euler.EulerClient Message.UploadFileResponse,
-    addLinkAsMedia :: Message.AddLinkAsMedia -> Euler.EulerClient Message.UploadFileResponse,
-    addMessage :: Message.AddMessageRequest -> Euler.EulerClient Message.AddMessageResponse,
-    sendMessage :: (LBS.ByteString, Message.SendMessageRequest) -> Euler.EulerClient APISuccess,
-    messageList :: Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageListResponse,
-    messageInfo :: Id Message.Message -> Euler.EulerClient Message.MessageInfoResponse,
-    messageDeliveryInfo :: Id Message.Message -> Euler.EulerClient Message.MessageDeliveryInfoResponse,
-    messageReceiverList :: Id Message.Message -> Maybe Text -> Maybe Message.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageReceiverListResponse
-  }
+-- data MessageAPIs = MessageAPIs
+--   { uploadFile :: (LBS.ByteString, Message.UploadFileRequest) -> Euler.EulerClient Message.UploadFileResponse,
+--     addLinkAsMedia :: Message.AddLinkAsMedia -> Euler.EulerClient Message.UploadFileResponse,
+--     addMessage :: Message.AddMessageRequest -> Euler.EulerClient Message.AddMessageResponse,
+--     sendMessage :: (LBS.ByteString, Message.SendMessageRequest) -> Euler.EulerClient APISuccess,
+--     messageList :: Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageListResponse,
+--     messageInfo :: Id Message.Message -> Euler.EulerClient Message.MessageInfoResponse,
+--     messageDeliveryInfo :: Id Message.Message -> Euler.EulerClient Message.MessageDeliveryInfoResponse,
+--     messageReceiverList :: Id Message.Message -> Maybe Text -> Maybe Message.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageReceiverListResponse
+--   }
 
 data OverlayAPIs = OverlayAPIs
   { createOverlay :: Overlay.CreateOverlayReq -> Euler.EulerClient APISuccess,
@@ -249,11 +251,12 @@ mkDriverOperationAPIs merchantId city token = do
   let subscription = SubscriptionAPIs {..}
   let bookings = BookingsAPIs {..}
   -- let merchant = MerchantAPIs {..}
-  let message = MessageAPIs {..}
+  -- let message = MessageAPIs {..}
   let issue = IssueAPIs {..}
   let overlay = OverlayAPIs {..}
 
   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
+  let messageDSL = MessageDSL.mkMessageAPIs messageClientDSL
   let revenueDSL = RevenueDSL.mkRevenueAPIs revenueClientDSL
   let rideDSL = RideDSL.mkRideAPIs rideClientDSL
   DriverOperationAPIs {..}
@@ -261,12 +264,13 @@ mkDriverOperationAPIs merchantId city token = do
     subscriptionClient
       :<|> ridesClient
       :<|> overlayClient
-      :<|> messageClient
+      -- :<|> messageClient
       -- :<|> merchantClient
       :<|> issueClient
       :<|> driversClient
       :<|> bookingsClient
       :<|> merchantClientDSL
+      :<|> messageClientDSL
       :<|> revenueClientDSL
       :<|> rideClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
@@ -382,14 +386,14 @@ mkDriverOperationAPIs merchantId city token = do
     --   :<|> upsertSpecialLocationGate
     --   :<|> deleteSpecialLocationGate = merchantClient
 
-    uploadFile
-      :<|> addLinkAsMedia
-      :<|> addMessage
-      :<|> sendMessage
-      :<|> messageList
-      :<|> messageInfo
-      :<|> messageDeliveryInfo
-      :<|> messageReceiverList = messageClient
+    -- uploadFile
+    --   :<|> addLinkAsMedia
+    --   :<|> addMessage
+    --   :<|> sendMessage
+    --   :<|> messageList
+    --   :<|> messageInfo
+    --   :<|> messageDeliveryInfo
+    --   :<|> messageReceiverList = messageClient
 
     createOverlay
       :<|> deleteOverlay
