@@ -1025,8 +1025,7 @@ newtype RideBookingStatusRes = RideBookingStatusRes {
   id :: String,
   isBookingUpdated :: Boolean,
   bookingStatus :: String,
-  rideStatus :: Maybe String,
-  bookingDetails :: RideBookingAPIDetails
+  rideStatus :: Maybe String
   
 }
 
