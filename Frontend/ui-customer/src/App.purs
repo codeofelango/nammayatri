@@ -72,6 +72,8 @@ import Services.API
 import Screens.RentalBookingFlow.RentalScreen.ScreenData as RentalScreenData
 import Screens.RideBookingFlow.PickupInstructionsScreen.ScreenData as PickupInstructionsScreenData
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
+import Screens.SelectFaqScreen.ScreenData as SelectFaqScreenData
+import Screens.FaqScreen.ScreenData as FaqScreenData
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.SavedLocationScreen.ScreenData as SavedLocationScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
@@ -119,6 +121,8 @@ newtype GlobalState = GlobalState {
   , rideScheduledScreen :: RideScheduledScreenState
   , rideSelectionScreen :: RideSelectionScreenData.RideSelectionScreenState
   , reportIssueChatScreen :: ReportIssueChatScreenData.ReportIssueChatScreenState
+  , selectFaqScreen :: SelectFaqScreenData.SelectFaqScreenState
+  , faqScreen :: FaqScreenData.FaqScreenState
   , nammaSafetyScreen :: NammaSafetyScreenState
   , metroTicketDetailsScreen :: MetroTicketDetailsScreenState
   , metroMyTicketsScreen :: MetroMyTicketsScreenState
@@ -160,6 +164,8 @@ defaultGlobalState = GlobalState {
   , rideScheduledScreen : RideScheduledScreenData.initData
   , rideSelectionScreen : RideSelectionScreenData.initData
   , reportIssueChatScreen : ReportIssueChatScreenData.initData
+  , selectFaqScreen : SelectFaqScreenData.initData
+  , faqScreen : FaqScreenData.initData
   , nammaSafetyScreen : NammaSafetyScreenData.initData
   , metroTicketDetailsScreen : MetroTicketDetailsScreenData.initData
   , metroMyTicketsScreen : MetroMyTicketsScreenData.initData
@@ -385,6 +391,8 @@ data ScreenType =
   | GlobalPropsType (GlobalProps -> GlobalProps)
   | RideSelectionScreenStateType (RideSelectionScreenData.RideSelectionScreenState -> RideSelectionScreenData.RideSelectionScreenState)
   | ReportIssueChatScreenStateType (ReportIssueChatScreenData.ReportIssueChatScreenState -> ReportIssueChatScreenData.ReportIssueChatScreenState)
+  | SelectFaqScreenStateType (SelectFaqScreenData.SelectFaqScreenState -> SelectFaqScreenData.SelectFaqScreenState)
+  | FaqScreenStateType (FaqScreenData.FaqScreenState -> FaqScreenData.FaqScreenState)
   | SearchLocationScreenStateType (SearchLocationScreenState -> SearchLocationScreenState)
   | NammaSafetyScreenStateType (NammaSafetyScreenState -> NammaSafetyScreenState)
   | FollowRideScreenStateType (FollowRideScreenState -> FollowRideScreenState)

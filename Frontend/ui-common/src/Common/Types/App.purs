@@ -481,9 +481,11 @@ type CarouselHolderData = {
 
 type CategoryListType = {
     categoryName :: String
-  , categoryImageUrl :: String
-  , categoryAction :: String
+  , categoryImageUrl :: Maybe String
+  , categoryAction :: Maybe String
   , categoryId :: String
+  , isRideRequired :: Boolean
+  , maxAllowedRideAge :: Maybe Int
   }
 
 type DisplayBase64ImageConig = {
@@ -640,3 +642,15 @@ type RateCard =
     waitingTimeInfo :: WaitingTimeInfo,
     serviceTierName :: Maybe String
   }
+
+type DropDownInfo = {
+  title :: String,
+  description :: String,
+  isExpanded :: Boolean,
+  id :: String
+}
+
+type StringType = {
+  value :: String,
+  type :: String
+}

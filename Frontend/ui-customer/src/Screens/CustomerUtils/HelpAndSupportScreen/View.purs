@@ -60,7 +60,7 @@ import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
 import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
-import Data.Maybe (Maybe(..), isJust, isNothing)
+import Data.Maybe (Maybe(..), isJust, isNothing, fromMaybe)
 
 screen :: HelpAndSupportScreenState -> Screen Action HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -137,12 +137,15 @@ view push state =
                     ] <> FontStyle.body1 LanguageStyle
                   ]
                   , recentRideView state push
-                ] <> ( if state.data.config.feature.enableSelfServe then [
+                ] 
+                  <> [ headingView state $ getString ALL_TOPICS
+                   , allTopicsView state push $ topicsList state] 
+                  <> ( if state.data.config.feature.enableSelfServe then [
                           if DA.null state.data.ongoingIssueList && DA.null state.data.resolvedIssueList then textView[height $ V 0, visibility GONE] else headingView state $ getString YOUR_REPORTS
                           , allTopicsView state push $ reportsList state
                       ] else [])
                 <> [ headingView state $ getString ALL_TOPICS
-                   , allTopicsView state push $ topicsList state] )
+                   , allTopicsView state push $ topicDummyList $ topicsList state] )
 
             ]
       , apiFailureView state push  
@@ -155,7 +158,7 @@ view push state =
 
 ------------------------------- recentRide --------------------------
 recentRideView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-recentRideView state push=
+recentRideView state push =
   linearLayout
   [ margin (Margin 16 16 16 16)
   , background Color.white900
@@ -285,6 +288,31 @@ driverRatingView state =
                           ]) [1 ,2 ,3 ,4 ,5])
     ]
 
+
+-- topicDummyList :: Array CategoryListType
+-- topicDummyList =[ {categoryName : "APP_RELATED", categoryImageUrl : "", categoryAction : "APP_RELATED", categoryId : "1"}
+--                 , {categoryName : "ACCOUNT_RELATED", categoryImageUrl : "", categoryAction : "ACCOUNT_RELATED", categoryId : "3"}
+--                 , {categoryName : "LOST_AND_FOUND", categoryImageUrl : "", categoryAction : "LOST_AND_FOUND", categoryId : "6"}
+--                 , {categoryName : "RIDE_RELATED", categoryImageUrl : "", categoryAction : "RIDE_RELATED", categoryId : "2"}
+--                 , {categoryName : "DRIVER_RELATED", categoryImageUrl : "", categoryAction : "DRIVER_RELATED", categoryId : ""}
+--                 , {categoryName : "SOS", categoryImageUrl : "", categoryAction : "SOS", categoryId : ""}
+--                 , {categoryName : "FARE_DISCREPANCY", categoryImageUrl : "", categoryAction : "FARE_DISCREPANCY", categoryId : "7"}
+--                 , {categoryName : "PAYMENT_RELATED", categoryImageUrl : "", categoryAction : "PAYMENT_RELATED", categoryId : "4"}
+--                 , {categoryName : "SAFETY", categoryImageUrl : "", categoryAction : "SAFETY", categoryId : "5"}
+--                 , {categoryName : "OTHER", categoryImageUrl : "", categoryAction : "OTHER", categoryId : "8"}
+--                 , {categoryName : "CONTACT_US", categoryImageUrl : "", categoryAction : "CONTACT_US", categoryId : ""} 
+--                 , {categoryName : "CALL_SUPPORT", categoryImageUrl : "", categoryAction : "CALL_SUPPORT", categoryId : ""}
+--                 , {categoryName : "DELETE_ACCOUNT", categoryImageUrl : "", categoryAction : "DELETE_ACCOUNT", categoryId : ""}
+--                 , {categoryName : "CLOSED", categoryImageUrl : "", categoryAction : "CLOSED", categoryId : ""}
+--                 , {categoryName : "REPORTED", categoryImageUrl : "", categoryAction : "REPORTED", categoryId : ""}
+--                  ]
+
+topicDummyList :: Array CategoryListType -> Array CategoryListType
+topicDummyList topicList = topicList <> [{categoryAction : "FAQ"
+                                        , categoryName : "Getting Started and FAQs"
+                                        , categoryImageUrl : fetchImage FF_ASSET "ny_ic_clip_board"
+                                        , categoryId : "9"
+                                        }]
 ------------------------------- allTopics --------------------------
 allTopicsView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> forall w . PrestoDOM (Effect Unit) w
 allTopicsView state push topicList =
@@ -299,17 +327,16 @@ allTopicsView state push topicList =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , padding (Padding 20 0 20 0)
-        , onClick push $ case item.categoryAction of
+        , onClick push $ case (fromMaybe "" item.categoryAction) of
                     "CLOSED"             -> const $ ResolvedIssue
                     "REPORTED"           -> const $ ReportedIssue
                     "CONTACT_US"         -> const $ ContactUs
                     "CALL_SUPPORT"       -> const $ CallSupport
                     "DELETE_ACCOUNT"     -> const $ DeleteAccount
-                    label | label `DA.elem` ["LOST_AND_FOUND", "RIDE_RELATED", "DRIVER_RELATED", "SOS", "FARE_DISCREPANCY", "PAYMENT_RELATED", "SAFETY"] 
-                                        -> const $ SelectRide item
-                    label | label `DA.elem` ["APP_RELATED", "ACCOUNT_RELATED", "OTHER"] 
-                                        -> const $ OpenChat item
-                    _                   -> const $ OpenChat item
+                    "FAQ"                -> const $ SelectFaqCategory item
+                    _ | item.isRideRequired 
+                                         -> const $ SelectRide item
+                    _                    -> const $ OpenChat item
                   
         , orientation VERTICAL
         ][  linearLayout
@@ -318,7 +345,7 @@ allTopicsView state push topicList =
             , orientation HORIZONTAL
             , padding $ Padding 0 20 0 20
             ][  imageView
-                [ imageWithFallback item.categoryImageUrl
+                [ imageWithFallback (fromMaybe "" item.categoryImageUrl)
                 , height $ V 17
                 , width $ V 17
                 ]
@@ -347,7 +374,7 @@ allTopicsView state push topicList =
               , background Color.greyLight
               , visibility $ boolToVisibility $ not $ index == (DA.length (topicList)) - 1
               ][]
-          ]) topicList)
+          ]) (topicList))
 
 deleteAccountView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 deleteAccountView state push=
