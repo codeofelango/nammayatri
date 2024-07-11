@@ -68,3 +68,4 @@ import Screens.EarningsScreen.Weekly.Handler (earningScreenWeeklyV2) as UI
 import Screens.EarningsScreen.Daily.Handler (earningScreenDailyV2) as UI
 import Screens.EarningsScreen.History.Handler (earningsHistoryFlow) as UI
 import Screens.RateCardScreen.RateCardBottomScreen (showRateCard) as UI
+import Screens.RideCompletedScreen.Handler (rideCompletedScreen) as UI
