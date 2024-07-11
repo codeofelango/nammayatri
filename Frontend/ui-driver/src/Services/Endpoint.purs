@@ -351,3 +351,6 @@ getDriverRateCard mbServiceTier mbDist =
         Just serviceTier, Nothing -> "?vehicleServiceTier=" <> serviceTier
         Nothing, Just dist -> "?distance=" <> show (dist*1000)
         _ , _ -> ""
+
+getSdkToken :: String -> String -> String
+getSdkToken expiry serviceName = (getBaseUrl "") <> "/driver/sdkToken?expiry=" <> "0" <> "&service=" <> "Gullak"
