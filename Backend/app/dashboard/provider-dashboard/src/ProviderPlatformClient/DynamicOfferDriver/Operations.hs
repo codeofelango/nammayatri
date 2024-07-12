@@ -21,6 +21,7 @@ where
 import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
 import qualified API.Dashboard.Management.Subscription as MSubscription
 import qualified API.Types.ProviderPlatform.Management.Merchant as MerchantDSL
+import qualified API.Types.ProviderPlatform.Management.Message as MessageDSL
 import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
 import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
 import qualified Dashboard.Common.Booking as Booking
@@ -28,9 +29,9 @@ import qualified Dashboard.ProviderPlatform.Driver as Driver
 import qualified Dashboard.ProviderPlatform.Driver.Coin as Coins
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified Dashboard.ProviderPlatform.DriverReferral as DriverReferral
-import qualified Dashboard.ProviderPlatform.Merchant as Merchant
+-- import qualified Dashboard.ProviderPlatform.Merchant as Merchant
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
-import qualified Dashboard.ProviderPlatform.Message as Message
+-- import qualified Dashboard.ProviderPlatform.Message as Message
 import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified Data.ByteString.Lazy as LBS
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
@@ -53,8 +54,8 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
-import Kernel.Utils.Common
-import qualified Lib.Types.SpecialLocation as SL
+-- import Kernel.Utils.Common
+-- import qualified Lib.Types.SpecialLocation as SL
 import Servant
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
@@ -64,12 +65,13 @@ data DriverOperationAPIs = DriverOperationAPIs
   { subscription :: SubscriptionAPIs,
     rides :: RidesAPIs,
     overlay :: OverlayAPIs,
-    message :: MessageAPIs,
-    merchant :: MerchantAPIs,
+    -- message :: MessageAPIs,
+    -- merchant :: MerchantAPIs,
     issue :: IssueAPIs,
     drivers :: DriversAPIs,
     bookings :: BookingsAPIs,
     merchantDSL :: MerchantDSL.MerchantAPIs,
+    messageDSL :: MessageDSL.MessageAPIs,
     revenueDSL :: RevenueDSL.RevenueAPIs,
     rideDSL :: RideDSL.RideAPIs
   }
@@ -153,46 +155,46 @@ data BookingsAPIs = BookingsAPIs
     multipleBookingSync :: Booking.MultipleBookingSyncReq -> Euler.EulerClient Booking.MultipleBookingSyncResp
   }
 
-data MerchantAPIs = MerchantAPIs
-  { merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
-    merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
-    driverPoolConfig :: Maybe Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Euler.EulerClient Merchant.DriverPoolConfigRes,
-    driverPoolConfigUpdate :: Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
-    driverPoolConfigCreate :: Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
-    driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
-    driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
-    documentVerificationConfig :: Maybe Merchant.DocumentType -> Maybe Common.Category -> Euler.EulerClient Merchant.DocumentVerificationConfigRes,
-    documentVerificationConfigUpdate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigUpdateReq -> Euler.EulerClient APISuccess,
-    documentVerificationConfigCreate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigCreateReq -> Euler.EulerClient APISuccess,
-    serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
-    mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
-    updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
-    updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
-    updateFarePolicy :: Id Common.FarePolicy -> Merchant.UpdateFarePolicyReq -> Euler.EulerClient APISuccess,
-    upsertFarePolicy :: (LBS.ByteString, Merchant.UpsertFarePolicyReq) -> Euler.EulerClient Merchant.UpsertFarePolicyResp,
-    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
-    schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess,
-    updateOnboardingVehicleVariantMapping :: (LBS.ByteString, Common.UpdateOnboardingVehicleVariantMappingReq) -> Euler.EulerClient APISuccess,
-    upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
-    deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
-    upsertSpecialLocationGate :: Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Euler.EulerClient APISuccess,
-    deleteSpecialLocationGate :: Id SL.SpecialLocation -> Text -> Euler.EulerClient APISuccess
-  }
+-- data MerchantAPIs = MerchantAPIs
+--   { --merchantCommonConfig :: Euler.EulerClient Merchant.MerchantCommonConfigRes,
+-- merchantCommonConfigUpdate :: Merchant.MerchantCommonConfigUpdateReq -> Euler.EulerClient APISuccess,
+-- driverPoolConfig :: Maybe Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Euler.EulerClient Merchant.DriverPoolConfigRes,
+-- driverPoolConfigUpdate :: Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
+-- driverPoolConfigCreate :: Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> SL.Area -> Maybe Common.Variant -> Maybe Text -> Merchant.DriverPoolConfigCreateReq -> Euler.EulerClient APISuccess,
+-- driverIntelligentPoolConfig :: Euler.EulerClient Merchant.DriverIntelligentPoolConfigRes,
+-- driverIntelligentPoolConfigUpdate :: Merchant.DriverIntelligentPoolConfigUpdateReq -> Euler.EulerClient APISuccess,
+-- documentVerificationConfig :: Maybe Merchant.DocumentType -> Maybe Common.Category -> Euler.EulerClient Merchant.DocumentVerificationConfigRes,
+-- documentVerificationConfigUpdate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigUpdateReq -> Euler.EulerClient APISuccess,
+-- documentVerificationConfigCreate :: Merchant.DocumentType -> Common.Category -> Merchant.DocumentVerificationConfigCreateReq -> Euler.EulerClient APISuccess,
+-- serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
+-- mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+-- smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+-- smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+-- verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+-- createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
+-- updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
+-- updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
+-- updateFarePolicy :: Id Common.FarePolicy -> Merchant.UpdateFarePolicyReq -> Euler.EulerClient APISuccess,
+-- upsertFarePolicy :: (LBS.ByteString, Merchant.UpsertFarePolicyReq) -> Euler.EulerClient Merchant.UpsertFarePolicyResp,
+-- createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
+-- schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess,
+-- updateOnboardingVehicleVariantMapping :: (LBS.ByteString, Common.UpdateOnboardingVehicleVariantMappingReq) -> Euler.EulerClient APISuccess,
+--   upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
+--   deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
+--   upsertSpecialLocationGate :: Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Euler.EulerClient APISuccess,
+--   deleteSpecialLocationGate :: Id SL.SpecialLocation -> Text -> Euler.EulerClient APISuccess
+-- }
 
-data MessageAPIs = MessageAPIs
-  { uploadFile :: (LBS.ByteString, Message.UploadFileRequest) -> Euler.EulerClient Message.UploadFileResponse,
-    addLinkAsMedia :: Message.AddLinkAsMedia -> Euler.EulerClient Message.UploadFileResponse,
-    addMessage :: Message.AddMessageRequest -> Euler.EulerClient Message.AddMessageResponse,
-    sendMessage :: (LBS.ByteString, Message.SendMessageRequest) -> Euler.EulerClient APISuccess,
-    messageList :: Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageListResponse,
-    messageInfo :: Id Message.Message -> Euler.EulerClient Message.MessageInfoResponse,
-    messageDeliveryInfo :: Id Message.Message -> Euler.EulerClient Message.MessageDeliveryInfoResponse,
-    messageReceiverList :: Id Message.Message -> Maybe Text -> Maybe Message.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageReceiverListResponse
-  }
+-- data MessageAPIs = MessageAPIs
+--   { uploadFile :: (LBS.ByteString, Message.UploadFileRequest) -> Euler.EulerClient Message.UploadFileResponse,
+--     addLinkAsMedia :: Message.AddLinkAsMedia -> Euler.EulerClient Message.UploadFileResponse,
+--     addMessage :: Message.AddMessageRequest -> Euler.EulerClient Message.AddMessageResponse,
+--     sendMessage :: (LBS.ByteString, Message.SendMessageRequest) -> Euler.EulerClient APISuccess,
+--     messageList :: Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageListResponse,
+--     messageInfo :: Id Message.Message -> Euler.EulerClient Message.MessageInfoResponse,
+--     messageDeliveryInfo :: Id Message.Message -> Euler.EulerClient Message.MessageDeliveryInfoResponse,
+--     messageReceiverList :: Id Message.Message -> Maybe Text -> Maybe Message.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Euler.EulerClient Message.MessageReceiverListResponse
+--   }
 
 data OverlayAPIs = OverlayAPIs
   { createOverlay :: Overlay.CreateOverlayReq -> Euler.EulerClient APISuccess,
@@ -255,12 +257,13 @@ mkDriverOperationAPIs merchantId city token = do
   let rides = RidesAPIs {..}
   let subscription = SubscriptionAPIs {..}
   let bookings = BookingsAPIs {..}
-  let merchant = MerchantAPIs {..}
-  let message = MessageAPIs {..}
+  -- let merchant = MerchantAPIs {..}
+  -- let message = MessageAPIs {..}
   let issue = IssueAPIs {..}
   let overlay = OverlayAPIs {..}
 
   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
+  let messageDSL = MessageDSL.mkMessageAPIs messageClientDSL
   let revenueDSL = RevenueDSL.mkRevenueAPIs revenueClientDSL
   let rideDSL = RideDSL.mkRideAPIs rideClientDSL
   DriverOperationAPIs {..}
@@ -268,12 +271,13 @@ mkDriverOperationAPIs merchantId city token = do
     subscriptionClient
       :<|> ridesClient
       :<|> overlayClient
-      :<|> messageClient
-      :<|> merchantClient
+      -- :<|> messageClient
+      -- :<|> merchantClient
       :<|> issueClient
       :<|> driversClient
       :<|> bookingsClient
       :<|> merchantClientDSL
+      :<|> messageClientDSL
       :<|> revenueClientDSL
       :<|> rideClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
@@ -361,42 +365,42 @@ mkDriverOperationAPIs merchantId city token = do
     stuckBookingsCancel
       :<|> multipleBookingSync = bookingsClient
 
-    merchantCommonConfig
-      :<|> merchantCommonConfigUpdate
-      :<|> driverPoolConfig
-      :<|> driverPoolConfigUpdate
-      :<|> driverPoolConfigCreate
-      :<|> driverIntelligentPoolConfig
-      :<|> driverIntelligentPoolConfigUpdate
-      :<|> documentVerificationConfig
-      :<|> documentVerificationConfigUpdate
-      :<|> documentVerificationConfigCreate
-      :<|> serviceUsageConfig
-      :<|> mapsServiceUsageConfigUpdate
-      :<|> smsServiceConfigUpdate
-      :<|> smsServiceUsageConfigUpdate
-      :<|> verificationServiceConfigUpdate
-      :<|> createFPDriverExtraFee
-      :<|> updateFPDriverExtraFee
-      :<|> updateFPPerExtraKmRate
-      :<|> updateFarePolicy
-      :<|> upsertFarePolicy
-      :<|> createMerchantOperatingCity
-      :<|> schedulerTrigger
-      :<|> updateOnboardingVehicleVariantMapping
-      :<|> upsertSpecialLocation
-      :<|> deleteSpecialLocation
-      :<|> upsertSpecialLocationGate
-      :<|> deleteSpecialLocationGate = merchantClient
+    -- merchantCommonConfig
+    --   :<|> merchantCommonConfigUpdate
+    --   :<|> driverPoolConfig
+    --   :<|> driverPoolConfigUpdate
+    --   :<|> driverPoolConfigCreate
+    --   :<|> driverIntelligentPoolConfig
+    --   :<|> driverIntelligentPoolConfigUpdate
+    --   :<|> documentVerificationConfig
+    --   :<|> documentVerificationConfigUpdate
+    --   :<|> documentVerificationConfigCreate
+    -- serviceUsageConfig
+    --   :<|> mapsServiceUsageConfigUpdate
+    --   :<|> smsServiceConfigUpdate
+    --   :<|> smsServiceUsageConfigUpdate
+    --   :<|> verificationServiceConfigUpdate
+    -- :<|> createFPDriverExtraFee
+    -- :<|> updateFPDriverExtraFee
+    -- :<|> updateFPPerExtraKmRate
+    -- :<|> updateFarePolicy
+    -- :<|> upsertFarePolicy
+    -- createMerchantOperatingCity
+    -- :<|> schedulerTrigger
+    -- :<|> updateOnboardingVehicleVariantMapping
+    -- upsertSpecialLocation
+    --   :<|> deleteSpecialLocation
+    --   :<|> upsertSpecialLocationGate
+    --   :<|> deleteSpecialLocationGate = merchantClient
 
-    uploadFile
-      :<|> addLinkAsMedia
-      :<|> addMessage
-      :<|> sendMessage
-      :<|> messageList
-      :<|> messageInfo
-      :<|> messageDeliveryInfo
-      :<|> messageReceiverList = messageClient
+    -- uploadFile
+    --   :<|> addLinkAsMedia
+    --   :<|> addMessage
+    --   :<|> sendMessage
+    --   :<|> messageList
+    --   :<|> messageInfo
+    --   :<|> messageDeliveryInfo
+    --   :<|> messageReceiverList = messageClient
 
     createOverlay
       :<|> deleteOverlay

@@ -12,9 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Dashboard.RiderPlatform.Message
-  ( module Reexport,
-  )
-where
+module Dashboard.RiderPlatform.Message where
 
-import Dashboard.Common.Message as Reexport
+-- ( module Reexport,
+-- )
+
+-- import Dashboard.Common.Message as Reexport

@@ -14,16 +14,25 @@
 
 module Domain.Action.Dashboard.Merchant
   ( postMerchantServiceConfigMapsUpdate,
-    mapsServiceUsageConfigUpdate,
+    -- mapsServiceUsageConfigUpdate,
+    postMerchantServiceUsageConfigMapsUpdate,
     postMerchantUpdate,
-    serviceUsageConfig,
-    smsServiceConfigUpdate,
-    smsServiceUsageConfigUpdate,
-    createMerchantOperatingCity,
-    upsertSpecialLocation,
-    deleteSpecialLocation,
-    upsertSpecialLocationGate,
-    deleteSpecialLocationGate,
+    -- serviceUsageConfig,
+    getMerchantServiceUsageConfig,
+    -- smsServiceConfigUpdate,
+    postMerchantServiceConfigSmsUpdate,
+    -- smsServiceUsageConfigUpdate,
+    postMerchantServiceUsageConfigSmsUpdate,
+    -- createMerchantOperatingCity,
+    postMerchantConfigOperatingCityCreate,
+    -- upsertSpecialLocation,
+    -- deleteSpecialLocation,
+    -- upsertSpecialLocationGate,
+    -- deleteSpecialLocationGate,
+    postMerchantSpecialLocationUpsert,
+    deleteMerchantSpecialLocationDelete,
+    postMerchantSpecialLocationGatesUpsert,
+    deleteMerchantSpecialLocationGatesDelete,
     buildMerchantServiceConfig,
   )
 where
@@ -126,11 +135,11 @@ buildExophone merchantId merchantOperatingCityId now req = do
       }
 
 ---------------------------------------------------------------------
-serviceUsageConfig ::
+getMerchantServiceUsageConfig ::
   ShortId DM.Merchant ->
   Context.City ->
   Flow Common.ServiceUsageConfigRes
-serviceUsageConfig merchantShortId city = do
+getMerchantServiceUsageConfig merchantShortId city = do
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
   config <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
   pure $ mkServiceUsageConfigRes config
@@ -182,12 +191,12 @@ postMerchantServiceConfigMapsUpdate merchantShortId city req = do
   pure Success
 
 ---------------------------------------------------------------------
-smsServiceConfigUpdate ::
+postMerchantServiceConfigSmsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
-smsServiceConfigUpdate merchantShortId city req = do
+postMerchantServiceConfigSmsUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <-
     CQMOC.findByMerchantShortIdAndCity merchantShortId city
@@ -197,16 +206,16 @@ smsServiceConfigUpdate merchantShortId city req = do
   merchantServiceConfig <- buildMerchantServiceConfig merchant.id merchantOperatingCity.id serviceConfig
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id merchantOperatingCity.id serviceName
-  logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantServiceConfigSmsUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------
-mapsServiceUsageConfigUpdate ::
+postMerchantServiceUsageConfigMapsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.MapsServiceUsageConfigUpdateReq ->
   Flow APISuccess
-mapsServiceUsageConfigUpdate merchantShortId city req = do
+postMerchantServiceUsageConfigMapsUpdate merchantShortId city req = do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   whenJust req.getEstimatedPickupDistances $ \_ ->
     throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
@@ -231,16 +240,16 @@ mapsServiceUsageConfigUpdate merchantShortId city req = do
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOperatingCity.id
-  logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchantOperatingCity.id)
+  logTagInfo "dashboard -> postMerchantServiceUsageConfigMapsUpdate : " (show merchantOperatingCity.id)
   pure Success
 
 ---------------------------------------------------------------------
-smsServiceUsageConfigUpdate ::
+postMerchantServiceUsageConfigSmsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.SmsServiceUsageConfigUpdateReq ->
   Flow APISuccess
-smsServiceUsageConfigUpdate merchantShortId city req = do
+postMerchantServiceUsageConfigSmsUpdate merchantShortId city req = do
   runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId city >>= fromMaybeM (MerchantOperatingCityNotFound ("merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city))
@@ -258,11 +267,11 @@ smsServiceUsageConfigUpdate merchantShortId city req = do
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOperatingCity.id
-  logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchantOperatingCity.id)
+  logTagInfo "dashboard -> postMerchantServiceUsageConfigSmsUpdate : " (show merchantOperatingCity.id)
   pure Success
 
-upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
-upsertSpecialLocation merchantShortId _city mbSpecialLocationId request = do
+postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
+postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId request = do
   existingSLWithGeom <- maybe (return Nothing) QSL.findByIdWithGeom mbSpecialLocationId
   let mbExistingSL = fst <$> existingSLWithGeom
       mbGeom = snd =<< existingSLWithGeom
@@ -291,15 +300,15 @@ upsertSpecialLocation merchantShortId _city mbSpecialLocationId request = do
             ..
           }
 
-deleteSpecialLocation :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Flow APISuccess
-deleteSpecialLocation _merchantShortid _city specialLocationId = do
+deleteMerchantSpecialLocationDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Flow APISuccess
+deleteMerchantSpecialLocationDelete _merchantShortid _city specialLocationId = do
   void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Special Location with given id not found")
   void $ runTransaction $ QSL.deleteById specialLocationId
   void $ runTransaction $ QGI.deleteAll specialLocationId
   pure Success
 
-upsertSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
-upsertSpecialLocationGate _merchantShortId _city specialLocationId request = do
+postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
+postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId request = do
   void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   createOrUpdateGate existingGates request
@@ -336,8 +345,8 @@ upsertSpecialLocationGate _merchantShortId _city specialLocationId request = do
             ..
           }
 
-deleteSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> Flow APISuccess
-deleteSpecialLocationGate _merchantShortId _city specialLocationId gateName = do
+deleteMerchantSpecialLocationGatesDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> Flow APISuccess
+deleteMerchantSpecialLocationGatesDelete _merchantShortId _city specialLocationId gateName = do
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   let existingGate = fst <$> find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName gateName) existingGates
   case existingGate of
@@ -348,8 +357,8 @@ deleteSpecialLocationGate _merchantShortId _city specialLocationId gateName = do
 normalizeName :: Text -> Text
 normalizeName = T.strip . T.toLower
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId city req = do
+postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigOperatingCityCreate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   baseOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
   let baseOperatingCityId = baseOperatingCity.id

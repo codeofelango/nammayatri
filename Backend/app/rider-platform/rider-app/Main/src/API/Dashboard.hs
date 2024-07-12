@@ -21,7 +21,7 @@ import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.HotSpot as HotSpot
 import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.IssueList as IssueList
-import qualified API.Dashboard.Merchant as Merchant
+-- import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Ride as Ride
 import qualified API.Dashboard.RideBooking as RideBookings
 import qualified API.Dashboard.Tickets as Tickets
@@ -56,7 +56,7 @@ type OperationsAPI =
   DashboardTokenAuth
     :> ( Customer.API
            :<|> Booking.API
-           :<|> Merchant.API
+           --  :<|> Merchant.API
            :<|> Ride.API
            :<|> IssueList.API
            :<|> Issue.API
@@ -97,7 +97,7 @@ operationHandler :: ShortId DM.Merchant -> Context.City -> FlowServer Operations
 operationHandler merchantId city _ = do
   Customer.handler merchantId city
     :<|> Booking.handler merchantId city
-    :<|> Merchant.handler merchantId city
+    -- :<|> Merchant.handler merchantId city
     :<|> Ride.handler merchantId
     :<|> IssueList.handler merchantId
     :<|> Issue.handler merchantId city

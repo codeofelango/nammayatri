@@ -15,13 +15,14 @@
 module API.Dashboard.Management where
 
 import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
+import qualified API.Action.Dashboard.Management.Message as MessageDSL
 import qualified API.Action.Dashboard.Management.Revenue as RevenueDSL
 import qualified API.Action.Dashboard.Management.Ride as RideDSL
 import qualified API.Dashboard.Management.Booking as Booking
 import qualified API.Dashboard.Management.Driver as Driver
 import qualified API.Dashboard.Management.Issue as Issue
-import qualified API.Dashboard.Management.Merchant as Merchant
-import qualified API.Dashboard.Management.Message as Message
+-- import qualified API.Dashboard.Management.Merchant as Merchant
+-- import qualified API.Dashboard.Management.Message as Message
 import qualified API.Dashboard.Management.Overlay as Overlay
 import qualified API.Dashboard.Management.Ride as Ride
 import qualified API.Dashboard.Management.Subscription as Subscription
@@ -37,12 +38,13 @@ type API =
     :> ( Subscription.API
            :<|> Ride.API
            :<|> Overlay.API
-           :<|> Message.API
-           :<|> Merchant.API
+           --  :<|> Message.API
+           --  :<|> Merchant.API
            :<|> Issue.API
            :<|> Driver.API
            :<|> Booking.API
            :<|> MerchantDSL.API
+           :<|> MessageDSL.API
            :<|> RevenueDSL.API
            :<|> RideDSL.API
        )
@@ -52,11 +54,12 @@ handler merchantId city _ =
   Subscription.handler merchantId city
     :<|> Ride.handler merchantId city
     :<|> Overlay.handler merchantId city
-    :<|> Message.handler merchantId city
-    :<|> Merchant.handler merchantId city
+    -- :<|> Message.handler merchantId city
+    -- :<|> Merchant.handler merchantId city
     :<|> Issue.handler merchantId city
     :<|> Driver.handler merchantId city
     :<|> Booking.handler merchantId city
     :<|> MerchantDSL.handler merchantId city
+    :<|> MessageDSL.handler merchantId city
     :<|> RevenueDSL.handler merchantId city
     :<|> RideDSL.handler merchantId city

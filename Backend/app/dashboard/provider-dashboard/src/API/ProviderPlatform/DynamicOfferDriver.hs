@@ -22,9 +22,10 @@ module API.ProviderPlatform.DynamicOfferDriver
   )
 where
 
-import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Merchant as MerchantDSL
-import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Revenue as RevenueDSL
-import qualified API.Action.ProviderPlatform.DynamicOfferDriver.Management.Ride as RideDSL
+import qualified API.Action.ProviderPlatform.Management.Merchant as MerchantDSL
+import qualified API.Action.ProviderPlatform.Management.Message as MessageDSL
+import qualified API.Action.ProviderPlatform.Management.Revenue as RevenueDSL
+import qualified API.Action.ProviderPlatform.Management.Ride as RideDSL
 import qualified API.ProviderPlatform.DynamicOfferDriver.Booking as Booking
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
@@ -33,8 +34,8 @@ import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as 
 import qualified API.ProviderPlatform.DynamicOfferDriver.DriverReferral as DriverReferral
 import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Maps as Maps
-import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
-import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
+-- import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
+-- import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
 import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscription
@@ -66,8 +67,8 @@ type API' =
     :<|> Ride.API
     :<|> Subscription.API
     :<|> Booking.API
-    :<|> Merchant.API
-    :<|> Message.API
+    -- :<|> Merchant.API
+    -- :<|> Message.API
     :<|> DriverReferral.API
     :<|> DriverRegistration.API
     :<|> DriverCoin.API
@@ -76,6 +77,7 @@ type API' =
     :<|> Overlay.API
     :<|> Maps.API
     :<|> MerchantDSL.API
+    :<|> MessageDSL.API
     :<|> RevenueDSL.API
     :<|> RideDSL.API
 
@@ -87,8 +89,8 @@ handler merchantId = do
     :<|> Ride.handler merchantId city
     :<|> Subscription.handler merchantId city
     :<|> Booking.handler merchantId city
-    :<|> Merchant.handler merchantId city
-    :<|> Message.handler merchantId city
+    -- :<|> Merchant.handler merchantId city
+    -- :<|> Message.handler merchantId city
     :<|> DriverReferral.handler merchantId city
     :<|> DriverRegistration.handler merchantId city
     :<|> DriverCoin.handler merchantId city
@@ -97,6 +99,7 @@ handler merchantId = do
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
     :<|> MerchantDSL.handler merchantId city
+    :<|> MessageDSL.handler merchantId city
     :<|> RevenueDSL.handler merchantId city
     :<|> RideDSL.handler merchantId city
   where
@@ -112,8 +115,8 @@ handlerV2 merchantId city =
     :<|> Ride.handler merchantId city
     :<|> Subscription.handler merchantId city
     :<|> Booking.handler merchantId city
-    :<|> Merchant.handler merchantId city
-    :<|> Message.handler merchantId city
+    -- :<|> Merchant.handler merchantId city
+    -- :<|> Message.handler merchantId city
     :<|> DriverReferral.handler merchantId city
     :<|> DriverRegistration.handler merchantId city
     :<|> DriverCoin.handler merchantId city
@@ -122,6 +125,7 @@ handlerV2 merchantId city =
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
     :<|> MerchantDSL.handler merchantId city
+    :<|> MessageDSL.handler merchantId city
     :<|> RevenueDSL.handler merchantId city
     :<|> RideDSL.handler merchantId city
 

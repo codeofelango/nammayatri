@@ -14,9 +14,9 @@
 
 module Domain.Action.Dashboard.Message where
 
+import API.Types.ProviderPlatform.Management.Message (InputType (..))
 import qualified AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
-import Dashboard.Common.Message (InputType (..))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -54,8 +54,8 @@ import Tools.Error
 lookupBroadcastPush :: IO Bool
 lookupBroadcastPush = fromMaybe False . (>>= readMaybe) <$> lookupEnv "BROADCAST_KAFKA_PUSH"
 
-addLinkAsMedia :: ShortId DM.Merchant -> Context.City -> Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
-addLinkAsMedia merchantShortId _ req = do
+postMessageAddLink :: ShortId DM.Merchant -> Context.City -> Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
+postMessageAddLink merchantShortId _ req = do
   _ <- findMerchantByShortId merchantShortId
   createMediaEntry req
 
@@ -76,8 +76,8 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
             createdAt = now
           }
 
-uploadFile :: ShortId DM.Merchant -> Context.City -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
-uploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
+postMessageUploadFile :: ShortId DM.Merchant -> Context.City -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
+postMessageUploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
   -- _ <- validateContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
@@ -126,8 +126,8 @@ toCommonType = \case
 translationToDomainType :: UTCTime -> Common.MessageTranslation -> Domain.MessageTranslation
 translationToDomainType createdAt Common.MessageTranslation {..} = Domain.MessageTranslation {..}
 
-addMessage :: ShortId DM.Merchant -> Context.City -> Common.AddMessageRequest -> Flow Common.AddMessageResponse
-addMessage merchantShortId opCity Common.AddMessageRequest {..} = do
+postMessageAdd :: ShortId DM.Merchant -> Context.City -> Common.AddMessageRequest -> Flow Common.AddMessageResponse
+postMessageAdd merchantShortId opCity Common.AddMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   message <- mkMessage merchant merchantOpCityId
@@ -160,8 +160,8 @@ newtype CSVRow = CSVRow {driverId :: String}
 instance FromNamedRecord CSVRow where
   parseNamedRecord r = CSVRow <$> r .: "driverId"
 
-sendMessage :: ShortId DM.Merchant -> Context.City -> Common.SendMessageRequest -> Flow APISuccess
-sendMessage merchantShortId opCity Common.SendMessageRequest {..} = do
+postMessageSend :: ShortId DM.Merchant -> Context.City -> Common.SendMessageRequest -> Flow APISuccess
+postMessageSend merchantShortId opCity Common.SendMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   message <- B.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
@@ -184,8 +184,8 @@ sendMessage merchantShortId opCity Common.SendMessageRequest {..} = do
           Right (_, v) -> pure $ V.toList $ V.map (Id . T.pack . (.driverId)) v
       Nothing -> throwError (InvalidRequest "CSV FilePath Not Found")
 
-messageList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
-messageList merchantShortId opCity mbLimit mbOffset = do
+getMessageList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
+getMessageList merchantShortId opCity mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant merchantOpCity
@@ -201,8 +201,9 @@ messageList merchantShortId opCity mbLimit mbOffset = do
           _type = toCommonType message._type
         }
 
-messageInfo :: ShortId DM.Merchant -> Context.City -> Id Domain.Message -> Flow Common.MessageInfoResponse
-messageInfo merchantShortId _ messageId = do
+getMessageInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Message -> Flow Common.MessageInfoResponse
+getMessageInfo merchantShortId _ reqMessageId = do
+  let messageId = cast reqMessageId
   _ <- findMerchantByShortId merchantShortId
   message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
   mediaFiles <- mapMaybeM MFQuery.findById message.mediaFiles
@@ -218,8 +219,9 @@ messageInfo merchantShortId _ messageId = do
           mediaFiles = (\mediaFile -> Common.MediaFile mediaFile._type mediaFile.url) <$> mf
         }
 
-messageDeliveryInfo :: ShortId DM.Merchant -> Context.City -> Id Domain.Message -> Flow Common.MessageDeliveryInfoResponse
-messageDeliveryInfo merchantShortId _ messageId = do
+getMessageDeliveryInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Message -> Flow Common.MessageDeliveryInfoResponse
+getMessageDeliveryInfo merchantShortId _ reqMessageId = do
+  let messageId = cast reqMessageId
   _ <- findMerchantByShortId merchantShortId
   success <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success
   failed <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed
@@ -229,8 +231,47 @@ messageDeliveryInfo merchantShortId _ messageId = do
   message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
   return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen, liked = message.likeCount, viewed = message.viewCount}
 
-messageReceiverList :: ShortId DM.Merchant -> Context.City -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
-messageReceiverList merchantShortId _ msgId _ mbStatus mbLimit mbOffset = do
+-- postMessageUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.Message.UploadFileRequest -> Environment.Flow API.Types.ProviderPlatform.Management.Message.UploadFileResponse)
+-- postMessageUploadFile _merchantShortId _opCity req = do error "Logic yet to be decided" req
+
+-- postMessageAddLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.Message.AddLinkAsMedia -> Environment.Flow API.Types.ProviderPlatform.Management.Message.UploadFileResponse)
+-- postMessageAddLink _merchantShortId _opCity req = do error "Logic yet to be decided" req
+
+-- postMessageAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.Message.AddMessageRequest -> Environment.Flow API.Types.ProviderPlatform.Management.Message.AddMessageResponse)
+-- postMessageAdd _merchantShortId _opCity req = do error "Logic yet to be decided" req
+
+-- postMessageSend :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.Message.SendMessageRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+-- postMessageSend _merchantShortId _opCity req = do error "Logic yet to be decided" req
+
+-- getMessageList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow API.Types.ProviderPlatform.Management.Message.MessageListResponse)
+-- getMessageList _merchantShortId _opCity limit offset = do error "Logic yet to be decided" limit offset
+
+-- getMessageInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> (Kernel.Types.Id.Id Dashboard.Common.Message) -> Environment.Flow API.Types.ProviderPlatform.Management.Message.MessageInfoResponse)
+-- getMessageInfo _merchantShortId _opCity messageId = do error "Logic yet to be decided" messageId
+
+-- getMessageDeliveryInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> (Kernel.Types.Id.Id Dashboard.Common.Message) -> Environment.Flow API.Types.ProviderPlatform.Management.Message.MessageDeliveryInfoResponse)
+-- getMessageDeliveryInfo _merchantShortId _opCity messageId = do error "Logic yet to be decided" messageId
+
+-- getMessageReceiverList ::
+-- (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+--   Kernel.Types.Beckn.Context.City ->
+--     (Kernel.Types.Id.Id Dashboard.Common.Message) ->
+--       Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+--         Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+--           Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+--             Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Message.MessageDeliveryStatus) ->
+--               Environment.Flow API.Types.ProviderPlatform.Management.Message.MessageReceiverListResponse)
+-- getMessageReceiverList
+-- _merchantShortId
+-- _opCity
+-- messageId
+-- limit
+-- number
+-- offset status = do error "Logic yet to be decided" messageId limit number offset status
+
+getMessageReceiverList :: ShortId DM.Merchant -> Context.City -> Id Common.Message -> Maybe Int -> Maybe Text -> Maybe Int -> Maybe Common.MessageDeliveryStatus -> Flow Common.MessageReceiverListResponse
+getMessageReceiverList merchantShortId _ reqMsgId mbLimit _ mbOffset mbStatus = do
+  let msgId = cast reqMsgId
   _ <- findMerchantByShortId merchantShortId
   encMesageReports <- B.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
   messageReports <- mapM (secondM decrypt) encMesageReports

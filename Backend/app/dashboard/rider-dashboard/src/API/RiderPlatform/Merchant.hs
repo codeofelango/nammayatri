@@ -12,193 +12,196 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.RiderPlatform.Merchant
-  ( API,
-    handler,
-  )
-where
+module API.RiderPlatform.Merchant where
 
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
-import qualified Data.Text as T
-import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified Domain.Types.Transaction as DT
-import "lib-dashboard" Environment
-import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess)
-import qualified Kernel.Types.Beckn.City as City
-import Kernel.Types.Error
-import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError, withFlowHandlerAPI')
-import Kernel.Utils.Geometry (getGeomFromKML)
-import Kernel.Utils.Validation (runRequestValidation)
-import qualified Lib.Types.SpecialLocation as SL
-import qualified RiderPlatformClient.RiderApp.Operations as Client
-import Servant hiding (throwError)
-import qualified SharedLogic.Transaction as T
-import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Storage.Queries.Merchant as SQM
-import "lib-dashboard" Tools.Auth
-import "lib-dashboard" Tools.Auth.Merchant
+--   ( API,
+--     handler,
+--   )
+-- where
 
-type API =
-  "merchant"
-    :> ( ServiceUsageConfigAPI
-           :<|> MapsServiceUsageConfigUpdateAPI
-           :<|> SmsServiceConfigUpdateAPI
-           :<|> SmsServiceUsageConfigUpdateAPI
-           :<|> CreateMerchantOperatingCityAPI
-           :<|> UpsertSpecialLocationAPI
-           :<|> DeleteSpecialLocationAPI
-           :<|> UpsertSpecialLocationGateAPI
-           :<|> DeleteSpecialLocationGateAPI
-       )
+-- import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
+-- import qualified Data.Text as T
+-- import qualified "lib-dashboard" Domain.Types.Merchant as DM
+-- import qualified Domain.Types.Transaction as DT
+-- import "lib-dashboard" Environment
+-- import Kernel.Prelude
+-- import Kernel.Types.APISuccess (APISuccess)
+-- import qualified Kernel.Types.Beckn.City as City
+-- import Kernel.Types.Error
+-- import Kernel.Types.Id
+-- import Kernel.Utils.Common (MonadFlow, fromMaybeM, withFlowHandlerAPI')
+-- import Kernel.Utils.Geometry (getGeomFromKML)
+-- -- import Kernel.Utils.Validation (runRequestValidation)
+-- import qualified Lib.Types.SpecialLocation as SL
+-- import qualified RiderPlatformClient.RiderApp.Operations as Client
+-- import Servant hiding (throwError)
+-- import qualified SharedLogic.Transaction as T
+-- import Storage.Beam.CommonInstances ()
+-- -- import "lib-dashboard" Storage.Queries.Merchant as SQM
+-- import "lib-dashboard" Tools.Auth
+-- import "lib-dashboard" Tools.Auth.Merchant
 
-type ServiceUsageConfigAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SERVICE_USAGE_CONFIG
-    :> Common.ServiceUsageConfigAPI
+-- type API =
+--   "merchant"
+--     :> ( -- ServiceUsageConfigAPI
+--  :<|> MapsServiceUsageConfigUpdateAPI
+--  :<|> SmsServiceConfigUpdateAPI
+--  :<|> SmsServiceUsageConfigUpdateAPI
+-- CreateMerchantOperatingCityAPI
+--    UpsertSpecialLocationAPI
+--      :<|> DeleteSpecialLocationAPI
+--      :<|> UpsertSpecialLocationGateAPI
+--      :<|> DeleteSpecialLocationGateAPI
+--  )
 
-type MapsServiceUsageConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
-    :> Common.MapsServiceUsageConfigUpdateAPI
+-- type ServiceUsageConfigAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SERVICE_USAGE_CONFIG
+--     :> Common.ServiceUsageConfigAPI
 
-type SmsServiceConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE
-    :> Common.SmsServiceConfigUpdateAPI
+-- type MapsServiceUsageConfigUpdateAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
+--     :> Common.MapsServiceUsageConfigUpdateAPI
 
-type SmsServiceUsageConfigUpdateAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
-    :> Common.SmsServiceUsageConfigUpdateAPI
+-- type SmsServiceConfigUpdateAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE
+--     :> Common.SmsServiceConfigUpdateAPI
 
-type CreateMerchantOperatingCityAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
-    :> Common.CreateMerchantOperatingCityAPI
+-- type SmsServiceUsageConfigUpdateAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
+--     :> Common.SmsServiceUsageConfigUpdateAPI
 
-type UpsertSpecialLocationAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION
-    :> Common.UpsertSpecialLocationAPI
+-- type CreateMerchantOperatingCityAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'CREATE_MERCHANT_OPERATING_CITY
+--     :> Common.CreateMerchantOperatingCityAPI
 
-type DeleteSpecialLocationAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'DELETE_SPECIAL_LOCATION
-    :> Common.DeleteSpecialLocationAPI
+-- type UpsertSpecialLocationAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION
+--     :> Common.UpsertSpecialLocationAPI
 
-type UpsertSpecialLocationGateAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION_GATE
-    :> Common.UpsertSpecialLocationGateAPI
+-- type DeleteSpecialLocationAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'DELETE_SPECIAL_LOCATION
+--     :> Common.DeleteSpecialLocationAPI
 
-type DeleteSpecialLocationGateAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'DELETE_SPECIAL_LOCATION_GATE
-    :> Common.DeleteSpecialLocationGateAPI
+-- type UpsertSpecialLocationGateAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION_GATE
+--     :> Common.UpsertSpecialLocationGateAPI
 
-handler :: ShortId DM.Merchant -> City.City -> FlowServer API
-handler merchantId city =
-  serviceUsageConfig merchantId city
-    :<|> mapsServiceUsageConfigUpdate merchantId city
-    :<|> smsServiceConfigUpdate merchantId city
-    :<|> smsServiceUsageConfigUpdate merchantId city
-    :<|> createMerchantOperatingCity merchantId city
-    :<|> upsertSpecialLocation merchantId city
-    :<|> deleteSpecialLocation merchantId city
-    :<|> upsertSpecialLocationGate merchantId city
-    :<|> deleteSpecialLocationGate merchantId city
+-- type DeleteSpecialLocationGateAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'DELETE_SPECIAL_LOCATION_GATE
+--     :> Common.DeleteSpecialLocationGateAPI
 
-buildTransaction ::
-  ( MonadFlow m,
-    Common.HideSecrets request
-  ) =>
-  Common.MerchantEndpoint ->
-  ApiTokenInfo ->
-  Maybe request ->
-  m DT.Transaction
-buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.MerchantAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+-- handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+-- handler merchantId city =
+--   -- serviceUsageConfig merchantId city
+--   --   :<|> mapsServiceUsageConfigUpdate merchantId city
+--   --   :<|> smsServiceConfigUpdate merchantId city
+--   --   :<|> smsServiceUsageConfigUpdate merchantId city
+--   -- createMerchantOperatingCity merchantId city
+--   upsertSpecialLocation merchantId city
+--     :<|> deleteSpecialLocation merchantId city
+--     :<|> upsertSpecialLocationGate merchantId city
+--     :<|> deleteSpecialLocationGate merchantId city
 
-serviceUsageConfig ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  FlowHandler Common.ServiceUsageConfigRes
-serviceUsageConfig merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callRiderAppOperations checkedMerchantId opCity (.merchant.serviceUsageConfig)
+-- buildTransaction ::
+--   ( MonadFlow m,
+--     Common.HideSecrets request
+--   ) =>
+--   Common.MerchantEndpoint ->
+--   ApiTokenInfo ->
+--   Maybe request ->
+--   m DT.Transaction
+-- buildTransaction endpoint apiTokenInfo =
+--   T.buildTransaction (DT.MerchantAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
-mapsServiceUsageConfigUpdate ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.MapsServiceUsageConfigUpdateReq ->
-  FlowHandler APISuccess
-mapsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
-  whenJust req.getEstimatedPickupDistances $ \_ ->
-    throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.MapsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $
-    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.mapsServiceUsageConfigUpdate) req
+-- serviceUsageConfig ::
+--   ShortId DM.Merchant ->
+--   City.City ->
+--   ApiTokenInfo ->
+--   FlowHandler Common.ServiceUsageConfigRes
+-- serviceUsageConfig merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   Client.callRiderAppOperations checkedMerchantId opCity (.merchant.serviceUsageConfig)
 
-smsServiceConfigUpdate ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.SmsServiceConfigUpdateReq ->
-  FlowHandler APISuccess
-smsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.SmsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $
-    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.smsServiceConfigUpdate) req
+-- TODO handler modified:
 
-smsServiceUsageConfigUpdate ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.SmsServiceUsageConfigUpdateReq ->
-  FlowHandler APISuccess
-smsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.SmsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $
-    Client.callRiderAppOperations checkedMerchantId opCity (.merchant.smsServiceUsageConfigUpdate) req
+-- mapsServiceUsageConfigUpdate ::
+--   ShortId DM.Merchant ->
+--   City.City ->
+--   ApiTokenInfo ->
+--   Common.MapsServiceUsageConfigUpdateReq ->
+--   FlowHandler APISuccess
+-- mapsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+--   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
+--   whenJust req.getEstimatedPickupDistances $ \_ ->
+--     throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.MapsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
+--   T.withTransactionStoring transaction $
+--     Client.callRiderAppOperations checkedMerchantId opCity (.merchant.mapsServiceUsageConfigUpdate) req
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
-  -- update entry in dashboard
-  merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
-  geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom")
-  unless (req.city `elem` merchant.supportedOperatingCities) $
-    SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
-  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
+-- smsServiceConfigUpdate ::
+--   ShortId DM.Merchant ->
+--   City.City ->
+--   ApiTokenInfo ->
+--   Common.SmsServiceConfigUpdateReq ->
+--   FlowHandler APISuccess
+-- smsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.SmsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
+--   T.withTransactionStoring transaction $
+--     Client.callRiderAppOperations checkedMerchantId opCity (.merchant.smsServiceConfigUpdate) req
 
-upsertSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReq -> FlowHandler APISuccess
-upsertSpecialLocation merchantShortId opCity apiTokenInfo specialLocationId req@Common.UpsertSpecialLocationReq {..} = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.UpsertSpecialLocationEndpoint apiTokenInfo (Just req)
-  geom <- maybe (return Nothing) mkGeom (req.file)
-  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.upsertSpecialLocation) specialLocationId Common.UpsertSpecialLocationReqT {geom = geom, ..}
+-- smsServiceUsageConfigUpdate ::
+--   ShortId DM.Merchant ->
+--   City.City ->
+--   ApiTokenInfo ->
+--   Common.SmsServiceUsageConfigUpdateReq ->
+--   FlowHandler APISuccess
+-- smsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+--   runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.SmsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
+--   T.withTransactionStoring transaction $
+--     Client.callRiderAppOperations checkedMerchantId opCity (.merchant.smsServiceUsageConfigUpdate) req
 
-deleteSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> FlowHandler APISuccess
-deleteSpecialLocation merchantShortId opCity apiTokenInfo specialLocationId = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.DeleteSpecialLocationEndpoint apiTokenInfo T.emptyRequest
-  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.deleteSpecialLocation) specialLocationId
+-- createMerchantOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> FlowHandler Common.CreateMerchantOperatingCityRes
+-- createMerchantOperatingCity merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.CreateMerchantOperatingCityEndpoint apiTokenInfo (Just req)
+--   -- update entry in dashboard
+--   merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
+--   geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom")
+--   unless (req.city `elem` merchant.supportedOperatingCities) $
+--     SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
+--   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.createMerchantOperatingCity) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
 
-upsertSpecialLocationGate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReq -> FlowHandler APISuccess
-upsertSpecialLocationGate merchantShortId opCity apiTokenInfo specialLocationId req@Common.UpsertSpecialLocationGateReq {..} = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.UpsertSpecialLocationGateEndpoint apiTokenInfo (Just req)
-  geom <- maybe (return Nothing) mkGeom (req.file)
-  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.upsertSpecialLocationGate) specialLocationId Common.UpsertSpecialLocationGateReqT {geom = geom, ..}
+-- upsertSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReq -> FlowHandler APISuccess
+-- upsertSpecialLocation merchantShortId opCity apiTokenInfo specialLocationId req@Common.UpsertSpecialLocationReq {..} = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.UpsertSpecialLocationEndpoint apiTokenInfo (Just req)
+--   geom <- maybe (return Nothing) mkGeom (req.file)
+--   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.upsertSpecialLocation) specialLocationId Common.UpsertSpecialLocationReqT {geom = geom, ..}
 
-deleteSpecialLocationGate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Text -> FlowHandler APISuccess
-deleteSpecialLocationGate merchantShortId opCity apiTokenInfo specialLocationId gateName = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.DeleteSpecialLocationGateEndpoint apiTokenInfo T.emptyRequest
-  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.deleteSpecialLocationGate) specialLocationId gateName
+-- deleteSpecialLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> FlowHandler APISuccess
+-- deleteSpecialLocation merchantShortId opCity apiTokenInfo specialLocationId = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.DeleteSpecialLocationEndpoint apiTokenInfo T.emptyRequest
+--   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.deleteSpecialLocation) specialLocationId
 
-mkGeom :: FilePath -> Flow (Maybe Text)
-mkGeom kmlFile = do
-  result <- getGeomFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
-  return $ Just $ T.pack result
+-- upsertSpecialLocationGate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReq -> FlowHandler APISuccess
+-- upsertSpecialLocationGate merchantShortId opCity apiTokenInfo specialLocationId req@Common.UpsertSpecialLocationGateReq {..} = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.UpsertSpecialLocationGateEndpoint apiTokenInfo (Just req)
+--   geom <- maybe (return Nothing) mkGeom (req.file)
+--   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.upsertSpecialLocationGate) specialLocationId Common.UpsertSpecialLocationGateReqT {geom = geom, ..}
+
+-- deleteSpecialLocationGate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SL.SpecialLocation -> Text -> FlowHandler APISuccess
+-- deleteSpecialLocationGate merchantShortId opCity apiTokenInfo specialLocationId gateName = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+--   transaction <- buildTransaction Common.DeleteSpecialLocationGateEndpoint apiTokenInfo T.emptyRequest
+--   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.merchant.deleteSpecialLocationGate) specialLocationId gateName
+
+-- mkGeom :: FilePath -> Flow (Maybe Text)
+-- mkGeom kmlFile = do
+--   result <- getGeomFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
+--   return $ Just $ T.pack result

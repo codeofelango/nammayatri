@@ -45,6 +45,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
+-- import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 import Lib.Types.SpecialLocation
 import Servant
@@ -78,6 +79,28 @@ data MerchantEndpoint
   | DeleteSpecialLocationGateEndpoint
   | PostMerchantUpdateEndpoint
   | PostMerchantServiceConfigMapsUpdateEndpoint
+  | PostMerchantConfigCommonUpdateEndpoint
+  | PostMerchantConfigDriverPoolUpdateEndpoint
+  | PostMerchantConfigDriverPoolCreateEndpoint
+  | PostMerchantConfigDriverIntelligentPoolUpdateEndpoint -- TODO move to DSL
+  | PostMerchantConfigOnboardingDocumentUpdateEndpoint
+  | PostMerchantConfigOnboardingDocumentCreateEndpoint
+  | PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreateEndpoint
+  | PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdateEndpoint
+  | PostMerchantConfigFarePolicyPerExtraKmRateUpdateEndpoint
+  | PostMerchantConfigFarePolicyUpdateEndpoint
+  | PostMerchantConfigFarePolicyUpsertEndpoint
+  | PostMerchantSchedulerTriggerEndpoint
+  | PostMerchantUpdateOnboardingVehicleVariantMappingEndpoint
+  | PostMerchantServiceConfigSmsUpdateEndpoint
+  | PostMerchantServiceConfigVerificationUpdateEndpoint
+  | PostMerchantServiceUsageConfigMapsUpdateEndpoint
+  | PostMerchantServiceUsageConfigSmsUpdateEndpoint
+  | PostMerchantConfigOperatingCityCreateEndpoint
+  | PostMerchantSpecialLocationUpsertEndpoint
+  | DeleteMerchantSpecialLocationDeleteEndpoint
+  | PostMerchantSpecialLocationGatesUpsertEndpoint
+  | DeleteMerchantSpecialLocationGatesDeleteEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "MerchantEndpoint"
@@ -279,12 +302,12 @@ data OSRMCfgUpdateReq = OSRMCfgUpdateReq
 ---------------------------------------------------------
 -- merchant sms service config update -------------------
 
-type SmsServiceConfigUpdateAPI =
-  "serviceConfig"
-    :> "sms"
-    :> "update"
-    :> ReqBody '[JSON] SmsServiceConfigUpdateReq
-    :> Post '[JSON] APISuccess
+-- type SmsServiceConfigUpdateAPI =
+--   "serviceConfig"
+--     :> "sms"
+--     :> "update"
+--     :> ReqBody '[JSON] SmsServiceConfigUpdateReq
+--     :> Post '[JSON] APISuccess
 
 data SmsServiceConfigUpdateReq
   = MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq
@@ -438,12 +461,12 @@ instance HideSecrets ExotelSmsCfgUpdateReq where
 ---------------------------------------------------------
 -- merchant verification service config update ----------
 
-type VerificationServiceConfigUpdateAPI =
-  "serviceConfig"
-    :> "verification"
-    :> "update"
-    :> ReqBody '[JSON] VerificationServiceConfigUpdateReq
-    :> Post '[JSON] APISuccess
+-- type VerificationServiceConfigUpdateAPI =
+--   "serviceConfig"
+--     :> "verification"
+--     :> "update"
+--     :> ReqBody '[JSON] VerificationServiceConfigUpdateReq
+--     :> Post '[JSON] APISuccess
 
 newtype VerificationServiceConfigUpdateReq
   = IdfyConfigUpdateReq IdfyCfgUpdateReq
@@ -537,9 +560,9 @@ instance HideSecrets IdfyCfgUpdateReq where
 ---------------------------------------------------------
 -- merchant service usage config ------------------------
 
-type ServiceUsageConfigAPI =
-  "serviceUsageConfig"
-    :> Get '[JSON] ServiceUsageConfigRes
+-- type ServiceUsageConfigAPI =
+--   "serviceUsageConfig"
+--     :> Get '[JSON] ServiceUsageConfigRes
 
 -- Fields with one possible value (verificationService, initiateCall, whatsappProvidersPriorityList) not included here
 data ServiceUsageConfigRes = ServiceUsageConfigRes
@@ -563,12 +586,12 @@ data ServiceUsageConfigRes = ServiceUsageConfigRes
 ---------------------------------------------------------
 -- merchant maps service config usage update ------------
 
-type MapsServiceUsageConfigUpdateAPI =
-  "serviceUsageConfig"
-    :> "maps"
-    :> "update"
-    :> ReqBody '[JSON] MapsServiceUsageConfigUpdateReq
-    :> Post '[JSON] APISuccess
+-- type MapsServiceUsageConfigUpdateAPI =
+--   "serviceUsageConfig"
+--     :> "maps"
+--     :> "update"
+--     :> ReqBody '[JSON] MapsServiceUsageConfigUpdateReq
+--     :> Post '[JSON] APISuccess
 
 data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
   { getDistances :: Maybe Maps.MapsService,
@@ -604,12 +627,12 @@ validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} = d
 ---------------------------------------------------------
 -- merchant sms service config usage update -------------
 
-type SmsServiceUsageConfigUpdateAPI =
-  "serviceUsageConfig"
-    :> "sms"
-    :> "update"
-    :> ReqBody '[JSON] SmsServiceUsageConfigUpdateReq
-    :> Post '[JSON] APISuccess
+-- type SmsServiceUsageConfigUpdateAPI =
+--   "serviceUsageConfig"
+--     :> "sms"
+--     :> "update"
+--     :> ReqBody '[JSON] SmsServiceUsageConfigUpdateReq
+--     :> Post '[JSON] APISuccess
 
 newtype SmsServiceUsageConfigUpdateReq = SmsServiceUsageConfigUpdateReq
   { smsProvidersPriorityList :: [SMS.SmsService]
@@ -630,12 +653,12 @@ validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
 
 ---- CreateMerchantOperatingCity ------------------------
 
-type CreateMerchantOperatingCityAPI =
-  "config"
-    :> "operatingCity"
-    :> "create"
-    :> MultipartForm Tmp CreateMerchantOperatingCityReq
-    :> Post '[JSON] CreateMerchantOperatingCityRes
+-- type CreateMerchantOperatingCityAPI =
+--   "config"
+--     :> "operatingCity"
+--     :> "create"
+--     :> MultipartForm Tmp CreateMerchantOperatingCityReq
+--     :> Post '[JSON] CreateMerchantOperatingCityRes
 
 data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
   { file :: FilePath,
@@ -690,12 +713,12 @@ newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type CreateMerchantOperatingCityAPIT =
-  "config"
-    :> "operatingCity"
-    :> "create"
-    :> ReqBody '[JSON] CreateMerchantOperatingCityReqT
-    :> Post '[JSON] CreateMerchantOperatingCityRes
+-- type CreateMerchantOperatingCityAPIT =
+--   "config"
+--     :> "operatingCity"
+--     :> "create"
+--     :> ReqBody '[JSON] CreateMerchantOperatingCityReqT
+--     :> Post '[JSON] CreateMerchantOperatingCityRes
 
 data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
   { geom :: Text,
@@ -720,12 +743,12 @@ instance HideSecrets CreateMerchantOperatingCityReq where
 
 ---- UpsertSpecialLocation ---------------------------------------
 
-type UpsertSpecialLocationAPI =
-  "specialLocation"
-    :> QueryParam "specialLocationId" (Id SpecialLocation)
-    :> "upsert"
-    :> MultipartForm Tmp UpsertSpecialLocationReq
-    :> Post '[JSON] APISuccess
+-- type UpsertSpecialLocationAPI =
+--   "specialLocation"
+--     :> QueryParam "specialLocationId" (Id SpecialLocation)
+--     :> "upsert"
+--     :> MultipartForm Tmp UpsertSpecialLocationReq
+--     :> Post '[JSON] APISuccess
 
 data UpsertSpecialLocationReq = UpsertSpecialLocationReq
   { file :: Maybe FilePath,
@@ -759,12 +782,12 @@ getFileAndFileType ethFile =
       (Just payload, Just fileCType)
     Left _err -> (Nothing, Nothing)
 
-type UpsertSpecialLocationAPIT =
-  "specialLocation"
-    :> QueryParam "specialLocationId" (Id SpecialLocation)
-    :> "upsert"
-    :> ReqBody '[JSON] UpsertSpecialLocationReqT
-    :> Post '[JSON] APISuccess
+-- type UpsertSpecialLocationAPIT =
+--   "specialLocation"
+--     :> QueryParam "specialLocationId" (Id SpecialLocation)
+--     :> "upsert"
+--     :> ReqBody '[JSON] UpsertSpecialLocationReqT
+--     :> Post '[JSON] APISuccess
 
 data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
   { locationName :: Maybe Text,
@@ -777,21 +800,21 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
 
 ---- DeleteSpecialLocation ----------------------------------
 
-type DeleteSpecialLocationAPI =
-  "specialLocation"
-    :> Capture "specialLocationId" (Id SpecialLocation)
-    :> "delete"
-    :> Delete '[JSON] APISuccess
+-- type DeleteSpecialLocationAPI =
+--   "specialLocation"
+--     :> Capture "specialLocationId" (Id SpecialLocation)
+--     :> "delete"
+--     :> Delete '[JSON] APISuccess
 
 ------- UpsertSpecialLocationGates ---------------------------------------
 
-type UpsertSpecialLocationGateAPI =
-  "specialLocation"
-    :> Capture "specialLocationId" (Id SpecialLocation)
-    :> "gates"
-    :> "upsert"
-    :> MultipartForm Tmp UpsertSpecialLocationGateReq
-    :> Post '[JSON] APISuccess
+-- type UpsertSpecialLocationGateAPI =
+--   "specialLocation"
+--     :> Capture "specialLocationId" (Id SpecialLocation)
+--     :> "gates"
+--     :> "upsert"
+--     :> MultipartForm Tmp UpsertSpecialLocationGateReq
+--     :> Post '[JSON] APISuccess
 
 data UpsertSpecialLocationGateReq = UpsertSpecialLocationGateReq
   { file :: Maybe FilePath,
@@ -822,13 +845,13 @@ instance FromMultipart Tmp UpsertSpecialLocationGateReq where
 instance HideSecrets UpsertSpecialLocationGateReq where
   hideSecrets = identity
 
-type UpsertSpecialLocationGateAPIT =
-  "specialLocation"
-    :> Capture "specialLocationId" (Id SpecialLocation)
-    :> "gates"
-    :> "upsert"
-    :> ReqBody '[JSON] UpsertSpecialLocationGateReqT
-    :> Post '[JSON] APISuccess
+-- type UpsertSpecialLocationGateAPIT =
+--   "specialLocation"
+--     :> Capture "specialLocationId" (Id SpecialLocation)
+--     :> "gates"
+--     :> "upsert"
+--     :> ReqBody '[JSON] UpsertSpecialLocationGateReqT
+--     :> Post '[JSON] APISuccess
 
 data UpsertSpecialLocationGateReqT = UpsertSpecialLocationGateReqT
   { name :: Text,
@@ -851,3 +874,124 @@ type DeleteSpecialLocationGateAPI =
     :> "delete"
     :> Capture "gateName" Text
     :> Delete '[JSON] APISuccess
+
+-- Moved here types, that can't be generated using DSL for now
+
+-- type DriverPoolConfigRes = [DriverPoolConfigItem]
+
+-- data DriverPoolConfigItem = DriverPoolConfigItem
+--   { minRadiusOfSearch :: Meters,
+--     maxRadiusOfSearch :: Meters,
+--     radiusStepSize :: Meters,
+--     minRadiusOfSearchWithUnit :: Distance,
+--     maxRadiusOfSearchWithUnit :: Distance,
+--     radiusStepSizeWithUnit :: Distance,
+--     driverPositionInfoExpiry :: Maybe Seconds,
+--     actualDistanceThreshold :: Maybe Meters,
+--     actualDistanceThresholdOnRide :: Maybe Meters,
+--     actualDistanceThresholdWithUnit :: Maybe Distance,
+--     actualDistanceThresholdOnRideWithUnit :: Maybe Distance,
+--     maxDriverQuotesRequired :: Int,
+--     driverQuoteLimit :: Int,
+--     driverRequestCountLimit :: Int,
+--     driverBatchSize :: Int,
+--     maxNumberOfBatches :: Int,
+--     maxParallelSearchRequests :: Int,
+--     maxParallelSearchRequestsOnRide :: Int,
+--     poolSortingType :: PoolSortingType,
+--     singleBatchProcessTime :: Seconds,
+--     tripDistance :: Meters,
+--     radiusShrinkValueForDriversOnRide :: Meters,
+--     driverToDestinationDistanceThreshold :: Meters,
+--     tripDistanceWithUnit :: Distance,
+--     radiusShrinkValueForDriversOnRideWithUnit :: Distance,
+--     driverToDestinationDistanceThresholdWithUnit :: Distance,
+--     driverToDestinationDuration :: Seconds,
+--     createdAt :: UTCTime,
+--     updatedAt :: UTCTime
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- data PoolSortingType = Intelligent | Random
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- type DocumentVerificationConfigRes = [DocumentVerificationConfigItem]
+
+-- data DocumentVerificationConfigItem = DocumentVerificationConfigItem
+--   { documentType :: DocumentType,
+--     checkExtraction :: Bool,
+--     checkExpiry :: Bool,
+--     supportedVehicleClasses :: SupportedVehicleClasses,
+--     vehicleClassCheckType :: VehicleClassCheckType,
+--     rcNumberPrefixList :: Maybe [Text],
+--     maxRetryCount :: Int,
+--     createdAt :: UTCTime,
+--     updatedAt :: UTCTime
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SupportedVehicleClasses = DLValidClasses [Text] | RCValidClasses [VehicleClassVariantMap]
+  deriving stock (Generic, Show)
+
+instance ToJSON SupportedVehicleClasses where
+  toJSON = genericToJSON supportedVCOptions
+
+instance FromJSON SupportedVehicleClasses where
+  parseJSON = genericParseJSON supportedVCOptions
+
+instance ToSchema SupportedVehicleClasses where
+  declareNamedSchema = genericDeclareNamedSchema supportedVCSchemaOptions
+
+supportedVCOptions :: Options
+supportedVCOptions =
+  defaultOptions
+    { sumEncoding = supportedVCTaggedObject,
+      constructorTagModifier = supportedVCModifier
+    }
+
+supportedVCSchemaOptions :: SchemaOptions
+supportedVCSchemaOptions =
+  defaultSchemaOptions
+    { sumEncoding = supportedVCTaggedObject,
+      constructorTagModifier = supportedVCModifier
+    }
+
+supportedVCTaggedObject :: SumEncoding
+supportedVCTaggedObject =
+  TaggedObject
+    { tagFieldName = "documentType",
+      contentsFieldName = "vehicleClasses"
+    }
+
+supportedVCModifier :: String -> String
+supportedVCModifier = \case
+  "DL" -> "DLValidClasses"
+  "RC" -> "RCValidClasses"
+  x -> x
+
+data VehicleClassVariantMap = VehicleClassVariantMap
+  { vehicleClass :: Text,
+    vehicleCapacity :: Maybe Int,
+    vehicleVariant :: Variant,
+    manufacturer :: Maybe Text,
+    manufacturerModel :: Maybe Text,
+    reviewRequired :: Maybe Bool,
+    vehicleModel :: Text,
+    bodyType :: Maybe Text,
+    priority :: Maybe Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- data VehicleClassCheckType = Infix | Prefix | Suffix
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- data DocumentType = RC | DL
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+-- $(mkHttpInstancesForEnum ''DocumentType)

@@ -14,36 +14,63 @@
 
 module Domain.Action.Dashboard.Merchant
   ( postMerchantServiceConfigMapsUpdate,
-    mapsServiceUsageConfigUpdate,
-    merchantCommonConfig,
-    merchantCommonConfigUpdate,
-    driverPoolConfig,
-    driverPoolConfigUpdate,
-    driverPoolConfigCreate,
-    driverIntelligentPoolConfig,
-    driverIntelligentPoolConfigUpdate,
-    documentVerificationConfig,
-    documentVerificationConfigUpdate,
-    documentVerificationConfigCreate,
+    -- mapsServiceUsageConfigUpdate,
+    postMerchantServiceUsageConfigMapsUpdate,
+    -- merchantCommonConfig,
+    -- merchantCommonConfigUpdate,
+    -- driverPoolConfig,
+    -- driverPoolConfigUpdate,
+    -- driverPoolConfigCreate,
+    -- driverIntelligentPoolConfig,
+    -- driverIntelligentPoolConfigUpdate,
+    -- documentVerificationConfig,
+    -- documentVerificationConfigUpdate,
+    -- documentVerificationConfigCreate,
     postMerchantUpdate,
-    serviceUsageConfig,
-    smsServiceConfigUpdate,
-    smsServiceUsageConfigUpdate,
-    verificationServiceConfigUpdate,
-    createFPDriverExtraFee,
-    updateFPDriverExtraFee,
-    updateFPPerExtraKmRate,
-    updateFarePolicy,
-    upsertFarePolicy,
-    createMerchantOperatingCity,
-    schedulerTrigger,
-    updateOnboardingVehicleVariantMapping,
-    upsertSpecialLocationGate,
-    deleteSpecialLocationGate,
-    upsertSpecialLocation,
-    deleteSpecialLocation,
+    -- serviceUsageConfig,
+    getMerchantServiceUsageConfig,
+    -- smsServiceConfigUpdate,
+    postMerchantServiceConfigSmsUpdate,
+    -- smsServiceUsageConfigUpdate,
+    postMerchantServiceUsageConfigSmsUpdate,
+    -- verificationServiceConfigUpdate,
+    postMerchantServiceConfigVerificationUpdate,
+    -- createFPDriverExtraFee,
+    -- updateFPDriverExtraFee,
+    -- updateFPPerExtraKmRate,
+    -- updateFarePolicy,
+    -- upsertFarePolicy,
+    postMerchantConfigFarePolicyUpsert,
+    -- createMerchantOperatingCity,
+    postMerchantConfigOperatingCityCreate,
+    -- schedulerTrigger,
+    -- updateOnboardingVehicleVariantMapping,
+    postMerchantUpdateOnboardingVehicleVariantMapping,
+    -- upsertSpecialLocationGate,
+    -- deleteSpecialLocationGate,
+    -- upsertSpecialLocation,
+    -- deleteSpecialLocation,
+    postMerchantSpecialLocationUpsert,
+    deleteMerchantSpecialLocationDelete,
+    postMerchantSpecialLocationGatesUpsert,
+    deleteMerchantSpecialLocationGatesDelete,
     castCategory,
     castDVehicleVariant,
+    getMerchantConfigCommon,
+    postMerchantConfigCommonUpdate,
+    getMerchantConfigDriverPool,
+    postMerchantConfigDriverPoolUpdate,
+    postMerchantConfigDriverPoolCreate,
+    getMerchantConfigDriverIntelligentPool,
+    postMerchantConfigDriverIntelligentPoolUpdate,
+    getMerchantConfigOnboardingDocument,
+    postMerchantConfigOnboardingDocumentUpdate,
+    postMerchantConfigOnboardingDocumentCreate,
+    postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate,
+    postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate,
+    postMerchantConfigFarePolicyPerExtraKmRateUpdate,
+    postMerchantConfigFarePolicyUpdate,
+    postMerchantSchedulerTrigger,
   )
 where
 
@@ -213,8 +240,8 @@ castMerchantStatus = \case
   DM.REJECTED -> Common.REJECTED
 
 ---------------------------------------------------------------------
-merchantCommonConfig :: ShortId DM.Merchant -> Context.City -> Flow Common.MerchantCommonConfigRes
-merchantCommonConfig merchantShortId opCity = do
+getMerchantConfigCommon :: ShortId DM.Merchant -> Context.City -> Flow Common.MerchantCommonConfigRes
+getMerchantConfigCommon merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -244,8 +271,8 @@ mkOptionalDistanceField oldField reqFieldWithUnit reqField =
     ((distanceToMeters <$>) . (.value) <$> reqFieldWithUnit)
       <|> ((.value) <$> reqField)
 
-merchantCommonConfigUpdate :: ShortId DM.Merchant -> Context.City -> Common.MerchantCommonConfigUpdateReq -> Flow APISuccess
-merchantCommonConfigUpdate merchantShortId opCity req = do
+postMerchantConfigCommonUpdate :: ShortId DM.Merchant -> Context.City -> Common.MerchantCommonConfigUpdateReq -> Flow APISuccess
+postMerchantConfigCommonUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -285,11 +312,11 @@ merchantCommonConfigUpdate merchantShortId opCity req = do
               }
   _ <- CQTC.update updConfig
   CQTC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantConfigCommonUpdate : " (show merchant.id)
   pure Success
 
-schedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
-schedulerTrigger merchantShortId _ req = do
+postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
+postMerchantSchedulerTrigger merchantShortId _ req = do
   void $ findMerchantByShortId merchantShortId
   now <- getCurrentTime
   maxShards <- asks (.maxShards)
@@ -335,12 +362,12 @@ schedulerTrigger merchantShortId _ req = do
         _ -> throwError $ InternalError "invalid job name"
 
 ---------------------------------------------------------------------
-driverPoolConfig :: ShortId DM.Merchant -> Context.City -> Maybe Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Flow Common.DriverPoolConfigRes
-driverPoolConfig merchantShortId opCity reqTripDistance reqTripDistance_ reqDistanceUnit = do
+getMerchantConfigDriverPool :: ShortId DM.Merchant -> Context.City -> Maybe DistanceUnit -> Maybe Meters -> Maybe HighPrecDistance -> Flow Common.DriverPoolConfigRes
+getMerchantConfigDriverPool merchantShortId opCity reqDistanceUnit reqTripDistance reqTripDistanceValue = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let mbTripDistance =
-        distanceToMeters <$> (Distance <$> reqTripDistance_ <*> reqDistanceUnit)
+        distanceToMeters <$> (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
           <|> reqTripDistance
   configs <- case mbTripDistance of
     Nothing -> CQDPC.findAllByMerchantOpCityId merchantOpCityId
@@ -368,22 +395,22 @@ castDPoolSortingType = \case
   DriverPool.Random -> Common.Random
 
 ---------------------------------------------------------------------
-driverPoolConfigUpdate ::
+postMerchantConfigDriverPoolUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
-  Meters ->
-  Maybe HighPrecDistance ->
   Maybe DistanceUnit ->
-  SL.Area ->
-  Maybe Common.Variant ->
   Maybe Text ->
+  Maybe HighPrecDistance ->
+  Maybe Common.Variant ->
+  SL.Area ->
+  Meters ->
   Common.DriverPoolConfigUpdateReq ->
   Flow APISuccess
-driverPoolConfigUpdate merchantShortId opCity reqTripDistance reqTripDistance_ reqDistanceUnit area mbVariant mbTripCategory req = do
+postMerchantConfigDriverPoolUpdate merchantShortId opCity reqDistanceUnit mbTripCategory reqTripDistanceValue mbVariant area reqTripDistance req = do
   runRequestValidation Common.validateDriverPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistance_ <*> reqDistanceUnit)
+  let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
   let tripCategory = fromMaybe "All" mbTripCategory
   let serviceTier = DriverPool.castVariantToServiceTier <$> (castVehicleVariant <$> mbVariant)
   config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
@@ -407,7 +434,7 @@ driverPoolConfigUpdate merchantShortId opCity reqTripDistance reqTripDistance_ r
               }
   _ <- CQDPC.update updConfig
   CQDPC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> driverPoolConfigUpdate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
+  logTagInfo "dashboard -> postMerchantConfigDriverPoolUpdate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
   pure Success
 
 castPoolSortingType :: Common.PoolSortingType -> DriverPool.PoolSortingType
@@ -425,23 +452,23 @@ castOnRideRadiusConfig :: Common.OnRideRadiusConfig -> DriverPool.OnRideRadiusCo
 castOnRideRadiusConfig Common.OnRideRadiusConfig {..} = DriverPool.OnRideRadiusConfig {onRideRadius = maybe onRideRadius distanceToMeters onRideRadiusWithUnit, ..}
 
 ---------------------------------------------------------------------
-driverPoolConfigCreate ::
+postMerchantConfigDriverPoolCreate ::
   ShortId DM.Merchant ->
   Context.City ->
-  Meters ->
-  Maybe HighPrecDistance ->
   Maybe DistanceUnit ->
-  SL.Area ->
-  Maybe Common.Variant ->
   Maybe Text ->
+  Maybe HighPrecDistance ->
+  Maybe Common.Variant ->
+  SL.Area ->
+  Meters ->
   Common.DriverPoolConfigCreateReq ->
   Flow APISuccess
-driverPoolConfigCreate merchantShortId opCity reqTripDistance reqTripDistance_ reqDistanceUnit area mbVariant mbTripCategory req = do
+postMerchantConfigDriverPoolCreate merchantShortId opCity reqDistanceUnit mbTripCategory reqTripDistanceValue mbVariant area reqTripDistance req = do
   runRequestValidation Common.validateDriverPoolConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
   let (distanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
-  let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistance_ <*> reqDistanceUnit)
+  let tripDistance = maybe reqTripDistance distanceToMeters (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
   let tripCategory = fromMaybe "All" mbTripCategory
   let serviceTier = DriverPool.castVariantToServiceTier <$> (castVehicleVariant <$> mbVariant)
   mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndAreaAndDVeh merchantOpCityId tripDistance serviceTier tripCategory area
@@ -450,7 +477,7 @@ driverPoolConfigCreate merchantShortId opCity reqTripDistance reqTripDistance_ r
   _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> driverPoolConfigCreate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
+  logTagInfo "dashboard -> postMerchantConfigDriverPoolCreate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
   pure Success
 
 buildDriverPoolConfig ::
@@ -492,8 +519,8 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area
       }
 
 ---------------------------------------------------------------------
-driverIntelligentPoolConfig :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverIntelligentPoolConfigRes
-driverIntelligentPoolConfig merchantShortId opCity = do
+getMerchantConfigDriverIntelligentPool :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverIntelligentPoolConfigRes
+getMerchantConfigDriverIntelligentPool merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   config <- CDIPC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
@@ -503,12 +530,12 @@ mkDriverIntelligentPoolConfigRes :: DDIPC.DriverIntelligentPoolConfig -> Common.
 mkDriverIntelligentPoolConfigRes DDIPC.DriverIntelligentPoolConfig {..} = Common.DriverIntelligentPoolConfigRes {..}
 
 ---------------------------------------------------------------------
-driverIntelligentPoolConfigUpdate ::
+postMerchantConfigDriverIntelligentPoolUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.DriverIntelligentPoolConfigUpdateReq ->
   Flow APISuccess
-driverIntelligentPoolConfigUpdate merchantShortId opCity req = do
+postMerchantConfigDriverIntelligentPoolUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateDriverIntelligentPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -531,12 +558,12 @@ driverIntelligentPoolConfigUpdate merchantShortId opCity req = do
               }
   _ <- CQDIPC.update updConfig
   CQDIPC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> driverIntelligentPoolConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantConfigDriverIntelligentPoolUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------
-documentVerificationConfig :: ShortId DM.Merchant -> Context.City -> Maybe Common.DocumentType -> Maybe Common.Category -> Flow Common.DocumentVerificationConfigRes
-documentVerificationConfig merchantShortId opCity mbReqDocumentType mbCategory = do
+getMerchantConfigOnboardingDocument :: ShortId DM.Merchant -> Context.City -> Maybe Common.DocumentType -> Maybe Common.Category -> Flow Common.DocumentVerificationConfigRes
+getMerchantConfigOnboardingDocument merchantShortId opCity mbReqDocumentType mbCategory = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   configs <- case (mbReqDocumentType, mbCategory) of
@@ -602,14 +629,14 @@ castDDocumentType = \case
   _ -> Common.RC -- fix later
 
 ---------------------------------------------------------------------
-documentVerificationConfigUpdate ::
+postMerchantConfigOnboardingDocumentUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
-  Common.DocumentType ->
   Common.Category ->
+  Common.DocumentType ->
   Common.DocumentVerificationConfigUpdateReq ->
   Flow APISuccess
-documentVerificationConfigUpdate merchantShortId opCity reqDocumentType reqCategory req = do
+postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqCategory reqDocumentType req = do
   -- runRequestValidation Common.validateDocumentVerificationConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
@@ -626,7 +653,7 @@ documentVerificationConfigUpdate merchantShortId opCity reqDocumentType reqCateg
               }
   _ <- CQDVC.update updConfig
   CQDVC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> documentVerificationConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
+  logTagInfo "dashboard -> postMerchantConfigOnboardingDocumentUpdate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 
 castSupportedVehicleClasses :: Common.SupportedVehicleClasses -> DVC.SupportedVehicleClasses
@@ -683,14 +710,14 @@ castCategory = \case
   Common.AMBULANCE -> DVeh.AMBULANCE
 
 ---------------------------------------------------------------------
-documentVerificationConfigCreate ::
+postMerchantConfigOnboardingDocumentCreate ::
   ShortId DM.Merchant ->
   Context.City ->
-  Common.DocumentType ->
   Common.Category ->
+  Common.DocumentType ->
   Common.DocumentVerificationConfigCreateReq ->
   Flow APISuccess
-documentVerificationConfigCreate merchantShortId opCity reqDocumentType reqCategory req = do
+postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqCategory reqDocumentType req = do
   -- runRequestValidation Common.validateDocumentVerificationConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -702,7 +729,7 @@ documentVerificationConfigCreate merchantShortId opCity reqDocumentType reqCateg
   _ <- CQDVC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDVC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> documentVerificationConfigCreate : " $ show merchant.id <> "documentType : " <> show documentType
+  logTagInfo "dashboard -> postMerchantConfigOnboardingDocumentCreate : " $ show merchant.id <> "documentType : " <> show documentType
   pure Success
 
 buildDocumentVerificationConfig ::
@@ -756,12 +783,12 @@ postMerchantServiceConfigMapsUpdate merchantShortId city req = do
   pure Success
 
 ---------------------------------------------------------------------
-smsServiceConfigUpdate ::
+postMerchantServiceConfigSmsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
-smsServiceConfigUpdate merchantShortId city req = do
+postMerchantServiceConfigSmsUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
@@ -769,15 +796,15 @@ smsServiceConfigUpdate merchantShortId city req = do
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
   CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
   CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
-  logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantServiceConfigSmsUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------
-serviceUsageConfig ::
+getMerchantServiceUsageConfig ::
   ShortId DM.Merchant ->
   Context.City ->
   Flow Common.ServiceUsageConfigRes
-serviceUsageConfig merchantShortId opCity = do
+getMerchantServiceUsageConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   config <- CQMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
@@ -793,12 +820,12 @@ mkServiceUsageConfigRes DMSUC.MerchantServiceUsageConfig {..} =
     }
 
 ---------------------------------------------------------------------
-mapsServiceUsageConfigUpdate ::
+postMerchantServiceUsageConfigMapsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.MapsServiceUsageConfigUpdateReq ->
   Flow APISuccess
-mapsServiceUsageConfigUpdate merchantShortId opCity req = do
+postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -827,12 +854,12 @@ mapsServiceUsageConfigUpdate merchantShortId opCity req = do
   pure Success
 
 ---------------------------------------------------------------------
-smsServiceUsageConfigUpdate ::
+postMerchantServiceUsageConfigSmsUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.SmsServiceUsageConfigUpdateReq ->
   Flow APISuccess
-smsServiceUsageConfigUpdate merchantShortId opCity req = do
+postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -850,16 +877,16 @@ smsServiceUsageConfigUpdate merchantShortId opCity req = do
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOpCityId
-  logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantServiceUsageConfigSmsUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------
-verificationServiceConfigUpdate ::
+postMerchantServiceConfigVerificationUpdate ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.VerificationServiceConfigUpdateReq ->
   Flow APISuccess
-verificationServiceConfigUpdate merchantShortId city req = do
+postMerchantServiceConfigVerificationUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.VerificationService $ Common.getVerificationServiceFromReq req
@@ -867,16 +894,16 @@ verificationServiceConfigUpdate merchantShortId city req = do
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
   _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
   CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
-  logTagInfo "dashboard -> verificationServiceConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> postMerchantServiceConfigVerificationUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------
-
-createFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
-createFPDriverExtraFee merchantShortId city farePolicyId reqStartDistance reqStartDistance_ reqDistanceUnit req = do
+postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Maybe DistanceUnit -> Maybe HighPrecDistance -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
+postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate merchantShortId city reqFarePolicyId reqDistanceUnit reqStartDistanceValue reqStartDistance req = do
+  let farePolicyId = cast reqFarePolicyId
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
-  let startDistance = maybe reqStartDistance distanceToMeters (Distance <$> reqStartDistance_ <*> reqDistanceUnit)
+  let startDistance = maybe reqStartDistance distanceToMeters (Distance <$> reqStartDistanceValue <*> reqDistanceUnit)
   SMerchant.checkCurrencies merchantOperatingCity.currency [req.minFeeWithCurrency, req.maxFeeWithCurrency, req.stepFeeWithCurrency, req.defaultStepFeeWithCurrency]
   mbFarePolicy <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance
   whenJust mbFarePolicy $ \_ -> throwError $ InvalidRequest "Fare policy with the same id and startDistance already exists"
@@ -898,11 +925,12 @@ createFPDriverExtraFee merchantShortId city farePolicyId reqStartDistance reqSta
       return (fpId, driverExtraFeeBounds)
 
 ---------------------------------------------------------------------
-updateFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
-updateFPDriverExtraFee merchantShortId city farePolicyId reqStartDistance reqStartDistance_ reqDistanceUnit req = do
+postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Maybe DistanceUnit -> Maybe HighPrecDistance -> Meters -> Common.CreateFPDriverExtraFeeReq -> Flow APISuccess
+postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate merchantShortId city reqFarePolicyId reqDistanceUnit reqStartDistanceValue reqStartDistance req = do
+  let farePolicyId = cast reqFarePolicyId
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
-  let startDistance = maybe reqStartDistance distanceToMeters (Distance <$> reqStartDistance_ <*> reqDistanceUnit)
+  let startDistance = maybe reqStartDistance distanceToMeters (Distance <$> reqStartDistanceValue <*> reqDistanceUnit)
   SMerchant.checkCurrencies merchantOperatingCity.currency [req.minFeeWithCurrency, req.maxFeeWithCurrency, req.stepFeeWithCurrency, req.defaultStepFeeWithCurrency]
   let reqMinFee = fromMaybe (toHighPrecMoney req.minFee) $ req.minFeeWithCurrency <&> (.amount)
   let reqMaxFee = fromMaybe (toHighPrecMoney req.maxFee) $ req.maxFeeWithCurrency <&> (.amount)
@@ -911,8 +939,9 @@ updateFPDriverExtraFee merchantShortId city farePolicyId reqStartDistance reqSta
   CQFP.clearCacheById farePolicyId
   pure Success
 
-updateFPPerExtraKmRate :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
-updateFPPerExtraKmRate merchantShortId city farePolicyId startDistance req = do
+postMerchantConfigFarePolicyPerExtraKmRateUpdate :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
+postMerchantConfigFarePolicyPerExtraKmRateUpdate merchantShortId city reqFarePolicyId startDistance req = do
+  let farePolicyId = cast reqFarePolicyId
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCity <- CQMOC.getMerchantOpCity merchant (Just city)
   SMerchant.checkCurrencies merchantOperatingCity.currency [req.perExtraKmRateWithCurrency]
@@ -921,8 +950,9 @@ updateFPPerExtraKmRate merchantShortId city farePolicyId startDistance req = do
   CQFP.clearCacheById farePolicyId
   pure Success
 
-updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
-updateFarePolicy _ _ farePolicyId req = do
+postMerchantConfigFarePolicyUpdate :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
+postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
+  let farePolicyId = cast reqFarePolicyId
   farePolicy <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   SMerchant.checkCurrencies farePolicy.currency $
     [ req.serviceChargeWithCurrency,
@@ -939,7 +969,7 @@ updateFarePolicy _ _ farePolicyId req = do
   pure Success
   where
     mkUpdatedFarePolicy FarePolicy.FarePolicy {..} = do
-      fPDetails <- mkFarePolicyDetails farePolicyDetails
+      fPDetails <- mkFarePolicyDetails id farePolicyDetails
       pure $
         FarePolicy.FarePolicy
           { serviceCharge = (req.serviceChargeWithCurrency <&> (.amount)) <|> (toHighPrecMoney <$> req.serviceCharge) <|> serviceCharge,
@@ -954,7 +984,7 @@ updateFarePolicy _ _ farePolicyId req = do
             ..
           }
 
-    mkFarePolicyDetails fPDetails =
+    mkFarePolicyDetails farePolicyId fPDetails =
       case fPDetails of
         FarePolicy.ProgressiveDetails _ -> do
           (_, fPProgressiveDetails) <- QFPPD.findById' farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy Progressive Details not found")
@@ -1053,8 +1083,8 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "peak_timings"
       <*> r .: "peak_days"
 
-upsertFarePolicy :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
-upsertFarePolicy merchantShortId opCity req = do
+postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
+postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
@@ -1284,8 +1314,8 @@ upsertFarePolicy merchantShortId opCity req = do
       Map.insert key True mapObj
 
 ---------------------------------------------------------------------
-upsertSpecialLocation :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
-upsertSpecialLocation merchantShortId _city mbSpecialLocationId request = do
+postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
+postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId request = do
   existingSLWithGeom <- maybe (return Nothing) QSL.findByIdWithGeom mbSpecialLocationId
   let mbExistingSL = fst <$> existingSLWithGeom
       mbGeom = snd =<< existingSLWithGeom
@@ -1314,15 +1344,15 @@ upsertSpecialLocation merchantShortId _city mbSpecialLocationId request = do
             ..
           }
 
-deleteSpecialLocation :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Flow APISuccess
-deleteSpecialLocation _merchantShortid _city specialLocationId = do
+deleteMerchantSpecialLocationDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Flow APISuccess
+deleteMerchantSpecialLocationDelete _merchantShortid _city specialLocationId = do
   void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Special Location with given id not found")
   void $ runTransaction $ QSL.deleteById specialLocationId
   void $ runTransaction $ QGI.deleteAll specialLocationId
   pure Success
 
-upsertSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
-upsertSpecialLocationGate _merchantShortId _city specialLocationId request = do
+postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
+postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId request = do
   void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   createOrUpdateGate existingGates request
@@ -1358,8 +1388,8 @@ upsertSpecialLocationGate _merchantShortId _city specialLocationId request = do
             ..
           }
 
-deleteSpecialLocationGate :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> Flow APISuccess
-deleteSpecialLocationGate _merchantShortId _city specialLocationId gateName = do
+deleteMerchantSpecialLocationGatesDelete :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Text -> Flow APISuccess
+deleteMerchantSpecialLocationGatesDelete _merchantShortId _city specialLocationId gateName = do
   void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   let existingGate = fst <$> find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName gateName) existingGates
@@ -1371,8 +1401,8 @@ deleteSpecialLocationGate _merchantShortId _city specialLocationId gateName = do
 normalizeName :: Text -> Text
 normalizeName = T.strip . T.toLower
 
-createMerchantOperatingCity :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
-createMerchantOperatingCity merchantShortId city req = do
+postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigOperatingCityCreate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   baseOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
 
@@ -1682,8 +1712,8 @@ instance FromNamedRecord VehicleVariantMappingCSVRow where
       <*> r .: "vehicle_model"
       <*> r .: "priority"
 
-updateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
-updateOnboardingVehicleVariantMapping merchantShortId opCity req = do
+postMerchantUpdateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
+postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   logTagInfo "Updating onboarding vehicle variant mapping for merchant: " (show merchant.id <> " and city: " <> show opCity)

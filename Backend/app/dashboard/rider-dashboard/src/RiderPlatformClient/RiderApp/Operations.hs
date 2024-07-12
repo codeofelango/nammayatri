@@ -24,9 +24,9 @@ import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
 import qualified Dashboard.Common.Booking as Booking
-import qualified Dashboard.Common.Merchant as CMerchant
+-- import qualified Dashboard.Common.Merchant as CMerchant
 import qualified Dashboard.RiderPlatform.Customer as Customer
-import qualified Dashboard.RiderPlatform.Merchant as Merchant
+-- import qualified Dashboard.RiderPlatform.Merchant as Merchant
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time
@@ -53,7 +53,7 @@ import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common hiding (callAPI)
-import qualified Lib.Types.SpecialLocation as SL
+-- import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (route)
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
@@ -61,7 +61,7 @@ import Tools.Client
 data AppBackendAPIs = AppBackendAPIs
   { customers :: CustomerAPIs,
     bookings :: BookingsAPIs,
-    merchant :: MerchantAPIs,
+    -- merchant :: MerchantAPIs,
     rides :: RidesAPIs,
     issues :: ListIssueAPIs,
     issuesV2 :: IssueAPIs,
@@ -86,17 +86,17 @@ data BookingsAPIs = BookingsAPIs
     multipleBookingSync :: Booking.MultipleBookingSyncReq -> Euler.EulerClient Booking.MultipleBookingSyncResp
   }
 
-data MerchantAPIs = MerchantAPIs
-  { serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
-    mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
-    upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> CMerchant.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
-    deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
-    upsertSpecialLocationGate :: Id SL.SpecialLocation -> CMerchant.UpsertSpecialLocationGateReqT -> Euler.EulerClient APISuccess,
-    deleteSpecialLocationGate :: Id SL.SpecialLocation -> Text -> Euler.EulerClient APISuccess
-  }
+-- data MerchantAPIs = MerchantAPIs
+--   { -- serviceUsageConfig :: Euler.EulerClient Merchant.ServiceUsageConfigRes,
+--     -- mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+--     -- smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+--     -- smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+--     -- createMerchantOperatingCity :: Merchant.CreateMerchantOperatingCityReqT -> Euler.EulerClient Merchant.CreateMerchantOperatingCityRes,
+--     upsertSpecialLocation :: Maybe (Id SL.SpecialLocation) -> CMerchant.UpsertSpecialLocationReqT -> Euler.EulerClient APISuccess,
+--     deleteSpecialLocation :: Id SL.SpecialLocation -> Euler.EulerClient APISuccess,
+--     upsertSpecialLocationGate :: Id SL.SpecialLocation -> CMerchant.UpsertSpecialLocationGateReqT -> Euler.EulerClient APISuccess,
+--     deleteSpecialLocationGate :: Id SL.SpecialLocation -> Text -> Euler.EulerClient APISuccess
+--   }
 
 data RidesAPIs = RidesAPIs
   { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
@@ -148,7 +148,7 @@ mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBacken
 mkAppBackendAPIs merchantId city token = do
   let customers = CustomerAPIs {..}
   let bookings = BookingsAPIs {..}
-  let merchant = MerchantAPIs {..}
+  -- let merchant = MerchantAPIs {..}
   let rides = RidesAPIs {..}
   let issues = ListIssueAPIs {..}
   let issuesV2 = IssueAPIs {..}
@@ -160,7 +160,7 @@ mkAppBackendAPIs merchantId city token = do
   where
     customersClient
       :<|> bookingsClient
-      :<|> merchantClient
+      -- :<|> merchantClient
       :<|> ridesClient
       :<|> issueClient
       :<|> issueV2Client
@@ -191,15 +191,15 @@ mkAppBackendAPIs merchantId city token = do
       :<|> multipleRideSync
       :<|> ticketRideList = ridesClient
 
-    serviceUsageConfig
-      :<|> mapsServiceUsageConfigUpdate
-      :<|> smsServiceConfigUpdate
-      :<|> smsServiceUsageConfigUpdate
-      :<|> createMerchantOperatingCity
-      :<|> upsertSpecialLocation
-      :<|> deleteSpecialLocation
-      :<|> upsertSpecialLocationGate
-      :<|> deleteSpecialLocationGate = merchantClient
+    -- serviceUsageConfig
+    --   :<|> mapsServiceUsageConfigUpdate
+    --   :<|> smsServiceConfigUpdate
+    --   :<|> smsServiceUsageConfigUpdate
+    -- createMerchantOperatingCity
+    -- upsertSpecialLocation
+    --   :<|> deleteSpecialLocation
+    --   :<|> upsertSpecialLocationGate
+    --   :<|> deleteSpecialLocationGate = merchantClient
 
     listIssue
       :<|> ticketStatusCallBack = issueClient
