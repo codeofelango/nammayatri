@@ -3,7 +3,6 @@ module Screens.EarningsScreen.Weekly.Handler where
 import Prelude
 import PrestoDOM.Core.Types.Language.Flow
 import Screens.EarningsScreen.Weekly.View
-import Screens.EarningsScreen.ScreenData
 import Prelude
 import Screens.EarningsScreen.ScreenData
 import Types.App

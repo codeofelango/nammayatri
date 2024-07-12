@@ -32,6 +32,8 @@ type Props
     , selectedBarIndex :: Int
     , currentWeekMaxEarning :: Int
     , currWeekData :: Array WeeklyEarning
+    , fromDate:: String
+    , toDate:: String
     }
 
 initialState :: State
@@ -51,18 +53,20 @@ initialState =
       , selectedBarIndex: 0
       , currentWeekMaxEarning: 1500
       , currWeekData: dummyEarnings
+      , fromDate: ""
+      , toDate: ""
       }
   }
 
-type WeeklyEarning
-  = { earnings :: Int
-    , earningsWithCurrency :: Price
-    , rideDistance :: Int
-    , rideDistanceWithUnit :: Distance
-    , rideDate :: String
-    , noOfRides :: Int
-    , percentLength :: Number
-    }
+type WeeklyEarning = { 
+    earnings :: Int
+  , earningsWithCurrency :: Price
+  , rideDistance :: Int
+  , rideDistanceWithUnit :: Distance
+  , rideDate :: String
+  , noOfRides :: Int
+  , percentLength :: Number
+  }
 
 dummyEarnings =
   [ { earnings: 1500

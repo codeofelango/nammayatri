@@ -40,7 +40,14 @@ screen initialState =
   , view: view
   , name: "EarningsScreenV2"
   , globalEvents: [ (\push -> fetchRideSummary push initialState) ]
-  , eval
+  , eval:
+      ( \action state -> do
+          let
+            _ = spy "Daily DriverEarningsScreenStateV2 action" action
+          let
+            _ = spy "Daily DriverEarningsScreenStateV2 state" state
+          eval action state
+      )
   }
 
 fetchRideSummary :: (Action -> Effect Unit) -> State -> Effect (Effect Unit)
@@ -59,6 +66,7 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.white900
+    , onBackPressed push (const BackClick)
     ] $
     [ defaultLayout push state
     , rideDistanceInfoPopUp push state
