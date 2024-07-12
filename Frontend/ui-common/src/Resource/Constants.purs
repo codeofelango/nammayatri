@@ -19,3 +19,6 @@ policeNumber = "112"
 
 assetDomain :: String
 assetDomain = "assets.moving.tech"
+
+locateOnMapLabelMaxWidth :: Int
+locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
