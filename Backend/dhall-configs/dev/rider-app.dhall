@@ -178,13 +178,18 @@ let hccfg =
 let kvConfigUpdateFrequency = +10
 
 let RiderJobType =
-      < CheckPNAndSendSMS | ScheduledRideNotificationsToRider | OtherJobTypes >
+      < CheckPNAndSendSMS
+      | ScheduledRideNotificationsToRider
+      | CheckExotelStatusDoFallback
+      | OtherJobTypes
+      >
 
 let jobInfoMapx =
       [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
       , { mapKey = RiderJobType.ScheduledRideNotificationsToRider
         , mapValue = True
         }
+      , { mapKey = RiderJobType.CheckExotelStatusDoFallback, mapValue = True }
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
       ]
 
@@ -303,4 +308,5 @@ in  { esqDBCfg
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
+    , exotelStatusScheduler = +120
     }

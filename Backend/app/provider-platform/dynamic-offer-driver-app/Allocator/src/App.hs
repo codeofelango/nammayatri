@@ -49,6 +49,7 @@ import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (noti
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
+import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelDoFallback (checkExotelDoFallback)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
@@ -101,6 +102,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendDriverReferralPayoutJobData)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideAssignedOnUpdate)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelDoFallback)
     }
 
 runDriverOfferAllocator ::

@@ -45,3 +45,9 @@ countCallsByEntityId entityID = do
             B.filter_' (\(BeamCT.CallStatusT {..}) -> B.fromMaybe_ (B.val_ "") entityId B.==?. B.val_ (getId entityID)) $
               B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
   pure $ either (const 0) (maybe 0 snd) resp
+
+findOneByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe CallStatus)
+findOneByEntityId rideId = findAllWithOptionsKV [Se.Is BeamCT.entityId $ Se.Eq rideId] (Se.Desc BeamCT.createdAt) (Just 1) Nothing <&> listToMaybe
+
+findByCallFromHash :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DbHash -> m (Maybe CallStatus)
+findByCallFromHash callFromNumberHash = findAllWithOptionsKV [Se.Is BeamCT.callFromNumberHash $ Se.Eq callFromNumberHash] (Se.Desc BeamCT.createdAt) (Just 1) Nothing <&> listToMaybe

@@ -105,6 +105,7 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
     Maps.AutoCompleteReq
       { country = toInterfaceCountry merchantOperatingCity.country,
         radiusWithUnit = Just $ fromMaybe (convertMetersToDistance merchantOperatingCity.distanceUnit $ fromInteger radius) radiusWithUnit,
+        types_ = Nothing,
         ..
       }
   where

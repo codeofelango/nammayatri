@@ -140,7 +140,8 @@ data AppCfg = AppCfg
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
-    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    exotelStatusScheduler :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -221,7 +222,8 @@ data AppEnv = AppEnv
     ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
-    urlShortnerConfig :: UrlShortner.UrlShortnerConfig
+    urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    exotelStatusScheduler :: Seconds
   }
   deriving (Generic)
 

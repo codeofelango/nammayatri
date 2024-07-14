@@ -24,4 +24,6 @@ VALUES
 ( 'RIDE_START_IN_ONE_HOURS', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '1e7b7ab9-3b9b-4d3e-a47c-11e7d2a9ff98', '{#IsRentalOrIntercity#} Ride starts in 1 hrs.', 'Pickup at {#pickupAddress#}', 'ENGLISH', 'SCHEDULED_RIDE_NOTIFICATION'),
 ( 'SCHEDULED_RIDE_ASSIGNED', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '1e7b7ab9-3b9b-4d3e-a47c-11e7d2a9ff98', 'Ride Assinged', '{#IsRentalOrIntercity#} ride is now active', 'ENGLISH', 'SCHEDULED_RIDE_NOTIFICATION'),
 ( 'GO_ONLINE_REMINDER', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f','1e7b7ab9-3b9b-4d3e-a47c-11e7d2a9ff98', 'Please Go Online' , 'You have an assigned ride starting in 45 minutes.\n Please go Online on Namma Yatri driver partner app\n and start moving to the pickup location.', 'ENGLISH', 'SCHEDULED_RIDE_NOTIFICATION'),
-( 'TOLL_CROSSED', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '1e7b7ab9-3b9b-4d3e-a47c-11e7d2a9ff98', 'Toll Crossed !', 'Toll charges added to final fare', 'ENGLISH', 'TOLL_CROSSED');
+( 'TOLL_CROSSED', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '1e7b7ab9-3b9b-4d3e-a47c-11e7d2a9ff98', 'Toll Crossed !', 'Toll charges added to final fare', 'ENGLISH', 'TOLL_CROSSED'),
+('CALL_SERVICE_DOWN', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '1e7b7ab9-3b9b-4d3e-a47c-11e7d2a9ff98', 'Try Direct Calling', 'Please Use Direct Calling Option for Better Connectivity.', 'ENGLISH', 'CALL_SERVICE_DOWN'),
+('UNREGISTERD_NUMBER', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '1e7b7ab9-3b9b-4d3e-a47c-11e7d2a9ff98', 'Unregistered Number', 'Please Use Registered Number for Better Connectivity.', 'ENGLISH', 'UNREGISTERD_NUMBER');

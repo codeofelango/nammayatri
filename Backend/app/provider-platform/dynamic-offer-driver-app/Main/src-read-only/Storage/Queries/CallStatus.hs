@@ -24,37 +24,45 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m (Maybe Domain.Types.CallStatus.CallStatus))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateCallAttempt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+updateCallAttempt callAttempt entityId = do updateWithKV [Se.Set Beam.callAttempt callAttempt] [Se.Is Beam.entityId $ Se.Eq entityId]
+
 updateCallError ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
-updateCallError callError callService merchantId id = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateCallError callError callService merchantId callId = do
   updateWithKV
     [ Se.Set Beam.callError callError,
       Se.Set Beam.callService callService,
       Se.Set Beam.merchantId merchantId
     ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+    [Se.Is Beam.callId $ Se.Eq callId]
 
 updateCallStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Call.Interface.Types.CallStatus -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
-updateCallStatus conversationDuration recordingUrl status id = do
+  (Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.External.Call.Interface.Types.CallStatus -> Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
+updateCallStatus conversationDuration recordingUrl status callAttempt id = do
   updateWithKV
     [ Se.Set Beam.conversationDuration conversationDuration,
       Se.Set Beam.recordingUrl recordingUrl,
-      Se.Set Beam.status status
+      Se.Set Beam.status status,
+      Se.Set Beam.callAttempt callAttempt
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCallStatusWithRideId ::
+updateCallStatusSId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
+updateCallStatusSId callId id = do updateWithKV [Se.Set Beam.callId callId] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateCallStatusWithId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
-updateCallStatusWithRideId entityId dtmfNumberUsed merchantId callService id = do
+  (Kernel.External.Call.Interface.Types.CallStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus -> m ())
+updateCallStatusWithId status dtmfNumberUsed merchantId callService callId id = do
   updateWithKV
-    [ Se.Set Beam.entityId entityId,
+    [ Se.Set Beam.status status,
       Se.Set Beam.dtmfNumberUsed dtmfNumberUsed,
       Se.Set Beam.merchantId merchantId,
-      Se.Set Beam.callService callService
+      Se.Set Beam.callService callService,
+      Se.Set Beam.callId callId
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -64,7 +72,10 @@ findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Ty
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.CallStatus.CallStatus -> m ())
 updateByPrimaryKey (Domain.Types.CallStatus.CallStatus {..}) = do
   updateWithKV
-    [ Se.Set Beam.callError callError,
+    [ Se.Set Beam.callAttempt callAttempt,
+      Se.Set Beam.callError callError,
+      Se.Set Beam.callFromNumberEncrypted (callFromNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.callFromNumberHash (callFromNumber <&> (.hash)),
       Se.Set Beam.callId callId,
       Se.Set Beam.callService callService,
       Se.Set Beam.conversationDuration conversationDuration,
