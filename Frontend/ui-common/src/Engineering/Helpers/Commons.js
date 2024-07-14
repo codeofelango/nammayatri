@@ -265,21 +265,23 @@ function getFormattedLanguage(language){
   else return "en-us";
 }
 
-export const getPastDays = function (count) {
-  try {
-    const result = [];
-    const language = getLanguageLocale();
-    for (let i = 0; i < count; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const obj = { utcDate: d.toISOString(), date: d.getDate(), month: d.toLocaleString(getFormattedLanguage(language), { month: "short" }), year: d.getFullYear() };
-      result.push(obj);
+export const getPastDays = function (inputDate) {
+  return function (count) {
+    try {
+      const result = [];
+      const language = getLanguageLocale();
+      for (let i = 0; i < count; i++) {
+        const d = new Date(inputDate);
+        d.setDate(d.getDate() - i);
+        const obj = { utcDate: d.toISOString(), date: d.getDate(), month: d.toLocaleString(getFormattedLanguage(language), { month: "short" }), year: d.getFullYear() };
+        result.push(obj);
+      }
+      console.log(language, getFormattedLanguage(language))
+      console.log(result);
+      return result.reverse();
+    } catch (e) {
+      console.log("error in getPastDays", e);
     }
-    console.log(language, getFormattedLanguage(language))
-    console.log(result);
-    return result.reverse();
-  } catch (e) {
-    console.log("error in getPastDays", e);
   }
 };
 

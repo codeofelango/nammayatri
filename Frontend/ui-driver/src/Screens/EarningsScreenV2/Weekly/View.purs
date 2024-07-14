@@ -1,43 +1,77 @@
 module Screens.EarningsScreen.Weekly.View where
 
+import Animation as Anim
+import Animation.Config (Direction(..), animConfig)
 import Common.Types.App
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Data.Array
+import Data.FoldableWithIndex
+import Data.Int
 import Data.Maybe
+import Data.String as DS
+import Debug
 import Effect
-import Prelude
+import Effect.Aff (launchAff)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.Commons as EHC
+import Font.Style as FontStyle
+import Helpers.Utils
+import JBridge (getHeightFromPercent, getWidthFromPercent)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Locale.Utils
+import Mobility.Prelude
 import PrestoDOM hiding (tabLayout)
+import PrestoDOM.Events (globalOnScroll)
+import PrestoDOM.Types.DomAttributes (__IS_ANDROID)
+import PrestoDOM.Animation as PrestoAnim
+import Prelude
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.Types as ST
 import Screens.EarningsScreen.Weekly.Controller
 import Screens.EarningsScreen.ScreenData
 import Screens.EarningsScreen.Common.Types
 import Screens.EarningsScreen.Common.View
-import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Commons
-import Font.Style as FontStyle
-import Language.Strings (getString)
-import Language.Types (STR(..))
+import Services.API (GetRidesSummaryListResp(..))
+import Services.Backend as Remote
 import Styles.Colors as Color
-import Helpers.Utils
-import PrestoDOM.Types.DomAttributes (__IS_ANDROID)
-import Data.Array
-import Data.FoldableWithIndex
-import PrestoDOM.Animation as PrestoAnim
-import Animation as Anim
-import Mobility.Prelude
-import JBridge (getHeightFromPercent, getWidthFromPercent)
-import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types as ST
-import Locale.Utils
-import Data.Int
-import Data.String as DS
+import Types.App (defaultGlobalState, GlobalState(..))
 
 screen :: State -> Screen Action State ScreenOutput
 screen initialState =
   { initialState
   , view: view
   , name: "EarningsScreenV2"
-  , globalEvents: [ (\push -> pure $ pure unit) ]
-  , eval
+  , globalEvents: [ globalOnScroll "EarningsScreenV2"
+      , ( \push -> do
+            _ <-
+              launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+                $ do
+                      -- let datesList = if initialState.props.toDate == "" then getDatesListV2 (getcurrentdate "") else getPastDays initialState.props.toDate 7
+                      let datesList = spy "printing dates -> " (getDatesListV2 (getcurrentdate ""))
+                      (GetRidesSummaryListResp rideSummaryResp) <- Remote.getRideSummaryListReqBT datesList
+                      liftFlowBT $ push $ RideSummaryResponseAction rideSummaryResp.list (getcurrentdate "") datesList
+                      pure unit
+            pure $ pure unit
+        )
+      ]
+  , eval:
+      ( \action state -> do
+          let
+            _ = spy "Weekly DriverEarningsScreenStateV2 action" action
+          let
+            _ = spy "Weekly DriverEarningsScreenStateV2 state" state
+          eval action state
+      )
   }
+
+getDatesListV2 :: String -> Array String
+getDatesListV2 todaysDate = do
+  let dayOfWeek = getDayOfWeek (EHC.getDayName todaysDate) + 1
+  map (\obj -> EHC.convertUTCtoISC obj.utcDate "YYYY-MM-DD") $ getPastDays todaysDate dayOfWeek
+
 
 view :: forall w. (Action -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
@@ -368,7 +402,7 @@ barGraphView push state =
     currWeekMaxEarning = if state.props.currentWeekMaxEarning > 0 then state.props.currentWeekMaxEarning else 1500
   in
     relativeLayout
-      [ height $ V 170
+      [ height $ V 150
       , width MATCH_PARENT
       ]
       [ linearLayout
@@ -385,6 +419,7 @@ barGraphView push state =
               , height $ WRAP_CONTENT
               -- , background Color.grey900
               , orientation VERTICAL
+              , margin $ MarginTop 10
               ]
               [ linearLayout
                   [ height $ V 2
@@ -425,10 +460,10 @@ barGraphView push state =
                 , orientation HORIZONTAL
                 , gravity BOTTOM
                 ]
-                (mapWithIndex (\index item -> (barView push index item state (if item.noOfRides > 0 then VISIBLE else INVISIBLE))) state.props.currWeekData)
+                (mapWithIndex (\index item -> (barView push index item state)) state.props.currWeekData)
             , linearLayout
                 [ weight 1.0
-                , width MATCH_PARENT
+                , width WRAP_CONTENT
                 , gravity CENTER
                 ]
                 [ textView
@@ -452,21 +487,21 @@ dottedLineView push margintop earnings =
     ]
     [ imageView
         [ height $ V 2
+        , width MATCH_PARENT
+        , weight 1.0
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_dotted_line"
-        , weight 5.0
         ]
     , textView
         $ [ height $ WRAP_CONTENT
           , width $ WRAP_CONTENT
-          , weight 1.0
           , margin $ MarginLeft 4
           , text $ "$" <> (show earnings)
           ]
         <> FontStyle.paragraphText TypoGraphy
     ]
 
-barView :: forall w. (Action -> Effect Unit) -> Int -> WeeklyEarning -> State -> Visibility -> PrestoDOM (Effect Unit) w
-barView push index item state vis =
+barView :: forall w. (Action -> Effect Unit) -> Int -> WeeklyEarning -> State -> PrestoDOM (Effect Unit) w
+barView push index item state =
   let
     selectedIndex = state.props.selectedBarIndex
 
@@ -482,7 +517,6 @@ barView push index item state vis =
       , orientation VERTICAL
       , alignParentBottom "true,-1"
       , gravity BOTTOM
-      , visibility vis
       ]
       [ linearLayout
           [ height WRAP_CONTENT
@@ -490,9 +524,8 @@ barView push index item state vis =
           , orientation VERTICAL
           , gravity CENTER
           ]
-          [ PrestoAnim.animationSet
-              [ Anim.expandWithDuration 1000 true
-              ]
+          [ (if EHC.os == "IOS" then PrestoAnim.animationSet [Anim.expandWithDuration 1000 true]
+            else PrestoAnim.animationSet [ Anim.translateInYAnim $ animConfig { duration = 1000 + (ceil item.percentLength), fromY = 200 + (ceil item.percentLength) }])
               $ linearLayout
                   [ height $ V if item.percentLength > 0.0 then (ceil item.percentLength) else 1
                   , width $ V $ getWidthFromPercent 7
@@ -505,7 +538,7 @@ barView push index item state vis =
       , textView
           $ [ height $ WRAP_CONTENT
             , width $ MATCH_PARENT
-            , text $ item.rideDate
+            , text $ convertUTCtoISC item.rideDate "DD"
             , color Color.black700
             , gravity CENTER
             ]
@@ -513,7 +546,7 @@ barView push index item state vis =
       , textView
           $ [ height $ WRAP_CONTENT
             , width $ MATCH_PARENT
-            , text $ "MON"
+            , text $ (fromMaybe "" (getWeekDays !! index))
             , gravity CENTER
             , singleLine true
             , color Color.black700
