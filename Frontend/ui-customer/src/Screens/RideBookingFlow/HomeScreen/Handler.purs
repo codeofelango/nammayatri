@@ -120,9 +120,15 @@ homeScreen = do
     RefreshHomeScreen updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
         App.BackT $ App.NoBack <$> (pure $ REFRESH_HOME_SCREEN)
+    RestartTracking updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ TRACKING_RESTART)
     Retry updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
         App.BackT $ App.NoBack <$> (pure $ RETRY)
+    EditLocationScreenOutput updatedState -> do
+        modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+        App.BackT $ App.NoBack <$> (pure $ EDIT_LOCATION_FLOW updatedState)
     GoToHome state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
       App.BackT $ App.NoBack <$> (pure $ HOME_SCREEN)
@@ -192,6 +198,9 @@ homeScreen = do
     ExitToTicketing updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ EXIT_TO_TICKETING updatedState)
+    EditTheLocation updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ EDIT_THE_LOCATION updatedState)
     GoToHelpAndSupport updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_HELP_AND_SUPPORT)
