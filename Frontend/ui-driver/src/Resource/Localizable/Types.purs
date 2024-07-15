@@ -1372,7 +1372,7 @@ data STR = LETS_GET_STARTED
         | DOCUMENT_UPLOADED_SUCCESSFULLY
         | TOLL_CHARGES_INCLUDING String
         | TOLL_ROAD_CHANGED
-        | RIDE_TOLL_FARE_INCLUDES
+        | RIDE_TOLL_FARE_INCLUDES String
         | TOLL_INCLUDED
         | TRIP_TIME
         | EARNINGS_PER_KM
@@ -1442,7 +1442,7 @@ data STR = LETS_GET_STARTED
         | RATE_CARD
         | TOLL_CHARGES
         | TOLL_CHARGES_DESC
-        | PARKING_CHARGES
+        | PARKING_CHARGE
         | FARE_FOR String
         | WAITING_CHARGE_LIMIT String
         | PARKING_CHARGES_DESC
@@ -1479,3 +1479,5 @@ data STR = LETS_GET_STARTED
         | BIKE_TAXI
         | FIRST_RIDE_FREE String
         | FIRST_RIDES_FREE String
+        | PARKING_CHARGES_INCLUDED String
+        | INCLUDED
