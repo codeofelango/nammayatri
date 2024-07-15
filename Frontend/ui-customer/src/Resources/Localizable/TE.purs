@@ -1327,3 +1327,5 @@ getTE stringKey =
     KOZHIKODE -> "కోజికోడ్"
     THRISSUR -> "తృశూర్"
     TRIVANDRUM -> "తిరువనంతపురం"
+    CLEAN_BIKE -> "స్వచ్ఛంగా బైక్"
+    UNCOMFORTABLE_BIKE -> "ఆకస్మికమైన బైక్"

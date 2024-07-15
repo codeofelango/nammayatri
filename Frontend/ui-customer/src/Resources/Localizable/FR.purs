@@ -1314,3 +1314,5 @@ getFR stringKey =
         KOZHIKODE -> "Kozhikode"
         THRISSUR -> "Thrissur"
         TRIVANDRUM -> "Trivandrum"
+        CLEAN_BIKE -> "Vélo propre"
+        UNCOMFORTABLE_BIKE -> "Vélo inconfortable"

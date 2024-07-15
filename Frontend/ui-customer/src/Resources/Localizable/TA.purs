@@ -1330,3 +1330,5 @@ getTA stringKey =
     KOZHIKODE -> "கோழிக்கோடு"
     THRISSUR -> "திரிசூர்"
     TRIVANDRUM -> "திருவநந்தபுரம்"
+    CLEAN_BIKE -> "சுத்தமான பைக்"
+    UNCOMFORTABLE_BIKE -> "அமைதியற்ற பைக்"
