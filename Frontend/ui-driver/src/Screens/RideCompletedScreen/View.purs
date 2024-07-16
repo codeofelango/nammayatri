@@ -102,11 +102,13 @@ rideRateCardView push state =
       , width $ V 64
       , height $ V 64
       ]
-    , textView 
+    , textView  $
       [ text $ getString $ HOW_WAS_YOUR_RIDE_WITH_NAME state.props.endRideData.riderName
       , color Color.black800
+      , width MATCH_PARENT
+      , gravity CENTER_HORIZONTAL
       , margin $ MarginTop 20
-      ]
+      ] <> FontStyle.subHeading1 TypoGraphy
     , linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT

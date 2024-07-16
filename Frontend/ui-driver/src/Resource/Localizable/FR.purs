@@ -1037,7 +1037,7 @@ getFR stringKey =
         WE_WILL_DELETE_YOUR_ACCOUNT -> "Nous sommes désolés de vous voir quitter notre plateforme. Nous supprimerons votre compte dans les 30 prochains jours. Si vous souhaitez conserver votre compte, veuillez nous appeler au numéro de support."
         RIDE_COMPLETE -> "Trajet terminé"
         HOW_WAS_YOUR_RIDE_WITH_NAME name -> "Comment s'est passée ta balade avec " <> name <> " ?"
-        HAS_PAID_YOU name -> name <> "t'a payé"
+        HAS_PAID_YOU name -> name <> " t'a payé"
         VIEW_FARE_BREAKDOWN -> "Afficher la répartition des tarifs"
         FARE_BREAKDOWN -> "répartition des tarifs"
         _ -> ""

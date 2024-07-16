@@ -30,13 +30,14 @@ rideCompletedButtonConfig :: ST.RideCompletedScreenState -> PrimaryButton.Config
 rideCompletedButtonConfig state =
   PrimaryButton.config
     {   textConfig { text = "Ride Complete", color = Color.white900 }
-      , isClickable = true
       , cornerRadius = 8.0
       , id = "RideCompletedButton"
       , padding = (Padding 14 16 14 16)
       , margin = (Margin 16 16 16 32)
       , background = Color.purple700
       , enableRipple = true
+      , alpha = if (state.props.selectedRating /= ST.SEL_NONE) then 1.0 else 0.4
+      , isClickable = state.props.selectedRating /= ST.SEL_NONE
     }
 
 

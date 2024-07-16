@@ -49,23 +49,6 @@ initData = {
     , capacity : Nothing
     , serviceTier : ""
     , tollAmbigous : false
-    }, 
-    driverGotoState:
-    { gotoCount: 0
-    , goToInfo: false
-    , selectedGoTo: ""
-    , savedLocationsArray: []
-    , showGoto: false
-    , gotoValidTill: "-"
-    , timerInMinutes: "-"
-    , isGotoEnabled: false
-    , timerId: ""
-    , gotoReducedCount: Nothing
-    , gotoLocInRange: false
-    , goToPopUpType: NO_POPUP_VIEW
-    , gotoEnabledForMerchant: false
-    , confirmGotoCancel: false
-    , savedLocationCount: 0
-  }
+    }
   }
 }

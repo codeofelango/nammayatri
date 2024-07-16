@@ -2596,6 +2596,28 @@ homeScreenFlow = do
                       isFreeRide = fromMaybe false response.isFreeRide
                     }
                   })
+                modifyScreenState $ RideCompletedScreenStateType (\rideCompletedScreenState → rideCompletedScreenState{
+                      props{
+                        endRideData { 
+                          actualTollCharge = fromMaybe 0.0 response.tollCharges, 
+                          estimatedTollCharge = fromMaybe 0.0 response.estimatedTollCharges, 
+                          tollAmbigous = response.tollConfidence == Just CTA.Unsure,
+                          actualRideDuration = response.actualDuration,
+                          actualRideDistance = if state.data.activeRide.tripType == ST.Rental then round <$> response.actualRideDistance else response.chargeableDistance, 
+                          finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, 
+                          finalAmountWithCurrency = fromMaybe response.estimatedBaseFareWithCurrency response.computedFareWithCurrency,
+                          riderName = fromMaybe "" response.riderName, 
+                          rideId = response.id, 
+                          tip = response.customerExtraFee, 
+                          disability = response.disabilityTag, 
+                          payerVpa = payerVpa, 
+                          specialZonePickup = if isSpecialPickUpZone then Just true else Nothing,
+                          capacity = response.vehicleCapacity,
+                          serviceTier = response.vehicleServiceTierName
+                        }, 
+                        selectedRating = ST.SEL_NONE
+                      })
+
                 liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_completed" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
                                                                                             {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle},
                                                                                             {key : "Actual Toll Charge", value : unsafeToForeign (fromMaybe 0.0 response.tollCharges)},
@@ -2604,7 +2626,6 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {enterOtpModal = false, endRideOdometerReadingModal = false, isInvalidOdometer = false,enterOdometerFocusIndex=0, showRideCompleted = true}})
             void $ updateStage $ HomeScreenStage RideCompleted
             void $ lift $ lift $ toggleLoader false
-            modifyScreenState $ RideCompletedScreenStateType (\rideCompletedScreenState → rideCompletedScreenState{props{endRideData = state.data.endRideData, driverGotoState = state.data.driverGotoState}} )
             rideCompletedScreenFlow
 
     GO_TO_CANCEL_RIDE {id, info , reason} state -> do
@@ -3808,15 +3829,15 @@ rideCompletedScreenFlow  = do
       tripDetailsScreenFlow
     GO_TO_HOME_SCREEN_FROM_RIDE_COMPLETED_SCREEN state -> do
       let rating = case state.props.selectedRating of
-                     ST.SEL_P -> 1
-                     ST.SEL_N -> 5
-                     _ -> 0
+                     ST.SEL_P -> 5
+                     ST.SEL_N -> 1
+                     _ -> 1
       void $ lift $ lift $ Remote.postRideFeedback state.props.endRideData.rideId rating ""
       when (rating == 5) $ void $ pure $ JB.launchInAppRatingPopup unit
       (GlobalState globalstate) <- getState
       (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
       let (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
-      when state.props.driverGotoState.isGotoEnabled do
+      when globalstate.homeScreen.data.driverGotoState.isGotoEnabled do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { 
             gotoPopupType = case globalstate.globalProps.gotoPopupType of
               ST.REDUCED _ -> ST.REDUCED driverGoHomeInfo.cnt 
