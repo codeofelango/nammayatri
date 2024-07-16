@@ -395,6 +395,8 @@ data BecknTag
   | -- rating tags
     RIDER_PHONE_NUMBER
   | SHOULD_FAVOURITE_DRIVER
+  | -- Driver Gender
+    GENDER
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
