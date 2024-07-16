@@ -46,6 +46,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
+
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   relativeLayout
@@ -241,7 +242,11 @@ dataListOptions config push =
                       Nothing -> Color.grey800
                   , cornerRadius 6.0
                   , margin (MarginBottom 16)
-                  , padding $ PaddingHorizontal 16 16] 
+                  , padding $ PaddingHorizontal 16 16
+                  , accessibility $ ENABLE 
+                  , accessibilityHint $ getAccessibilityText index item
+                   ] 
+                   
                 else [])
           [ radioButton config push index item,
             horizontalLine index (fromMaybe (-1) config.activeIndex) config,
@@ -251,10 +256,12 @@ dataListOptions config push =
             (case config.activeReasonCode of
               Just reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode == "TECHNICAL_GLITCH")) then technicalGlitchDescription config push index else dummyTextView
               Nothing         -> dummyTextView)
-            -- , technicalGlitchDescription config push index
           ]
         ]
-      ) config.selectionOptions)
+      ) $  config.selectionOptions)
+  where getAccessibilityText index item = case config.activeIndex of 
+          Just activeIndex' -> if (index  == activeIndex') then item.description <> " : Selected"  else (item.description <> " : Un Selected")
+          Nothing -> ""
 
 
 someOtherReason :: forall w . Config -> (Action  -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
