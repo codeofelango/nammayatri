@@ -1313,3 +1313,5 @@ getKN stringKey =
         KOZHIKODE -> "ಕೋಝಿಕೋಡ್"
         THRISSUR -> "ತೃಶೂರ್"
         TRIVANDRUM -> "ತಿರುವನಂತಪುರಂ"
+        CLEAN_BIKE -> "ಸ್ವಚ್ಛ ಬೈಕ್"
+        UNCOMFORTABLE_BIKE -> "ಅಸಂತೋಷಕರ ಬೈಕ್"

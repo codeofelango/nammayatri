@@ -1314,3 +1314,5 @@ getEN stringKey =
         KOZHIKODE -> "Kozhikode"
         THRISSUR -> "Thrissur"
         TRIVANDRUM -> "Trivandrum"
+        CLEAN_BIKE -> "Clean Bike"
+        UNCOMFORTABLE_BIKE -> "Uncomfortable Bike"

@@ -1312,3 +1312,5 @@ getBN stringKey =
         KOZHIKODE -> "কোজিকোড"
         THRISSUR -> "ত্রিশূর"
         TRIVANDRUM -> "তিরুবনন্তপুরম"
+        CLEAN_BIKE -> "পরিষ্কার বাইক"
+        UNCOMFORTABLE_BIKE -> "অসুবিধাজনক বাইক"

@@ -1314,3 +1314,5 @@ getML stringKey =
         KOZHIKODE -> "കോഴിക്കോട്"
         THRISSUR -> "തൃശ്ശൂർ"
         TRIVANDRUM -> "തിരുവനന്തപുരം"
+        CLEAN_BIKE -> "വൃത്തിയാക്കിയ ബൈക്ക്"
+        UNCOMFORTABLE_BIKE -> "അസന്തുഷ്ടമായ ബൈക്ക്"

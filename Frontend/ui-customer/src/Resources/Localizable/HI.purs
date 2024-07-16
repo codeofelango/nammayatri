@@ -1312,3 +1312,5 @@ getHI stringKey =
         KOZHIKODE -> "कोझिकोड"
         THRISSUR -> "त्रिशूर"
         TRIVANDRUM -> "तिरुवनंतपुरम"
+        CLEAN_BIKE -> "साफ बाइक"
+        UNCOMFORTABLE_BIKE -> "असहज बाइक"
