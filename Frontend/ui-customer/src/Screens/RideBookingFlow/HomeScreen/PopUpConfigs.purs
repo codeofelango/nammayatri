@@ -43,3 +43,35 @@ finalFareExcludesToll lazyCheck = PopUpModal.config{
   , margin = Margin 0 24 0 0
   }
 }
+
+
+tollChargesIncluded :: HomeScreenState -> PopUpModal.Config
+tollChargesIncluded lazyCheck = PopUpModal.config{
+  margin = MarginHorizontal 24 24
+, padding =  Padding 16 20 16 20
+, gravity = CENTER
+, buttonLayoutMargin = Margin 0 0 0 0
+, cornerRadius = Corners 24.0 true true true true
+, coverImageConfig{
+    imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_toll_charges_included"
+  , visibility = VISIBLE
+  , height =  V 200
+  , width = V $ (screenWidth unit) - 80
+  }
+, primaryText {
+    text = getString TOLL_CHARGES_INCLUDED_IN_FAIR
+  , color = Color.black800
+  , margin = Margin 0 24 0 0
+  }
+, secondaryText {
+    text = getString PLEASE_DO_NOT_PAY_EXTRA_TO_DRIVER
+  , margin = Margin 0 8 0 0
+  }
+, option1{
+  visibility = false
+}
+, option2 {
+    text = getString OK_GOT_IT
+  , margin = Margin 0 24 0 0
+  }
+}
