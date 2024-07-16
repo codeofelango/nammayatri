@@ -99,7 +99,7 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEst
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), CancelSearchType(..))
-import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), GetEditLocResultResp(..), BookingUpdateRequestDetails(..),  SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..))
+import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..),RideBookingStatusRes(..), SelectListRes(..), GetEditLocResultResp(..), BookingUpdateRequestDetails(..),  SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore, deleteValueFromLocalStore)
@@ -426,6 +426,21 @@ eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
   continue state{props{isMockLocation = false}}
+
+eval (UpdateCurrentStageStatus stage (RideBookingStatusRes resp)) newState = do
+  _ <- pure $ spy "updateCurrentPollingStage" stage
+  case stage of
+    "REALLOCATED" -> exit $ NotificationHandler "REALLOCATE_PRODUCT" newState
+    "INPROGRESS"  -> updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
+    "NEW"         -> updateAndExit newState $ NotificationHandler "DRIVER_ASSIGNMENT" newState
+    "COMPLETED"   -> if not $ isLocalStageOn HomeScreen
+                       then exit $ NotificationHandler "TRIP_FINISHED" newState
+                       else continue newState
+    "CANCELLED"   -> if not $ isLocalStageOn HomeScreen
+                       then exit $ NotificationHandler "CANCELLED_PRODUCT" newState
+                       else continue newState
+    _             -> continue newState
+
 
 eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
   _ <- pure $ spy "updateCurrentStage" stage
