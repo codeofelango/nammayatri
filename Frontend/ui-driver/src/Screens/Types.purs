@@ -2593,6 +2593,7 @@ type BenefitsScreenData = {
   , rank :: Maybe Int
   , totalEligibleDrivers :: Maybe Int
   , moduleList :: LmsModuleList
+  , cityConfig :: CityConfig
 }
 
 type BenefitsScreenProps = {
@@ -2791,4 +2792,12 @@ type RateCardScreenProps = {
   sliderMinValue :: Int,
   sliderMaxValue :: Int,
   sliderLoading :: Boolean
+}
+
+type GullakSDKResp = {
+  amount :: Number,
+  quantity :: String,
+  responseMessage :: String,
+  responseCode :: Int,
+  isNewUser :: Boolean
 }
