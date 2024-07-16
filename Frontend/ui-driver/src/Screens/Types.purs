@@ -1242,7 +1242,8 @@ type HomeScreenProps =  {
   toll :: TollState,
   bookingStage :: BookingTypes,
   showAdvancedRidePopUp :: Boolean,
-  showInterOperablePopUp :: Boolean
+  showInterOperablePopUp :: Boolean,
+  referralEarned :: Boolean
  }
 
 type TollState = {
@@ -2367,7 +2368,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
@@ -2593,6 +2594,7 @@ type BenefitsScreenData = {
   , rank :: Maybe Int
   , totalEligibleDrivers :: Maybe Int
   , moduleList :: LmsModuleList
+  , bannerData :: BannerCarousalData
 }
 
 type BenefitsScreenProps = {
@@ -2602,6 +2604,8 @@ type BenefitsScreenProps = {
 , referralInfoPopType :: ReferralInfoPopType
 , selectedModule :: Maybe LmsModuleRes
 , showShimmer :: Boolean
+, isPayoutEnabled :: Maybe Boolean
+, bannerLength :: Int
 }
 
 type LmsModuleList =
