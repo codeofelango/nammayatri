@@ -84,14 +84,15 @@ tfPayment res bapConfig = do
   let updatedPaymentTags =
         maybe
           []
-          ( (<>)
+          ( \tag ->
               [ (Tags.SETTLEMENT_WINDOW, Just $ fromMaybe "PT1D" bapConfig.settlementWindow),
                 (Tags.BUYER_FINDER_FEES_PERCENTAGE, Just $ fromMaybe "0" bapConfig.buyerFinderFee),
                 (Tags.STATIC_TERMS, Just $ maybe "https://api.example-bap.com/booking/terms" Kernel.Prelude.showBaseUrl bapConfig.staticTermsUrl),
                 (Tags.SETTLEMENT_TYPE, bapConfig.settlementType)
               ]
+                <> (tag.paymentTags)
           )
-          ((.paymentTags) <$> res.taggings)
+          (res.taggings)
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
   Just $ mkPayment' updatedPaymentTags (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams
 
