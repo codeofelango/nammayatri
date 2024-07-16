@@ -1475,4 +1475,12 @@ getTE stringKey =
         BIKE_TAXI -> "బైక్ టాక్సీ"
         FIRST_RIDE_FREE count -> "మొదటి " <> count <> " రైడు ఉచితం"
         FIRST_RIDES_FREE count -> "మొదటి " <> count <> " రైడ్లు ఉచితం"
-
+        CANNOT_DETECT_PAN_CARD -> "PAN కార్డ్‌ని గుర్తించడం సాధ్యం కాదు. దయచేసి మళ్లీ ప్రయత్నించండి."
+        CANNOT_DETECT_AADHAAR -> "ఆధార్ కార్డును గుర్తించడం సాధ్యం కాదు. దయచేసి మళ్లీ ప్రయత్నించండి."
+        DOCUMENT_ALREADY_VALIDATED -> "పత్రం ఇప్పటికే ధృవీకరించబడింది."
+        DOCUMENT_UNDER_MANUAL_REVIEW -> "మాన్యువల్ సమీక్షలో పత్రం."
+        DOCUMENT_ALREADY_LINKED_TO_ANOTHER_DRIVER -> "పత్రం ఇప్పటికే మరొక డ్రైవర్‌కి లింక్ చేయబడింది."
+        PAN_ALREADY_LINKED -> "పాన్ ఇప్పటికే లింక్ చేయబడింది."
+        EXITED_BY_USER -> "వినియోగదారు ద్వారా నిష్క్రమించారు."
+        APP_UPDATE ->  "యాప్ అప్‌డేట్"
+        APP_UPDATE_MESSAGE -> "దయచేసి కొనసాగడానికి మీ అప్లికేషన్‌ను అప్‌డేట్ చేయండి"

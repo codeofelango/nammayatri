@@ -210,7 +210,8 @@ window.getMerchantConfig = function () {
         "assets" :{
           "auto_image" : "ic_auto_rickshaw",
           "onboarding_auto_image" : "ny_ic_auto_side"
-        }
+        },
+        "enableHvSdk" : true
       },
       {
         "cityName" : "Hyderabad",
@@ -262,7 +263,8 @@ window.getMerchantConfig = function () {
         "assets" :{
           "auto_image" :  "ny_ic_black_yellow_auto_side_view",
           "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
-        }
+        },
+        "enableHvSdk" : false
       },
       {
         "cityName" : "Mysore",
@@ -302,7 +304,9 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
+
       },
       {
         "cityName" : "Delhi",
@@ -355,7 +359,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+        },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Chennai",
@@ -408,7 +413,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
-      }
+        },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Coimbatore",
@@ -448,7 +454,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Puducherry",
@@ -488,7 +495,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Tumakuru",
@@ -528,7 +536,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Gurugram",
@@ -568,7 +577,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Noida",
@@ -608,7 +618,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "TamilNaduCities",
@@ -648,7 +659,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" :  "ny_ic_black_yellow_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_yellow" 
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Minneapolis",
@@ -688,7 +700,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ic_auto_rickshaw",
         "onboarding_auto_image" : "ny_ic_auto_side"
-      }
+      },
+      "enableHvSdk" : false
       },
       {
         "cityName" : "Kochi",
@@ -727,7 +740,8 @@ window.getMerchantConfig = function () {
       "assets" :{
         "auto_image" : "ny_ic_auto_side_view",
         "onboarding_auto_image" : "ny_ic_auto_right_side_black"
-      }
+      },
+      "enableHvSdk" : false
       }
   ]
   , "coinsConfig" : {
@@ -747,6 +761,7 @@ window.getMerchantConfig = function () {
         "enable" : true,
         "url" : "https://nammayatri.in/open?source=in-app"
     }
+  , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=com.mobility.movingtechdriver&pcampaignid=web_share"
   , "profile" : {
     "showBookingOption" : true
   }
