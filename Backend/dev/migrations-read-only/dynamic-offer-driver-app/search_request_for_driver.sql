@@ -79,3 +79,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN total_ri
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN vehicle_age int ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN previous_drop_geo_hash text ;

@@ -314,7 +314,7 @@ data DriverQuoteError
   | UnexpectedResponseValue
   | NoActiveRidePresent
   | RecentActiveRide
-  | DriverTransactionTryAgain Text
+  | DriverTransactionTryAgain (Maybe Text)
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverQuoteError
@@ -330,7 +330,7 @@ instance IsBaseError DriverQuoteError where
   toMessage UnexpectedResponseValue = Just "The response type is unexpected"
   toMessage NoActiveRidePresent = Just "No active ride is present for this driver registered with given vehicle Number"
   toMessage RecentActiveRide = Just "Cannot End Ride before 60 seconds"
-  toMessage (DriverTransactionTryAgain driverId) = Just $ "Ongoing Transaction For DriverId" <> driverId <> ". Please try again later."
+  toMessage (DriverTransactionTryAgain driverId) = Just $ "Ongoing Transaction" <> maybe "" (<> "For DriverId") driverId <> ". Please try again later."
 
 instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
