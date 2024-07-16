@@ -1177,7 +1177,7 @@ getFR stringKey =
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "Le dépassement de distance sera facturé à " <> charges
         ADDITIONAL_CHARGES_DESCRIPTION -> "Le tarif final sera basé sur la durée et la distance réelle du voyage"
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Les frais de parking, <b> les péages </b> et autres surcharges ne sont <b> pas inclus </b>. Veuillez les payer séparément au chauffeur."
-        NIGHT_TIME_FEE_DESCRIPTION -> "Des frais de nuit de {} seront facturés si votre trajet commence/se termine à n'importe quel moment entre 22h et 5h"
+        NIGHT_TIME_FEE_DESCRIPTION charges -> "Des frais de nuit de " <> charges <> " seront facturés si votre trajet commence/se termine à n'importe quel moment entre 22h et 5h"
         CHOOSE_YOUR_RENTAL_RIDE -> "Choisissez votre trajet de location"
         FIRST_STOP_OPTIONAL -> "Premier arrêt (facultatif)"
         JANUARY -> "janvier"
@@ -1314,3 +1314,6 @@ getFR stringKey =
         KOZHIKODE -> "Kozhikode"
         THRISSUR -> "Thrissur"
         TRIVANDRUM -> "Trivandrum"
+        NIGHT_CHARGES -> "Frais de nuit"
+        SINCE_A_PART_OF_YOUR_TRIP -> "Étant donné qu'une partie / la totalité de votre trajet se situe entre {} et {}, des frais de nuit ont été ajoutés à l'estimation."
+

@@ -319,3 +319,6 @@ _isValueAddNP = lens (unwrap >>> _.isValueAddNP) (\oldRec newVal -> wrap ((unwra
 
 _stopLocation :: forall a b c. Newtype a { stopLocation :: b | c } => Lens' a b
 _stopLocation = lens (unwrap >>> _.stopLocation) (\oldRec newVal -> wrap ((unwrap oldRec) { stopLocation = newVal }))
+
+_nightShiftCharge :: forall a b c. Newtype a {nightShiftCharge :: b | c } => Lens' a b
+_nightShiftCharge = lens (unwrap >>> _.nightShiftCharge) (\oldRec newVal -> wrap ((unwrap oldRec) { nightShiftCharge = newVal }))
