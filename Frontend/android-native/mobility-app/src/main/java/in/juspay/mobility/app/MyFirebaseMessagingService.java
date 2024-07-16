@@ -269,6 +269,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             } else {
                                NotificationUtils.startWidgetService(this, getString(R.string.ride_cancelled), payload, entity_payload, NotificationUtils.RequestSource.FCM);
                             }
+                            NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                             break;
 
                         case NotificationTypes.DRIVER_QUOTE_INCOMING:
@@ -302,6 +303,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "true").apply();
                             sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.DRIVER_ASSIGNMENT)).apply();
                             startMainActivity();
+                            NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                             break;
 
                         case NotificationTypes.TRIP_UPDATED:
