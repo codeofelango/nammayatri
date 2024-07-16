@@ -2804,5 +2804,6 @@ type RideCompletedScreenProps = {
   isFareBreakDownVisible :: Boolean,
   selectedRating :: RatingTypeSelected,
   showCallSupportPopup :: Boolean,
-  endRideData :: EndRideData
+  endRideData :: EndRideData,
+  driverGotoState :: DriverGoToState
 }

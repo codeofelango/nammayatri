@@ -18,7 +18,8 @@ module Screens.RideCompletedScreen.ScreenData where
 import Screens.Types as ST
 import ConfigProvider
 import Data.Maybe (Maybe(..))
-
+import Constants.Configs (dummyPrice)
+import Screens.Types 
 
 initData :: ST.RideCompletedScreenState
 initData = {
@@ -36,6 +37,7 @@ initData = {
     , zeroCommision: 0
     , tip: Nothing
     , finalAmount: 0
+    , finalAmountWithCurrency: dummyPrice
     , riderName: ""
     , rating: 0
     , feedback: ""
@@ -47,6 +49,23 @@ initData = {
     , capacity : Nothing
     , serviceTier : ""
     , tollAmbigous : false
-    }
+    }, 
+    driverGotoState:
+    { gotoCount: 0
+    , goToInfo: false
+    , selectedGoTo: ""
+    , savedLocationsArray: []
+    , showGoto: false
+    , gotoValidTill: "-"
+    , timerInMinutes: "-"
+    , isGotoEnabled: false
+    , timerId: ""
+    , gotoReducedCount: Nothing
+    , gotoLocInRange: false
+    , goToPopUpType: NO_POPUP_VIEW
+    , gotoEnabledForMerchant: false
+    , confirmGotoCancel: false
+    , savedLocationCount: 0
+  }
   }
 }

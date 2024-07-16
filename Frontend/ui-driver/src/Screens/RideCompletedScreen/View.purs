@@ -40,6 +40,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Components.PopUpModal as PopUpModal
 import Animation (fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, screenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
 import Animation.Config as AnimConfig
+import Engineering.Helpers.Utils (priceToBeDisplayed)
 
 screen :: ST.RideCompletedScreenState -> Screen Action ST.RideCompletedScreenState ScreenOutput 
 screen initialState =
@@ -180,25 +181,28 @@ ridePaymentDetailsCardView push state =
      , color Color.black800
      ] <> FontStyle.h2 TypoGraphy
   ,  textView $ 
-     [ text $ "$" <> show state.props.endRideData.finalAmount
+     [ text $ priceToBeDisplayed state.props.endRideData.finalAmountWithCurrency true
      , margin $ MarginTop 12
      , color Color.black800
      ] <> FontStyle.title3 TypoGraphy
-  ,  textView $ 
-     [ text $ getString $ TOTAL_AMOUNT_INCLUDING_CHARGES ""
-     , color Color.black400
-     ] <> FontStyle.subHeading2 TypoGraphy
-  ,  linearLayout
-     [ width $ MATCH_PARENT
-     , height $ WRAP_CONTENT
-     , gravity CENTER
-     , onClick push $ const ViewFareBreakDown
-     ][ textView $ 
-        [ text $ getString VIEW_FARE_BREAKDOWN
-        , color Color.purple700
-        , margin $ MarginTop 12
-        ] <> FontStyle.body1 TypoGraphy
-      ]
+
+  -- todo :: once it is finalized, will add these
+  -----------------------------------------------
+  -- ,  textView $ 
+  --    [ text $ getString $ TOTAL_AMOUNT_INCLUDING_CHARGES ""
+  --    , color Color.black400
+  --    ] <> FontStyle.subHeading2 TypoGraphy   
+  -- ,  linearLayout
+  --    [ width $ MATCH_PARENT
+  --    , height $ WRAP_CONTENT
+  --    , gravity CENTER
+  --    , onClick push $ const ViewFareBreakDown
+  --    ][ textView $ 
+  --       [ text $ getString VIEW_FARE_BREAKDOWN
+  --       , color Color.purple700
+  --       , margin $ MarginTop 12
+  --       ] <> FontStyle.body1 TypoGraphy
+  --     ]
   ]
 
 rideDetailsPillView :: forall w . (Action -> Effect Unit) -> ST.RideCompletedScreenState -> PrestoDOM (Effect Unit) w

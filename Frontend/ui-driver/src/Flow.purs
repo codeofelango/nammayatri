@@ -118,6 +118,7 @@ import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.ReportIssueChatScreen.ScreenData (initData) as ReportIssueScreenData
 import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
+import Screens.RideCompletedScreen.Handler (rideCompletedScreen) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.DriverEarningsScreen.Transformer (checkPopupShowToday, isPopupShownToday)
@@ -2603,7 +2604,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {enterOtpModal = false, endRideOdometerReadingModal = false, isInvalidOdometer = false,enterOdometerFocusIndex=0, showRideCompleted = true}})
             void $ updateStage $ HomeScreenStage RideCompleted
             void $ lift $ lift $ toggleLoader false
-            modifyScreenState $ RideCompletedScreenStateType (\rideCompletedScreenState → rideCompletedScreenState{props{endRideData = state.data.endRideData}} )
+            modifyScreenState $ RideCompletedScreenStateType (\rideCompletedScreenState → rideCompletedScreenState{props{endRideData = state.data.endRideData, driverGotoState = state.data.driverGotoState}} )
             rideCompletedScreenFlow
 
     GO_TO_CANCEL_RIDE {id, info , reason} state -> do
@@ -3797,11 +3798,11 @@ welcomeScreenFlow = do
   case welcomeScreen of
     GoToMobileNumberScreen -> loginFlow
 
-rideCompletedScreenFlow :: FlowBT String Unit
+rideCompletedScreenFlow ::  FlowBT String Unit
 rideCompletedScreenFlow  = do
-  rideCompletedScreen <- UI.rideCompletedScreen
+  rcsAction <- UI.rideCompletedScreen
   void $ updateStage $ HomeScreenStage HomeScreen
-  case rideCompletedScreen of
+  case rcsAction of
     GO_TO_RIDE_DETAILS_SCREEN_FROM_RIDE_COMPLETED_SCREEN -> do 
       modifyScreenState $ TripDetailsScreenStateType $ \tripDetailsScreen -> tripDetailsScreen { data {goBackTo = ST.RideCompletion}}
       tripDetailsScreenFlow
@@ -3812,14 +3813,14 @@ rideCompletedScreenFlow  = do
                      _ -> 0
       void $ lift $ lift $ Remote.postRideFeedback state.props.endRideData.rideId rating ""
       when (rating == 5) $ void $ pure $ JB.launchInAppRatingPopup unit
-      -- (GlobalState globalstate) <- getState
-      -- (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
-      -- let (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
-      -- when state.data.driverGotoState.isGotoEnabled do
-      --   modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { 
-      --       gotoPopupType = case globalstate.globalProps.gotoPopupType of
-      --         ST.REDUCED _ -> ST.REDUCED driverGoHomeInfo.cnt 
-      --         _ -> globalstate.globalProps.gotoPopupType}
+      (GlobalState globalstate) <- getState
+      (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
+      let (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
+      when state.props.driverGotoState.isGotoEnabled do
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { 
+            gotoPopupType = case globalstate.globalProps.gotoPopupType of
+              ST.REDUCED _ -> ST.REDUCED driverGoHomeInfo.cnt 
+              _ -> globalstate.globalProps.gotoPopupType}
       void $ updateStage $ HomeScreenStage HomeScreen
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
