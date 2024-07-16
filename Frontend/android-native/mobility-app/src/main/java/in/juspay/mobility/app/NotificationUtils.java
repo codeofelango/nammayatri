@@ -818,6 +818,26 @@ public class NotificationUtils {
         return isLowRamDevice || modelNotSupported;
     }
 
+    public static void updateLocationUpdateDisAndFreq(String fcmType, SharedPreferences sharedPref) {
+        boolean updateLocPingsFromFcm = remoteConfigs.hasKey("update_loc_pings_from_fcm") && remoteConfigs.getBoolean("update_loc_pings_from_fcm");
+        if (sharedPref == null || !updateLocPingsFromFcm) return;
+        switch (fcmType){
+            case MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT:
+                sharedPref.edit().putString("RIDE_G_FREQUENCY", "2000").apply();
+                sharedPref.edit().putString("DRIVER_MIN_DISPLACEMENT", "5.0").apply();
+                break;
+            case MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED:
+                sharedPref.edit().putString("RIDE_G_FREQUENCY", "10000").apply();
+                sharedPref.edit().putString("DRIVER_MIN_DISPLACEMENT", "20.0").apply();
+                break;
+            case MyFirebaseMessagingService.NotificationTypes.CANCELLED_PRODUCT:
+            case MyFirebaseMessagingService.NotificationTypes.TRIP_FINISHED:
+                sharedPref.edit().putString("RIDE_G_FREQUENCY", "50000").apply();
+                sharedPref.edit().putString("DRIVER_MIN_DISPLACEMENT", "25.0").apply();
+                break;
+        }
+    }
+
     public static void createChatNotification(String sentBy, String message, Context context) {
         createChatNotificationChannel(context);
         Intent notificationIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
